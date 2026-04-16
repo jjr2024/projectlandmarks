@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' } },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/store.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(208,90,50,0.15);
+      border-color: #e47243;
+    }
+    .step-enter { animation: stepIn 0.3s ease forwards; }
+    @keyframes stepIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .progress-bar { transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+    .gift-option {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .gift-option:hover { border-color: #f4ae8a; background: #fdf5f0; }
+    .gift-option.selected { border-color: #d05a32; background: #fdf5f0; }
+    .gift-option .check-box { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #d1d5db; flex-shrink: 0; margin-left: auto; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+    .gift-option.selected .check-box { background: #d05a32; border-color: #d05a32; }
+    .rel-option { border: 2px solid #e5e7eb; border-radius: 10px; padding: 10px 16px; cursor: pointer; transition: all 0.15s; text-align: center; font-size: 14px; font-weight: 500; color: #6b7280; }
+    .rel-option:hover { border-color: #f4ae8a; color: #d05a32; background: #fdf5f0; }
+    .rel-option.selected { border-color: #d05a32; background: #fce8db; color: #d05a32; }
+    .event-type-btn { border: 2px solid #e5e7eb; transition: all 0.15s; }
+    .event-type-btn:hover { border-color: #f4ae8a; }
+    .event-type-btn.active { border-color: #d05a32; background: #fdf5f0; color: #ad4628; }
+    .event-row { animation: stepIn 0.2s ease forwards; }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50 min-h-screen" x-data="onboardingApp()" x-init="init()" x-cloak>
+
+  <!-- Top nav with progress -->
+  <div class="fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-10">
+    <div class="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        </div>
+        <span class="font-bold text-gray-900">Landmarks</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-gray-400">Step <span x-text="step"></span> of <span x-text="totalSteps"></span></span>
+        <a href="dashboard.html" class="text-xs text-gray-400 hover:text-gray-600">Skip setup →</a>
+      </div>
+    </div>
+    <div class="h-0.5 bg-gray-100">
+      <div class="progress-bar h-full bg-brand-500" :style="'width: ' + (step / totalSteps * 100) + '%'"></div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="pt-24 pb-16 px-6">
+    <div class="max-w-xl mx-auto">
+
+      <!-- ───── Step 1: Welcome ───── -->
+      <div x-show="step === 1" class="step-enter">
+        <div class="text-center mb-10">
+          <div class="text-5xl mb-5">👋</div>
+          <h1 class="text-3xl font-bold text-gray-900 mb-3">
+            Welcome, <span class="text-brand-600" x-text="firstName || 'there'"></span>!
+          </h1>
+          <p class="text-gray-500 text-lg leading-relaxed max-w-sm mx-auto">
+            Let's get you set up in about 2 minutes. We'll start with the person you most want to remember.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 mb-8">
+          <div class="flex items-center gap-4 p-5">
+            <div class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0 text-lg">👤</div>
+            <div>
+              <div class="font-semibold text-gray-900 text-sm">Add a contact and their dates</div>
+              <div class="text-gray-500 text-sm">Name, birthday, anniversary — all in one go</div>
+            </div>
+            <div class="ml-auto text-xs text-gray-400">~1 min</div>
+          </div>
+          <div class="flex items-center gap-4 p-5">
+            <div class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0 text-lg">🎁</div>
+            <div>
+              <div class="font-semibold text-gray-900 text-sm">Pick their gift preferences</div>
+              <div class="text-gray-500 text-sm">So your reminders include the right ideas</div>
+            </div>
+            <div class="ml-auto text-xs text-gray-400">~30 sec</div>
+          </div>
+        </div>
+
+        <button @click="nextStep()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-4 rounded-xl text-lg transition-all shadow-md shadow-brand-100">
+          Let's get started →
+        </button>
+      </div>
+
+      <!-- ───── Step 2: Contact + Events (combined) ───── -->
+      <div x-show="step === 2" class="step-enter">
+        <div class="mb-6">
+          <p class="text-sm text-brand-600 font-semibold uppercase tracking-wide mb-2">Step 1</p>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Who do you want to remember?</h2>
+          <p class="text-gray-500">Add their name, relationship, and the dates that matter.</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
+
+          <!-- Name -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">First name <span class="text-red-400">*</span></label>
+              <input type="text" x-model="contact.first_name" @keydown.enter="$refs.lastName2.focus()"
+                     placeholder="Sarah" autofocus
+                     class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 text-base transition-all" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Last name</label>
+              <input type="text" x-model="contact.last_name" x-ref="lastName2"
+                     placeholder="Chen"
+                     class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 text-base transition-all" />
+            </div>
+          </div>
+
+          <!-- Relationship -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Relationship</label>
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" @click="contact.relationship='family'" :class="contact.relationship==='family' ? 'rel-option selected' : 'rel-option'">👨‍👩‍👧 Family</button>
+              <button type="button" @click="contact.relationship='friend'" :class="contact.relationship==='friend' ? 'rel-option selected' : 'rel-option'">👫 Friend</button>
+              <button type="button" @click="contact.relationship='colleague'" :class="contact.relationship==='colleague' ? 'rel-option selected' : 'rel-option'">💼 Colleague</button>
+              <button type="button" @click="contact.relationship='other'" :class="contact.relationship==='other' ? 'rel-option selected' : 'rel-option'">👤 Other</button>
+            </div>
+          </div>
+
+          <!-- High importance -->
+          <div>
+            <label class="flex items-center gap-3 cursor-pointer group">
+              <input type="checkbox" x-model="contact.high_importance"
+                     class="w-4.5 h-4.5 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer" />
+              <span class="text-sm font-medium text-gray-700">High importance</span>
+              <span class="relative group/tip">
+                <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="invisible group-hover/tip:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 leading-relaxed z-50 shadow-lg">
+                  Adds an extra reminder farther from the event date so you have more time to plan the perfect gift.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <!-- Divider: Events -->
+          <div class="border-t border-gray-100 pt-5">
+            <label class="block text-sm font-medium text-gray-700 mb-3">
+              Important dates
+              <span class="text-gray-400 font-normal">— add all that apply</span>
+            </label>
+
+            <div class="space-y-3">
+              <template x-for="(evt, idx) in eventsToAdd" :key="idx">
+                <div class="event-row bg-gray-50 rounded-xl p-4">
+                  <div class="flex items-center gap-2 mb-3">
+                    <button type="button" @click="evt.event_type='birthday'"
+                            :class="evt.event_type==='birthday' ? 'event-type-btn active' : 'event-type-btn'"
+                            class="rounded-lg px-3 py-1.5 text-xs font-semibold">
+                      🎂 Birthday
+                    </button>
+                    <button type="button" @click="evt.event_type='anniversary'"
+                            :class="evt.event_type==='anniversary' ? 'event-type-btn active' : 'event-type-btn'"
+                            class="rounded-lg px-3 py-1.5 text-xs font-semibold">
+                      💕 Anniversary
+                    </button>
+                    <button type="button" @click="evt.event_type='custom'"
+                            :class="evt.event_type==='custom' ? 'event-type-btn active' : 'event-type-btn'"
+                            class="rounded-lg px-3 py-1.5 text-xs font-semibold">
+                      📅 Custom
+                    </button>
+                    <button x-show="eventsToAdd.length > 1" type="button" @click="removeEvent(idx)"
+                            class="ml-auto text-gray-400 hover:text-red-500 transition-colors p-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+
+                  <div x-show="evt.event_type === 'custom'" class="mb-3" x-transition>
+                    <input type="text" x-model="evt.event_label" placeholder="Event name (e.g. Graduation)"
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm transition-all" />
+                  </div>
+
+                  <div x-show="evt.event_type === 'anniversary'" class="mb-3" x-transition>
+                    <input type="number" x-model="evt.year_started" placeholder="Year started (optional, e.g. 2019)"
+                           min="1950" :max="new Date().getFullYear()"
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm transition-all" />
+                  </div>
+
+                  <!-- Don't repeat (custom only) -->
+                  <div x-show="evt.event_type === 'custom'" class="mb-3 space-y-2" x-transition>
+                    <label class="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" x-model="evt.one_time"
+                             class="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer" />
+                      <span class="text-xs font-medium text-gray-600">Don't repeat</span>
+                      <span class="relative group/tip">
+                        <svg class="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="invisible group-hover/tip:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 leading-relaxed z-50 shadow-lg">
+                          For one-off events like graduations. Won't repeat next year.
+                        </span>
+                      </span>
+                    </label>
+                    <div x-show="evt.one_time" x-transition>
+                      <input type="number" x-model="evt.event_year" :placeholder="new Date().getFullYear()" min="2024" max="2100"
+                             class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm transition-all" />
+                      <p class="text-xs text-gray-400 mt-1">Year of event</p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <select x-model="evt.month" class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 transition-all">
+                      <option value="">Month</option>
+                      <option value="1">January</option><option value="2">February</option>
+                      <option value="3">March</option><option value="4">April</option>
+                      <option value="5">May</option><option value="6">June</option>
+                      <option value="7">July</option><option value="8">August</option>
+                      <option value="9">September</option><option value="10">October</option>
+                      <option value="11">November</option><option value="12">December</option>
+                    </select>
+                    <select x-model="evt.day" class="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 transition-all">
+                      <option value="">Day</option>
+                      <template x-for="d in 31" :key="d">
+                        <option :value="d" x-text="d"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <button type="button" @click="addAnotherEvent()" class="mt-3 w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-brand-300 rounded-xl py-3 text-sm text-gray-500 hover:text-brand-600 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Add another date for <span x-text="contact.first_name || 'this person'"></span>
+            </button>
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              Anything we should know?
+              <span class="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea x-model="contact.notes" rows="2"
+                      placeholder="e.g. loves dark chocolate, allergic to flowers, big coffee person…"
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 text-sm resize-none transition-all"></textarea>
+          </div>
+
+          <!-- Live preview -->
+          <div x-show="hasValidEvent" x-transition
+               class="bg-brand-50 border border-brand-100 rounded-xl p-4 flex items-start gap-3">
+            <svg class="w-5 h-5 text-brand-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            <div class="text-sm text-brand-800">
+              <strong>You'll get a reminder email</strong>
+              <span x-text="reminderPreviewText"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 flex items-center gap-3">
+          <button @click="prevStep()" class="border border-gray-200 text-gray-600 font-medium px-5 py-3 rounded-xl hover:bg-gray-50 transition-colors">← Back</button>
+          <button @click="submitContactAndEvents()" :disabled="!contact.first_name.trim() || !hasValidEvent"
+                  class="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all">
+            Continue →
+          </button>
+        </div>
+        <p class="text-center text-xs text-gray-400 mt-4">You can add more contacts from your dashboard anytime</p>
+      </div>
+
+      <!-- ───── Step 3: Gift preferences (multi-select) ───── -->
+      <div x-show="step === 3" class="step-enter">
+        <div class="mb-6">
+          <p class="text-sm text-brand-600 font-semibold uppercase tracking-wide mb-2">Step 2</p>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">
+            What kind of gifts does
+            <span class="text-brand-600" x-text="contact.first_name"></span> like?
+          </h2>
+          <p class="text-gray-500">Pick as many as apply — your reminders will include ideas from these categories.</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-2.5 mb-4">
+          <template x-for="opt in giftOptions" :key="opt.value">
+            <label class="gift-option" :class="selectedGifts.includes(opt.value) ? 'selected' : ''" @click="toggleGift(opt.value)">
+              <span class="text-2xl" x-text="opt.emoji"></span>
+              <div class="flex-1">
+                <div class="font-semibold text-gray-900 text-sm" x-text="opt.label"></div>
+                <div class="text-gray-500 text-xs mt-0.5" x-text="opt.description"></div>
+              </div>
+              <div class="check-box">
+                <template x-if="selectedGifts.includes(opt.value)">
+                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </template>
+              </div>
+            </label>
+          </template>
+
+          <!-- Other field -->
+          <div class="mt-3 pt-3 border-t border-gray-100">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              Something else?
+              <span class="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input type="text" x-model="giftOther" maxlength="100"
+                   placeholder="e.g. Books, board games, hiking gear…"
+                   class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 text-sm transition-all" />
+            <div class="flex justify-end mt-1">
+              <span class="text-xs" :class="giftOther.length > 80 ? 'text-amber-500' : 'text-gray-400'" x-text="giftOther.length + '/100'"></span>
+            </div>
+          </div>
+        </div>
+
+        <button @click="selectedGifts = ['gift_card']; giftOther = ''; submitGift()"
+                class="w-full text-gray-400 text-sm hover:text-gray-600 transition-colors mb-4 py-2">
+          Not sure — default to gift cards for now
+        </button>
+
+        <div class="flex items-center gap-3">
+          <button @click="prevStep()" class="border border-gray-200 text-gray-600 font-medium px-5 py-3 rounded-xl hover:bg-gray-50 transition-colors">← Back</button>
+          <button @click="submitGift()" :disabled="selectedGifts.length === 0 && !giftOther.trim()"
+                  class="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition-all">
+            Finish setup →
+          </button>
+        </div>
+      </div>
+
+      <!-- ───── Step 4: Done! ───── -->
+      <div x-show="step === 4" class="step-enter text-center">
+        <div class="mb-8">
+          <div class="text-6xl mb-5">🎉</div>
+          <h2 class="text-3xl font-bold text-gray-900 mb-3">You're all set!</h2>
+          <p class="text-gray-500 text-lg max-w-sm mx-auto leading-relaxed">
+            <span class="font-semibold text-gray-700" x-text="contact.first_name"></span> is saved.
+            We'll email you before each of their important dates with curated gift ideas.
+          </p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 p-6 text-left mb-8">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center text-xl font-bold text-brand-700" x-text="contact.first_name?.[0]"></div>
+            <div>
+              <div class="font-semibold text-gray-900" x-text="contact.first_name + (contact.last_name ? ' ' + contact.last_name : '')"></div>
+              <div class="text-sm text-gray-500" x-text="Store.utils.relationshipLabel(contact.relationship)"></div>
+            </div>
+          </div>
+          <div class="space-y-2 text-sm">
+            <template x-for="(evt, idx) in savedEvents" :key="idx">
+              <div class="flex items-center gap-2 text-gray-600">
+                <span x-text="evt.event_type === 'birthday' ? '🎂' : evt.event_type === 'anniversary' ? '💕' : '📅'"></span>
+                <span x-text="Store.utils.eventTypeLabel(evt.event_type) + ' · ' + Store.utils.formatDate(evt.month, evt.day)"></span>
+              </div>
+            </template>
+            <div class="flex items-center gap-2 text-gray-600">
+              <span>🎁</span>
+              <span x-text="Store.utils.giftLabel(selectedGifts, giftOther)"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <a href="contacts.html?new=1" class="block w-full border-2 border-brand-200 hover:border-brand-400 text-brand-700 font-semibold py-3.5 rounded-xl transition-all">
+            Add another contact
+          </a>
+          <a href="dashboard.html" class="block w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3.5 rounded-xl transition-all">
+            Go to my dashboard →
+          </a>
+        </div>
+
+        <p class="text-xs text-gray-400 mt-6">
+          You can add more contacts, change reminder timing, and update gift preferences anytime from Settings.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function onboardingApp() {
+      return {
+        user: null, profile: null,
+        step: 1,
+        totalSteps: 4,
+        createdContactId: null,
+        savedEvents: [],
+
+        contact: {
+          first_name: '', last_name: '',
+          relationship: 'friend',
+          high_importance: false,
+          notes: '',
+        },
+
+        eventsToAdd: [
+          { event_type: 'birthday', event_label: '', month: '', day: '', year_started: '', one_time: false, event_year: '' },
+        ],
+
+        selectedGifts: [],
+        giftOther: '',
+
+        get firstName() {
+          return this.profile?.display_name?.split(' ')[0] || '';
+        },
+
+        get hasValidEvent() {
+          return this.eventsToAdd.some(e => e.month && e.day);
+        },
+
+        get reminderPreviewText() {
+          const validEvents = this.eventsToAdd.filter(e => e.month && e.day);
+          if (validEvents.length === 0) return '';
+          const parts = validEvents.map(e => {
+            const label = e.event_type === 'birthday' ? 'birthday' : e.event_type === 'anniversary' ? 'anniversary' : (e.event_label || 'event');
+            return label + ' on ' + Store.utils.formatDate(e.month, e.day);
+          });
+          const name = this.contact.first_name || 'their';
+          return ' 7 days and 3 days before ' + name + '\'s ' + parts.join(', and their ') + '.';
+        },
+
+        giftOptions: [
+          { value: 'flowers', emoji: '🌸', label: 'Flowers', description: 'Bouquets, arrangements, succulents' },
+          { value: 'treats', emoji: '🍫', label: 'Food & Treats', description: 'Chocolates, cakes, gourmet baskets' },
+          { value: 'wine', emoji: '🍷', label: 'Wine & Drinks', description: 'Wine, champagne, spirits' },
+          { value: 'gift_card', emoji: '🎁', label: 'Gift Cards', description: 'Amazon, Nordstrom, Starbucks & more' },
+          { value: 'experiences', emoji: '✨', label: 'Experiences', description: 'Shows, activities, unique outings' },
+          { value: 'donation', emoji: '❤️', label: 'Charitable Donation', description: 'Give to a cause in their name' },
+        ],
+
+        init() {
+          this.user = Store.auth.currentUser();
+          if (!this.user) { window.location.href = 'auth.html'; return; }
+          this.profile = Store.profile.get(this.user.id);
+          if (Store.contacts.list(this.user.id).length > 0) {
+            window.location.href = 'dashboard.html';
+          }
+        },
+
+        nextStep() {
+          if (this.step < this.totalSteps) this.step++;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        prevStep() {
+          if (this.step > 1) this.step--;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        addAnotherEvent() {
+          this.eventsToAdd.push({ event_type: 'anniversary', event_label: '', month: '', day: '', year_started: '', one_time: false, event_year: '' });
+        },
+
+        removeEvent(idx) {
+          if (this.eventsToAdd.length > 1) {
+            this.eventsToAdd.splice(idx, 1);
+          }
+        },
+
+        toggleGift(value) {
+          const idx = this.selectedGifts.indexOf(value);
+          if (idx > -1) {
+            this.selectedGifts.splice(idx, 1);
+          } else {
+            this.selectedGifts.push(value);
+          }
+        },
+
+        submitContactAndEvents() {
+          if (!this.contact.first_name.trim() || !this.hasValidEvent) return;
+
+          const result = Store.contacts.create(this.user.id, this.contact);
+          this.createdContactId = result.contact.id;
+
+          this.savedEvents = [];
+          this.eventsToAdd.forEach(evt => {
+            if (evt.month && evt.day) {
+              const created = Store.events.create(this.user.id, this.createdContactId, evt);
+              this.savedEvents.push(created.event);
+            }
+          });
+
+          this.nextStep();
+        },
+
+        submitGift() {
+          if (this.createdContactId) {
+            Store.contacts.update(this.createdContactId, {
+              gift_categories: this.selectedGifts.length > 0 ? this.selectedGifts : ['gift_card'],
+              gift_other: this.giftOther.trim(),
+            });
+          }
+          this.nextStep();
+        },
+      };
+    }
+  </script>
+</body>
+</html>

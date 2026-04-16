@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact – Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    [x-cloak] { display: none !important; }
+    input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(208,90,50,0.2); }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50" x-data="contactFormApp()" x-cloak>
+
+  <!-- Nav -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        </div>
+        <span class="font-bold text-gray-900 text-lg">Landmarks</span>
+      </a>
+      <a href="index.html" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">← Back to home</a>
+    </div>
+  </nav>
+
+  <main class="pt-28 pb-24 px-6">
+    <div class="max-w-xl mx-auto">
+
+      <!-- Header -->
+      <div class="text-center mb-10">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-3">Get in touch</h1>
+        <p class="text-gray-500">We read every message and aim to reply within one business day.</p>
+      </div>
+
+      <!-- Success state -->
+      <div x-show="submitted" class="bg-white rounded-2xl border border-green-200 p-10 text-center shadow-sm">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Message sent!</h2>
+        <p class="text-gray-500 mb-6">Thanks for reaching out. We'll be back to you shortly.</p>
+        <button @click="submitted = false; form = { name: '', email: '', subject: '', message: '' }"
+                class="text-brand-600 hover:text-brand-700 font-medium text-sm underline">
+          Send another message
+        </button>
+      </div>
+
+      <!-- Form -->
+      <div x-show="!submitted" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <form @submit.prevent="send" class="space-y-5">
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Your name</label>
+              <input type="text" x-model="form.name" placeholder="Alex"
+                     class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Email address <span class="text-brand-500">*</span></label>
+              <input type="email" x-model="form.email" required placeholder="you@example.com"
+                     class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">What's this about? <span class="text-brand-500">*</span></label>
+            <select x-model="form.subject" required
+                    class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white">
+              <option value="">Select a topic…</option>
+              <option value="feedback">Feedback or suggestion</option>
+              <option value="bug">Something isn't working</option>
+              <option value="data-request">Data or privacy request</option>
+              <option value="affiliate">Affiliate or partnership inquiry</option>
+              <option value="other">Something else</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Message <span class="text-brand-500">*</span></label>
+            <textarea x-model="form.message" required rows="5" placeholder="Tell us what's on your mind…"
+                      class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none"></textarea>
+          </div>
+
+          <!-- Data privacy note -->
+          <div class="bg-brand-50 border border-brand-100 rounded-xl p-4 text-xs text-brand-800 leading-relaxed">
+            Your message and email address will be used only to respond to your inquiry and won't be added to any marketing list. See our <a href="privacy.html" class="underline hover:text-brand-900">Privacy Policy</a>.
+          </div>
+
+          <button type="submit"
+                  class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
+            Send message
+          </button>
+
+        </form>
+      </div>
+
+      <!-- Alternatives -->
+      <div class="mt-8 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl border border-gray-100 p-5 text-center shadow-sm">
+          <div class="text-2xl mb-2">📬</div>
+          <div class="text-sm font-semibold text-gray-800 mb-1">Email us directly</div>
+          <a href="mailto:hello@landmarks.app" class="text-xs text-brand-600 hover:underline">hello@landmarks.app</a>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5 text-center shadow-sm">
+          <div class="text-2xl mb-2">⏱️</div>
+          <div class="text-sm font-semibold text-gray-800 mb-1">Response time</div>
+          <p class="text-xs text-gray-500">Within one business day</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-10 px-6 bg-gray-900">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        </div>
+        <span class="text-white font-semibold">Landmarks</span>
+      </div>
+      <div class="flex gap-6 text-sm text-gray-400">
+        <a href="privacy.html" class="hover:text-white transition-colors">Privacy Policy</a>
+        <a href="terms.html" class="hover:text-white transition-colors">Terms of Service</a>
+        <a href="contact-us.html" class="hover:text-white transition-colors text-white">Contact</a>
+      </div>
+      <p class="text-xs text-gray-500">© 2026 Landmarks</p>
+    </div>
+  </footer>
+
+  <script>
+    function contactFormApp() {
+      return {
+        submitted: false,
+        form: { name: '', email: '', subject: '', message: '' },
+        send() {
+          // TODO: wire to backend email (e.g. hello@landmarks.app via Resend or Formspree)
+          this.submitted = true;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+      };
+    }
+  </script>
+</body>
+</html>

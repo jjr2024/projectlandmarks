@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' } },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/store.js"></script>
+  <script src="js/email-config.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .funnel-bar { transition: width 0.6s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
+    input:focus { outline: none; box-shadow: 0 0 0 3px rgba(208,90,50,0.2); }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-100 min-h-screen" x-data="adminApp()" x-init="init()" x-cloak>
+
+  <!-- ═══ LOGIN GATE ═══════════════════════════════════════════════════════ -->
+  <div x-show="!authenticated" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="bg-gray-900 px-6 py-5 text-center">
+          <div class="inline-flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            </div>
+            <span class="font-bold text-white text-sm">Landmarks</span>
+          </div>
+          <h1 class="text-white text-lg font-bold">Admin Dashboard</h1>
+          <p class="text-gray-400 text-xs mt-1">Conversion metrics &amp; system health</p>
+        </div>
+        <form @submit.prevent="signIn" class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <input type="email" x-model="loginForm.email" placeholder="admin@landmarks.app" required
+                   class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <input type="password" x-model="loginForm.password" placeholder="Admin password" required
+                   class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm"/>
+          </div>
+          <div x-show="loginError" class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2" x-text="loginError"></div>
+          <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">Sign in</button>
+        </form>
+      </div>
+      <p class="text-center text-xs text-gray-400 mt-4">This page is not linked from the public site.</p>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD ════════════════════════════════════════════════════════ -->
+  <div x-show="authenticated" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
+
+    <!-- Top bar -->
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        </div>
+        <span class="font-bold text-white">Landmarks Admin</span>
+        <span class="bg-amber-500 text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full ml-2">INTERNAL</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <!-- Date range selector -->
+        <select x-model.number="daysBack" @change="refreshData()" class="bg-gray-800 text-gray-300 border border-gray-700 rounded-lg text-xs px-3 py-2">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="60">Last 60 days</option>
+        </select>
+        <button @click="signOut" class="text-gray-400 hover:text-red-400 text-xs font-medium transition-colors">Sign out</button>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+
+      <!-- ── KPI Cards ──────────────────────────────────────────────────── -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-white rounded-xl p-5 border border-gray-100">
+          <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Reminders Sent</div>
+          <div class="text-2xl font-bold text-gray-900" x-text="funnel.sent.toLocaleString()"></div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-100">
+          <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Opened</div>
+          <div class="text-2xl font-bold text-gray-900" x-text="funnel.opened.toLocaleString()"></div>
+          <div class="text-xs mt-1" :class="openRate >= 0.20 ? 'text-green-600' : 'text-red-500'"
+               x-text="(openRate * 100).toFixed(1) + '% open rate'"></div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-100">
+          <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Clicked</div>
+          <div class="text-2xl font-bold text-gray-900" x-text="funnel.clicked.toLocaleString()"></div>
+          <div class="text-xs mt-1 text-gray-500" x-text="(clickRate * 100).toFixed(1) + '% of opens'"></div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-gray-100">
+          <div class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Purchased</div>
+          <div class="text-2xl font-bold text-gray-900" x-text="funnel.purchased.toLocaleString()"></div>
+          <div class="text-xs mt-1 font-semibold" :class="conversionRate >= 0.10 ? 'text-green-600' : 'text-amber-500'"
+               x-text="(conversionRate * 100).toFixed(1) + '% click→purchase'">
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-brand-200 bg-brand-50">
+          <div class="text-xs text-brand-600 font-medium uppercase tracking-wider mb-1">Revenue</div>
+          <div class="text-2xl font-bold text-brand-700" x-text="'$' + funnel.revenue.toFixed(2)"></div>
+          <div class="text-xs text-brand-500 mt-1" x-text="'$' + revenuePerPurchase.toFixed(2) + ' avg commission'"></div>
+        </div>
+      </div>
+
+      <!-- ── Target benchmarks ────────────────────────────────────────── -->
+      <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <h3 class="font-semibold text-gray-900 text-sm mb-3">Target Benchmarks</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                 :class="openRate >= 0.20 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'"
+                 x-text="openRate >= 0.20 ? '✓' : '✗'"></div>
+            <div>
+              <div class="text-sm font-medium text-gray-800">Open rate &ge; 20%</div>
+              <div class="text-xs text-gray-400" x-text="(openRate * 100).toFixed(1) + '% actual'"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                 :class="conversionRate >= 0.10 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-600'"
+                 x-text="conversionRate >= 0.10 ? '✓' : '~'"></div>
+            <div>
+              <div class="text-sm font-medium text-gray-800">Click→purchase &ge; 10%</div>
+              <div class="text-xs text-gray-400" x-text="(conversionRate * 100).toFixed(1) + '% actual'"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-green-100 text-green-700">✓</div>
+            <div>
+              <div class="text-sm font-medium text-gray-800">Bounce rate &lt; 2%</div>
+              <div class="text-xs text-gray-400">0.0% (demo data)</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-green-100 text-green-700">✓</div>
+            <div>
+              <div class="text-sm font-medium text-gray-800">Complaint rate &lt; 0.1%</div>
+              <div class="text-xs text-gray-400">0.0% (demo data)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Funnel visualization ─────────────────────────────────────── -->
+      <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <h3 class="font-semibold text-gray-900 text-sm mb-4">Conversion Funnel</h3>
+        <div class="space-y-3">
+          <template x-for="step in funnelSteps" :key="step.label">
+            <div class="flex items-center gap-4">
+              <div class="w-24 text-xs font-medium text-gray-600 text-right" x-text="step.label"></div>
+              <div class="flex-1 bg-gray-100 rounded-full h-8 relative overflow-hidden">
+                <div class="funnel-bar h-full rounded-full flex items-center px-3"
+                     :style="'width:' + step.pct + '%; background-color:' + step.color"
+                     :class="step.pct > 8 ? 'justify-start' : 'justify-end'">
+                  <span class="text-xs font-bold" :class="step.pct > 8 ? 'text-white' : 'text-gray-600 ml-2'"
+                        x-text="step.count.toLocaleString() + ' (' + step.pct.toFixed(1) + '%)'"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6">
+
+        <!-- ── Breakdown by partner ─────────────────────────────────────── -->
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <h3 class="font-semibold text-gray-900 text-sm mb-4">By Affiliate Partner</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b border-gray-100">
+                  <th class="text-left py-2 font-medium text-gray-500">Partner</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Sent</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Clicked</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Purchased</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Revenue</th>
+                  <th class="text-right py-2 font-medium text-gray-500">CVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in partnerBreakdown" :key="row.name">
+                  <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-2 font-medium text-gray-800" x-text="row.name"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="row.sent"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="row.clicked"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="row.purchased"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="'$' + row.revenue.toFixed(2)"></td>
+                    <td class="py-2 text-right font-semibold" :class="row.cvr >= 10 ? 'text-green-600' : 'text-amber-500'"
+                        x-text="row.cvr.toFixed(1) + '%'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Breakdown by category ────────────────────────────────────── -->
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <h3 class="font-semibold text-gray-900 text-sm mb-4">By Gift Category</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b border-gray-100">
+                  <th class="text-left py-2 font-medium text-gray-500">Category</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Sent</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Clicked</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Purchased</th>
+                  <th class="text-right py-2 font-medium text-gray-500">Revenue</th>
+                  <th class="text-right py-2 font-medium text-gray-500">CVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in categoryBreakdown" :key="row.name">
+                  <tr class="border-b border-gray-50 hover:bg-gray-50">
+                    <td class="py-2 font-medium text-gray-800" x-text="row.name"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="row.sent"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="row.clicked"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="row.purchased"></td>
+                    <td class="py-2 text-right text-gray-600" x-text="'$' + row.revenue.toFixed(2)"></td>
+                    <td class="py-2 text-right font-semibold" :class="row.cvr >= 10 ? 'text-green-600' : 'text-amber-500'"
+                        x-text="row.cvr.toFixed(1) + '%'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Breakdown by reminder lead time ────────────────────────────── -->
+      <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <h3 class="font-semibold text-gray-900 text-sm mb-4">By Reminder Lead Time</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <template x-for="row in leadTimeBreakdown" :key="row.name">
+            <div class="border border-gray-100 rounded-xl p-4 text-center">
+              <div class="text-lg font-bold text-gray-900" x-text="row.name + '-day'"></div>
+              <div class="text-xs text-gray-400 mt-1">reminder</div>
+              <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <div class="font-bold text-gray-700" x-text="row.sent"></div>
+                  <div class="text-gray-400">sent</div>
+                </div>
+                <div>
+                  <div class="font-bold text-gray-700" x-text="row.purchased"></div>
+                  <div class="text-gray-400">purchases</div>
+                </div>
+              </div>
+              <div class="mt-2 text-sm font-bold" :class="row.cvr >= 10 ? 'text-green-600' : 'text-amber-500'"
+                   x-text="row.cvr.toFixed(1) + '% CVR'"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── Daily trend (text sparkline) ───────────────────────────────── -->
+      <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <h3 class="font-semibold text-gray-900 text-sm mb-4">Daily Activity (last <span x-text="daysBack"></span> days)</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b border-gray-100">
+                <th class="text-left py-2 font-medium text-gray-500 sticky left-0 bg-white">Date</th>
+                <th class="text-right py-2 font-medium text-gray-500 px-3">Sent</th>
+                <th class="text-right py-2 font-medium text-gray-500 px-3">Opened</th>
+                <th class="text-right py-2 font-medium text-gray-500 px-3">Clicked</th>
+                <th class="text-right py-2 font-medium text-gray-500 px-3">Purchased</th>
+                <th class="text-right py-2 font-medium text-gray-500 px-3">Visual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in dailyData.slice(-14)" :key="row.date">
+                <tr class="border-b border-gray-50 hover:bg-gray-50">
+                  <td class="py-1.5 font-medium text-gray-600 sticky left-0 bg-white" x-text="new Date(row.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'})"></td>
+                  <td class="py-1.5 text-right text-gray-600 px-3" x-text="row.sent"></td>
+                  <td class="py-1.5 text-right text-gray-600 px-3" x-text="row.opened"></td>
+                  <td class="py-1.5 text-right text-gray-600 px-3" x-text="row.clicked"></td>
+                  <td class="py-1.5 text-right text-gray-600 px-3" x-text="row.purchased"></td>
+                  <td class="py-1.5 text-right px-3">
+                    <div class="inline-flex items-end gap-px h-4">
+                      <div class="w-1.5 bg-gray-300 rounded-t-sm" :style="'height:' + Math.max(2, (row.sent / maxDailySent) * 16) + 'px'"></div>
+                      <div class="w-1.5 bg-blue-400 rounded-t-sm" :style="'height:' + Math.max(2, (row.opened / maxDailySent) * 16) + 'px'"></div>
+                      <div class="w-1.5 bg-brand-500 rounded-t-sm" :style="'height:' + Math.max(2, (row.clicked / maxDailySent) * 16) + 'px'"></div>
+                      <div class="w-1.5 bg-green-500 rounded-t-sm" :style="'height:' + Math.max(2, (row.purchased / maxDailySent) * 16) + 'px'"></div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex items-center gap-4 mt-3 text-xs text-gray-400">
+          <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 bg-gray-300 rounded-sm"></div> Sent</div>
+          <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 bg-blue-400 rounded-sm"></div> Opened</div>
+          <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 bg-brand-500 rounded-sm"></div> Clicked</div>
+          <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 bg-green-500 rounded-sm"></div> Purchased</div>
+        </div>
+      </div>
+
+      <!-- ── Deliverability checklist ───────────────────────────────────── -->
+      <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <h3 class="font-semibold text-gray-900 text-sm mb-4">Deliverability Checklist</h3>
+        <div class="grid md:grid-cols-2 gap-2">
+          <template x-for="item in deliverabilityChecklist" :key="item.id">
+            <div class="flex items-center gap-3 border border-gray-50 rounded-lg px-3 py-2.5">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                   :class="item.status === 'done' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'"
+                   x-text="item.status === 'done' ? '✓' : '○'"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-gray-700" x-text="item.label"></div>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full"
+                    :class="{
+                      'bg-blue-50 text-blue-600': item.category === 'dns',
+                      'bg-purple-50 text-purple-600': item.category === 'infra',
+                      'bg-green-50 text-green-600': item.category === 'headers',
+                      'bg-amber-50 text-amber-600': item.category === 'monitoring',
+                    }"
+                    x-text="item.category"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ── System info ────────────────────────────────────────────────── -->
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500">
+        <strong>Admin session:</strong> <span x-text="Store.admin.getSession()?.email"></span> ·
+        <strong>Conversion events in store:</strong> <span x-text="Store.conversion.getAll().length.toLocaleString()"></span> ·
+        <strong>Registered users:</strong> <span x-text="totalUsers"></span> ·
+        <strong>Data range:</strong> last <span x-text="daysBack"></span> days
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function adminApp() {
+      return {
+        authenticated: false,
+        loginForm: { email: '', password: '' },
+        loginError: '',
+
+        daysBack: 30,
+        funnel: { sent: 0, opened: 0, clicked: 0, purchased: 0, revenue: 0 },
+        dailyData: [],
+        partnerData: {},
+        categoryData: {},
+        leadTimeData: {},
+
+        // ── Auth ──────────────────────────────────────────────────────
+        init() {
+          try {
+            this.authenticated = Store.admin.isAuthenticated();
+            if (this.authenticated) {
+              this.loadDashboardData();
+            }
+          } catch (e) {
+            console.error('[Landmarks Admin] init error:', e);
+            this.authenticated = false;
+          }
+        },
+
+        signIn() {
+          this.loginError = '';
+
+          // 1. Authenticate
+          let result;
+          try {
+            result = Store.admin.signIn(this.loginForm.email, this.loginForm.password);
+          } catch (e) {
+            this.loginError = 'Sign-in failed: ' + (e.message || e);
+            return;
+          }
+
+          if (result.error) {
+            this.loginError = result.error;
+            return;
+          }
+
+          // 2. Show the dashboard immediately — don't let data-loading errors block the transition
+          this.authenticated = true;
+
+          // 3. Seed demo data + refresh on next tick so Alpine flushes the DOM first
+          this.$nextTick(() => {
+            this.loadDashboardData();
+          });
+        },
+
+        /** Shared helper: seed demo conversion data if needed, then refresh metrics. */
+        loadDashboardData() {
+          try {
+            Store.conversion.seedDemo();
+          } catch (e) {
+            console.warn('[Landmarks Admin] seedDemo failed (non-fatal):', e);
+          }
+          try {
+            this.refreshData();
+          } catch (e) {
+            console.warn('[Landmarks Admin] refreshData failed:', e);
+          }
+        },
+
+        signOut() {
+          Store.admin.signOut();
+          this.authenticated = false;
+        },
+
+        // ── Data ──────────────────────────────────────────────────────
+        refreshData() {
+          this.funnel = Store.conversion.getFunnelMetrics(this.daysBack);
+          this.dailyData = Store.conversion.getTimeSeries(this.daysBack);
+          this.partnerData = Store.conversion.getBreakdown('partner', this.daysBack);
+          this.categoryData = Store.conversion.getBreakdown('gift_category', this.daysBack);
+          this.leadTimeData = Store.conversion.getBreakdown('reminder_lead', this.daysBack);
+        },
+
+        // ── Computed ──────────────────────────────────────────────────
+        get openRate() { return this.funnel.sent ? this.funnel.opened / this.funnel.sent : 0; },
+        get clickRate() { return this.funnel.opened ? this.funnel.clicked / this.funnel.opened : 0; },
+        get conversionRate() { return this.funnel.clicked ? this.funnel.purchased / this.funnel.clicked : 0; },
+        get revenuePerPurchase() { return this.funnel.purchased ? this.funnel.revenue / this.funnel.purchased : 0; },
+        get totalUsers() {
+          try { return JSON.parse(localStorage.getItem('lm_users') || '[]').length; } catch (e) { return 0; }
+        },
+
+        get funnelSteps() {
+          const max = this.funnel.sent || 1;
+          return [
+            { label: 'Sent',      count: this.funnel.sent,      pct: 100,                                  color: '#9ca3af' },
+            { label: 'Opened',    count: this.funnel.opened,    pct: (this.funnel.opened / max) * 100,     color: '#60a5fa' },
+            { label: 'Clicked',   count: this.funnel.clicked,   pct: (this.funnel.clicked / max) * 100,    color: '#e47243' },
+            { label: 'Purchased', count: this.funnel.purchased, pct: (this.funnel.purchased / max) * 100,  color: '#22c55e' },
+          ];
+        },
+
+        get partnerBreakdown() {
+          return Object.entries(this.partnerData)
+            .map(([name, d]) => ({
+              name,
+              sent: d.sent || 0,
+              clicked: d.clicked || 0,
+              purchased: d.purchased || 0,
+              revenue: d.revenue || 0,
+              cvr: d.clicked ? ((d.purchased || 0) / d.clicked) * 100 : 0,
+            }))
+            .sort((a, b) => b.revenue - a.revenue);
+        },
+
+        get categoryBreakdown() {
+          const catLabels = { flowers: 'Flowers', wine: 'Wine', treats: 'Treats', gift_card: 'Gift Card', experiences: 'Experiences', donation: 'Donation' };
+          return Object.entries(this.categoryData)
+            .map(([name, d]) => ({
+              name: catLabels[name] || name,
+              sent: d.sent || 0,
+              clicked: d.clicked || 0,
+              purchased: d.purchased || 0,
+              revenue: d.revenue || 0,
+              cvr: d.clicked ? ((d.purchased || 0) / d.clicked) * 100 : 0,
+            }))
+            .sort((a, b) => b.revenue - a.revenue);
+        },
+
+        get leadTimeBreakdown() {
+          return Object.entries(this.leadTimeData)
+            .map(([name, d]) => ({
+              name,
+              sent: d.sent || 0,
+              clicked: d.clicked || 0,
+              purchased: d.purchased || 0,
+              revenue: d.revenue || 0,
+              cvr: d.clicked ? ((d.purchased || 0) / d.clicked) * 100 : 0,
+            }))
+            .sort((a, b) => parseInt(a.name) - parseInt(b.name));
+        },
+
+        get maxDailySent() {
+          return Math.max(1, ...this.dailyData.map(d => d.sent));
+        },
+
+        get deliverabilityChecklist() {
+          return typeof EmailConfig !== 'undefined' ? EmailConfig.complianceChecklist : [];
+        },
+      };
+    }
+  </script>
+</body>
+</html>

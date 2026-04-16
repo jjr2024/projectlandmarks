@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings – Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' } },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/store.js"></script>
+  <style>
+    .sidebar-link { transition: all 0.15s; }
+    .sidebar-link.active, .sidebar-link:hover { background: #fdf5f0; color: #d05a32; }
+    .sidebar-link.active { font-weight: 600; }
+    [x-cloak] { display: none !important; }
+    input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(208,90,50,0.2); }
+    .day-chip { transition: all 0.15s; cursor: pointer; }
+    .day-chip.selected { background: #d05a32; color: white; border-color: #d05a32; }
+    .toast { animation: slideInRight 0.3s ease, fadeOut 0.4s ease 2.2s forwards; }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50" x-data="settingsApp()" x-init="init()" x-cloak>
+
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+      <div class="p-6 border-b border-gray-100">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          </div>
+          <span class="font-bold text-gray-900">Landmarks</span>
+        </a>
+      </div>
+      <nav class="p-4 flex-1 space-y-1">
+        <a href="dashboard.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Contacts
+        </a>
+        <a href="settings.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+          Settings
+        </a>
+        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Email Preview
+          <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
+        </a>
+      </nav>
+      <div class="p-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-semibold text-sm" x-text="initials"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate" x-text="profile?.display_name || user?.email"></div>
+            <div class="text-xs text-gray-400 truncate" x-text="user?.email"></div>
+          </div>
+          <button @click="signOut" class="text-gray-400 hover:text-red-500 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 overflow-y-auto">
+      <div class="bg-white border-b border-gray-100 px-8 py-5">
+        <h1 class="text-xl font-bold text-gray-900">Settings</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Manage your account and reminder preferences</p>
+      </div>
+
+      <div class="p-8 max-w-2xl space-y-6">
+
+        <!-- Profile -->
+        <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50/50">
+            <h2 class="font-semibold text-gray-900">Profile</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Your name is used in reminder email greetings</p>
+          </div>
+          <form @submit.prevent="saveProfile" class="p-6 space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Display name</label>
+              <input type="text" x-model="form.display_name" placeholder="Your name"
+                     class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <input type="email" :value="user?.email" disabled
+                     class="w-full px-3 py-2.5 border border-gray-100 rounded-lg text-sm bg-gray-50 text-gray-400"/>
+              <p class="text-xs text-gray-400 mt-1">Email changes coming soon</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Timezone</label>
+              <select x-model="form.timezone" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all">
+                <option value="America/New_York">Eastern Time (ET)</option>
+                <option value="America/Chicago">Central Time (CT)</option>
+                <option value="America/Denver">Mountain Time (MT)</option>
+                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="America/Anchorage">Alaska (AKT)</option>
+                <option value="Pacific/Honolulu">Hawaii (HT)</option>
+                <option value="Europe/London">London (GMT/BST)</option>
+                <option value="Europe/Paris">Central Europe (CET)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="Australia/Sydney">Sydney (AEDT)</option>
+              </select>
+            </div>
+            <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">Save changes</button>
+          </form>
+        </section>
+
+        <!-- Reminder preferences -->
+        <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50/50">
+            <h2 class="font-semibold text-gray-900">Reminder Timing</h2>
+            <p class="text-xs text-gray-400 mt-0.5">When do you want to be reminded before an event?</p>
+          </div>
+          <div class="p-6">
+
+            <div class="bg-brand-50 border border-brand-100 rounded-xl p-4 mb-5 flex gap-3">
+              <span class="text-lg flex-shrink-0">📬</span>
+              <div>
+                <div class="text-sm font-semibold text-brand-800 mb-1">How reminders work</div>
+                <div class="text-xs text-brand-700 leading-relaxed">Everyone gets reminders at the times you pick below. Contacts marked as <strong>High importance</strong> get an extra reminder 21 days out so you have more time to plan.</div>
+              </div>
+            </div>
+
+            <p class="text-sm text-gray-700 mb-4">Send me a reminder <strong>N days before</strong> any event:</p>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <template x-for="day in [1, 2, 3, 5, 7, 10, 14, 21, 30]" :key="day">
+                <button type="button"
+                        @click="toggleReminderDay(day)"
+                        class="day-chip border rounded-lg px-4 py-2 text-sm font-medium"
+                        :class="form.reminder_days_before.includes(day) ? 'selected' : 'border-gray-200 text-gray-600 hover:border-brand-300'"
+                        x-text="day + (day === 1 ? ' day' : ' days')">
+                </button>
+              </template>
+            </div>
+            <div class="text-xs text-gray-400" x-show="form.reminder_days_before.length > 0"
+                 x-text="'You\'ll receive ' + form.reminder_days_before.length + ' reminder' + (form.reminder_days_before.length > 1 ? 's' : '') + ' per event: ' + form.reminder_days_before.slice().sort((a,b)=>b-a).join(' and ') + ' days before.'">
+            </div>
+            <div class="text-xs text-red-500" x-show="form.reminder_days_before.length === 0">Select at least one reminder day.</div>
+
+            <div class="mt-6 pt-5 border-t border-gray-100">
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Preferred send time</label>
+              <p class="text-xs text-gray-400 mb-3">Reminders arrive at this hour in your local timezone (<span x-text="form.timezone.split('/').pop().replace(/_/g, ' ')"></span>).</p>
+              <select x-model.number="form.preferred_send_hour" class="w-full sm:w-48 px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all">
+                <option value="6">6:00 AM</option>
+                <option value="7">7:00 AM</option>
+                <option value="8">8:00 AM</option>
+                <option value="9">9:00 AM</option>
+                <option value="10">10:00 AM</option>
+                <option value="11">11:00 AM</option>
+                <option value="12">12:00 PM</option>
+              </select>
+            </div>
+
+            <button @click="saveProfile" :disabled="form.reminder_days_before.length === 0" class="mt-4 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">Save preferences</button>
+          </div>
+        </section>
+
+        <!-- Monthly digest -->
+        <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50/50">
+            <h2 class="font-semibold text-gray-900">Monthly Preview Email</h2>
+            <p class="text-xs text-gray-400 mt-0.5">A planning email on the 1st of each month showing everything coming up</p>
+          </div>
+          <div class="p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-medium text-gray-900">Send me a monthly preview</div>
+                <div class="text-xs text-gray-500 mt-0.5">A single email at the start of each month with all upcoming events — great for ordering gifts with regular shipping.</div>
+              </div>
+              <!-- Toggle switch -->
+              <button type="button"
+                      @click="form.monthly_digest_enabled = !form.monthly_digest_enabled; saveProfile()"
+                      :class="form.monthly_digest_enabled ? 'bg-brand-600' : 'bg-gray-200'"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ml-4">
+                <span :class="form.monthly_digest_enabled ? 'translate-x-5' : 'translate-x-0'"
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"></span>
+              </button>
+            </div>
+            <a href="email-preview.html#digest" class="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline mt-3">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              Preview what this email looks like →
+            </a>
+          </div>
+        </section>
+
+        <!-- Default gift preferences -->
+        <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50/50">
+            <h2 class="font-semibold text-gray-900">Default Gift Preferences</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Used for contacts without a specific preference set — pick multiple</p>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <template x-for="opt in giftOptions" :key="opt.value">
+                <button type="button" @click="toggleDefaultGift(opt.value)"
+                        class="border rounded-xl p-3 text-left transition-all"
+                        :class="form.default_gift_categories.includes(opt.value) ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300'">
+                  <div class="text-xl mb-1" x-text="opt.emoji"></div>
+                  <div class="text-sm font-medium text-gray-800" x-text="opt.label"></div>
+                </button>
+              </template>
+            </div>
+            <button @click="saveProfile" class="mt-4 bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">Save preferences</button>
+          </div>
+        </section>
+
+        <!-- Data & Privacy -->
+        <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50/50">
+            <h2 class="font-semibold text-gray-900">Data & Privacy</h2>
+          </div>
+          <div class="p-6 space-y-4">
+            <button @click="exportData()" class="w-full flex items-center gap-3 border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors text-left">
+              <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <div>
+                <div class="font-medium text-gray-900 text-sm">Export my data</div>
+                <div class="text-xs text-gray-400 mt-0.5">Download all your contacts and events as JSON</div>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+
+            <button @click="showDeleteAccount=true" class="w-full flex items-center gap-3 border border-red-100 rounded-xl p-4 hover:bg-red-50 transition-colors text-left">
+              <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </div>
+              <div>
+                <div class="font-medium text-red-700 text-sm">Delete my account</div>
+                <div class="text-xs text-gray-400 mt-0.5">Permanently remove all data. This cannot be undone.</div>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Delete Account Modal -->
+  <div x-show="showDeleteAccount" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900">Delete your account?</h3>
+        <p class="text-sm text-gray-500 mt-2">This will permanently delete your account, all contacts, events, and settings. There is no undo.</p>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Type <strong>DELETE</strong> to confirm</label>
+        <input type="text" x-model="deleteConfirmText" placeholder="DELETE" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300"/>
+      </div>
+      <div class="flex gap-3">
+        <button @click="showDeleteAccount=false; deleteConfirmText=''" class="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        <button @click="deleteAccount()" :disabled="deleteConfirmText !== 'DELETE'"
+                class="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div x-show="toast" class="fixed bottom-6 right-6 z-50">
+    <div class="toast bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
+      <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      <span x-text="toast"></span>
+    </div>
+  </div>
+
+  <script>
+    function settingsApp() {
+      return {
+        user: null, profile: null,
+        form: { display_name: '', timezone: 'America/New_York', preferred_send_hour: 8, reminder_days_before: [7, 3], default_gift_categories: ['gift_card'], monthly_digest_enabled: true },
+        showDeleteAccount: false, deleteConfirmText: '', toast: '',
+        giftOptions: [
+          { value: 'flowers', emoji: '🌸', label: 'Flowers' },
+          { value: 'wine', emoji: '🍷', label: 'Wine' },
+          { value: 'treats', emoji: '🍫', label: 'Treats' },
+          { value: 'gift_card', emoji: '🎁', label: 'Gift Card' },
+          { value: 'experiences', emoji: '✨', label: 'Experiences' },
+          { value: 'donation', emoji: '❤️', label: 'Donation' },
+        ],
+
+        get initials() {
+          const name = this.profile?.display_name || this.user?.email || '';
+          return name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+        },
+
+        init() {
+          this.user = Store.auth.currentUser();
+          if (!this.user) { window.location.href = 'auth.html'; return; }
+          this.profile = Store.profile.get(this.user.id);
+          if (this.profile) {
+            this.form.display_name = this.profile.display_name || '';
+            this.form.timezone = this.profile.timezone || 'America/New_York';
+            this.form.preferred_send_hour = this.profile.preferred_send_hour ?? 8;
+            this.form.reminder_days_before = [...(this.profile.reminder_days_before || [7, 3])];
+            const cats = this.profile.default_gift_categories || (this.profile.default_gift_category ? [this.profile.default_gift_category] : ['gift_card']);
+            this.form.default_gift_categories = [...cats];
+            this.form.monthly_digest_enabled = this.profile.monthly_digest_enabled !== false; // default true
+          }
+        },
+
+        toggleDefaultGift(value) {
+          const idx = this.form.default_gift_categories.indexOf(value);
+          if (idx > -1) this.form.default_gift_categories.splice(idx, 1);
+          else this.form.default_gift_categories.push(value);
+        },
+
+        toggleReminderDay(day) {
+          const idx = this.form.reminder_days_before.indexOf(day);
+          if (idx > -1) {
+            if (this.form.reminder_days_before.length === 1) return; // keep at least one
+            this.form.reminder_days_before.splice(idx, 1);
+          } else {
+            this.form.reminder_days_before.push(day);
+          }
+        },
+
+        saveProfile() {
+          Store.profile.update(this.user.id, {
+            display_name: this.form.display_name,
+            timezone: this.form.timezone,
+            preferred_send_hour: this.form.preferred_send_hour,
+            reminder_days_before: this.form.reminder_days_before,
+            default_gift_categories: this.form.default_gift_categories,
+            monthly_digest_enabled: this.form.monthly_digest_enabled,
+          });
+          this.profile = Store.profile.get(this.user.id);
+          this.showToast('Settings saved!');
+        },
+
+        exportData() {
+          const contacts = Store.contacts.list(this.user.id);
+          const events = Store.events.list(this.user.id);
+          const data = { exported_at: new Date().toISOString(), profile: this.profile, contacts, events };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'landmarks-export.json'; a.click();
+          URL.revokeObjectURL(url);
+          this.showToast('Data exported!');
+        },
+
+        deleteAccount() {
+          if (this.deleteConfirmText !== 'DELETE') return;
+          const userId = this.user.id;
+          // Hard delete all user data
+          const contacts = Store.contacts.list(userId);
+          contacts.forEach(c => Store.contacts.delete(c.id));
+          // Clear profile
+          const profiles = JSON.parse(localStorage.getItem(Store.KEYS.profiles) || '[]').filter(p => p.id !== userId);
+          localStorage.setItem(Store.KEYS.profiles, JSON.stringify(profiles));
+          // Clear user
+          const users = JSON.parse(localStorage.getItem(Store.KEYS.users) || '[]').filter(u => u.id !== userId);
+          localStorage.setItem(Store.KEYS.users, JSON.stringify(users));
+          Store.auth.signOut();
+          window.location.href = 'index.html';
+        },
+
+        showToast(msg) {
+          this.toast = msg;
+          setTimeout(() => { this.toast = ''; }, 2800);
+        },
+
+        signOut() { Store.auth.signOut(); window.location.href = 'index.html'; },
+      };
+    }
+  </script>
+</body>
+</html>

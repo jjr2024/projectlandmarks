@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contacts – Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/store.js"></script>
+  <style>
+    .sidebar-link { transition: all 0.15s; }
+    .sidebar-link.active, .sidebar-link:hover { background: #fdf5f0; color: #d05a32; }
+    .sidebar-link.active { font-weight: 600; }
+    .contact-card { transition: all 0.2s; }
+    .contact-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.07); }
+    [x-cloak] { display: none !important; }
+    .modal-overlay { backdrop-filter: blur(2px); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-up { animation: slideUp 0.25s ease forwards; }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50" x-data="contactsApp()" x-init="init()" x-cloak>
+
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar (shared) -->
+    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+      <div class="p-6 border-b border-gray-100">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          </div>
+          <span class="font-bold text-gray-900">Landmarks</span>
+        </a>
+      </div>
+      <nav class="p-4 flex-1 space-y-1">
+        <a href="dashboard.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="contacts.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Contacts
+          <span class="ml-auto bg-brand-100 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full" x-text="contacts.length"></span>
+        </a>
+        <a href="settings.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+          Settings
+        </a>
+        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Email Preview
+          <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
+        </a>
+      </nav>
+      <div class="p-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-semibold text-sm" x-text="initials"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate" x-text="profile?.display_name || user?.email"></div>
+            <div class="text-xs text-gray-400 truncate" x-text="user?.email"></div>
+          </div>
+          <button @click="signOut" class="text-gray-400 hover:text-red-500 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 overflow-y-auto">
+      <div class="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">Contacts</h1>
+          <p class="text-sm text-gray-500 mt-0.5" x-text="contacts.length + ' ' + (contacts.length === 1 ? 'person' : 'people') + ' tracked'"></p>
+        </div>
+        <button @click="openAdd()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Contact
+        </button>
+      </div>
+
+      <div class="p-8">
+
+        <!-- Search + filter -->
+        <div x-show="contacts.length > 0" class="flex gap-3 mb-6">
+          <div class="relative flex-1 max-w-sm">
+            <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" x-model="search" placeholder="Search contacts…" class="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 transition-all" />
+          </div>
+          <select x-model="filterRelationship" class="border border-gray-200 rounded-lg text-sm px-3 py-2.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-300">
+            <option value="">All relationships</option>
+            <option value="family">Family</option>
+            <option value="friend">Friend</option>
+            <option value="colleague">Colleague</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="contacts.length === 0" class="text-center py-20">
+          <div class="w-20 h-20 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">No contacts yet</h2>
+          <p class="text-gray-500 max-w-sm mx-auto mb-8">Add the people whose birthdays and anniversaries you want to remember.</p>
+          <button @click="openAdd()" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add your first contact
+          </button>
+        </div>
+
+        <!-- No results -->
+        <div x-show="contacts.length > 0 && filteredContacts.length === 0" class="text-center py-12">
+          <p class="text-gray-500">No contacts match your search.</p>
+          <button @click="search = ''; filterRelationship = ''" class="text-brand-600 hover:underline text-sm mt-2">Clear filters</button>
+        </div>
+
+        <!-- Contacts grid -->
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="contact in filteredContacts" :key="contact.id">
+            <div class="contact-card bg-white rounded-xl border border-gray-100 p-5">
+              <!-- Header -->
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold"
+                       :class="avatarColor(contact.relationship)"
+                       x-text="contact.first_name[0]">
+                  </div>
+                  <div>
+                    <div class="font-semibold text-gray-900 flex items-center gap-1.5">
+                      <span x-text="contact.first_name + (contact.last_name ? ' ' + contact.last_name : '')"></span>
+                      <svg x-show="contact.high_importance" class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    </div>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+                          :class="relBadge(contact.relationship)"
+                          x-text="Store.utils.relationshipLabel(contact.relationship)">
+                    </span>
+                  </div>
+                </div>
+                <!-- Actions dropdown -->
+                <div class="relative" x-data="{ open: false }">
+                  <button @click="open = !open" @click.outside="open = false" class="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+                  </button>
+                  <div x-show="open" x-transition class="absolute right-0 top-8 w-40 bg-white rounded-xl border border-gray-100 shadow-xl z-10 py-1">
+                    <a :href="'contact.html?id=' + contact.id" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                      View & edit
+                    </a>
+                    <button @click="openEdit(contact); open = false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                      Edit
+                    </button>
+                    <button @click="confirmDelete(contact); open = false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Events for this contact -->
+              <div class="space-y-1 mb-4">
+                <template x-for="evt in eventsForContact(contact.id)" :key="evt.id">
+                  <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <span x-text="evt.event_type === 'birthday' ? '🎂' : evt.event_type === 'anniversary' ? '💕' : '📅'"></span>
+                    <span x-text="Store.utils.eventTypeLabel(evt.event_type)"></span>
+                    <span class="text-gray-400">·</span>
+                    <span x-text="Store.utils.formatDate(evt.month, evt.day)"></span>
+                  </div>
+                </template>
+                <div x-show="eventsForContact(contact.id).length === 0" class="text-sm text-gray-400 italic">No events yet</div>
+              </div>
+
+              <!-- Gift pref + budget -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <div class="text-xs text-gray-500" x-text="Store.utils.giftLabelsForContact(contact, profile)"></div>
+                  <template x-if="contact.budget_tier">
+                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium"
+                          x-text="Store.utils.budgetLabel(contact.budget_tier)">
+                    </span>
+                  </template>
+                </div>
+                <a :href="'contact.html?id=' + contact.id" class="text-xs text-brand-600 hover:underline font-medium flex-shrink-0">
+                  Manage →
+                </a>
+              </div>
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"
+       style="background: rgba(0,0,0,0.4)"
+       @click.self="closeModal()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md slide-up" @click.stop>
+      <div class="px-6 py-5 border-b flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900" x-text="editingId ? 'Edit Contact' : 'Add Contact'"></h2>
+        <button @click="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form @submit.prevent="saveContact" class="p-6 space-y-5">
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">First name <span class="text-red-500">*</span></label>
+            <input type="text" x-model="form.first_name" required placeholder="Sarah"
+                   class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Last name</label>
+            <input type="text" x-model="form.last_name" placeholder="Chen"
+                   class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Relationship</label>
+          <select x-model="form.relationship" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300">
+            <option value="family">Family</option>
+            <option value="friend">Friend</option>
+            <option value="colleague">Colleague</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Gift preferences <span class="text-gray-400 font-normal">(pick multiple)</span></label>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="opt in [{v:'flowers',l:'🌸 Flowers'},{v:'wine',l:'🍷 Wine'},{v:'treats',l:'🍫 Treats'},{v:'gift_card',l:'🎁 Gift Card'},{v:'experiences',l:'✨ Experiences'},{v:'donation',l:'❤️ Donation'}]" :key="opt.v">
+              <button type="button" @click="toggleFormGift(opt.v)"
+                      :class="form.gift_categories.includes(opt.v) ? 'bg-brand-600 text-white border-brand-600' : 'border-gray-200 text-gray-600 hover:border-brand-300'"
+                      class="border rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" x-text="opt.l">
+              </button>
+            </template>
+          </div>
+          <input type="text" x-model="form.gift_other" maxlength="100" placeholder="Other: books, board games…"
+                 class="w-full mt-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Gift budget <span class="text-gray-400 font-normal">(optional)</span></label>
+          <div class="flex gap-2">
+            <template x-for="opt in [{v:'',l:'Any'},{v:'low',l:'Under $30'},{v:'mid',l:'$30–75'},{v:'high',l:'$75+'}]" :key="opt.v">
+              <button type="button" @click="form.budget_tier = opt.v"
+                      :class="form.budget_tier === opt.v ? 'bg-brand-600 text-white border-brand-600' : 'border-gray-200 text-gray-600 hover:border-brand-300'"
+                      class="border rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" x-text="opt.l">
+              </button>
+            </template>
+          </div>
+          <p class="text-xs text-gray-400 mt-1.5">Helps us show you gift ideas in the right price range.</p>
+        </div>
+
+        <div>
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="checkbox" x-model="form.high_importance"
+                   class="w-4.5 h-4.5 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer" />
+            <span class="text-sm font-medium text-gray-700">High importance</span>
+            <span class="relative group/tip">
+              <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="invisible group-hover/tip:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 leading-relaxed z-50 shadow-lg">
+                Adds an extra reminder farther from the event date so you have more time to plan the perfect gift.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Notes <span class="text-gray-400 font-normal">(optional)</span></label>
+          <textarea x-model="form.notes" rows="2" placeholder="e.g. loves dark chocolate, allergic to nuts…"
+                    class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" @click="closeModal()" class="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+          <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors" x-text="editingId ? 'Save changes' : 'Add contact'"></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirm -->
+  <div x-show="deleteTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       style="background: rgba(0,0,0,0.4)" @click.self="deleteTarget = null">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 slide-up">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">Delete contact?</h3>
+        <p class="text-gray-500 text-sm mt-2">This will permanently delete <strong x-text="deleteTarget?.first_name"></strong> and all their events. This can't be undone.</p>
+      </div>
+      <div class="flex gap-3">
+        <button @click="deleteTarget = null" class="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+        <button @click="doDelete()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function contactsApp() {
+      return {
+        user: null, profile: null,
+        contacts: [], allEvents: [],
+        search: '', filterRelationship: '',
+        showModal: false, editingId: null, deleteTarget: null,
+        form: { first_name: '', last_name: '', relationship: 'friend', gift_categories: [], gift_other: '', high_importance: false, budget_tier: '', notes: '' },
+
+        get initials() {
+          const name = this.profile?.display_name || this.user?.email || '';
+          return name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+        },
+        get filteredContacts() {
+          return this.contacts.filter(c => {
+            const q = this.search.toLowerCase();
+            const nameMatch = !q || (c.first_name + ' ' + c.last_name).toLowerCase().includes(q);
+            const relMatch = !this.filterRelationship || c.relationship === this.filterRelationship;
+            return nameMatch && relMatch;
+          });
+        },
+        eventsForContact(contactId) {
+          return this.allEvents.filter(e => e.contact_id === contactId);
+        },
+
+        init() {
+          this.user = Store.auth.currentUser();
+          if (!this.user) { window.location.href = 'auth.html'; return; }
+          this.profile = Store.profile.get(this.user.id);
+          this.loadData();
+          // Auto-open add form if ?new=1
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('new') === '1') setTimeout(() => this.openAdd(), 200);
+        },
+        loadData() {
+          this.contacts = Store.contacts.list(this.user.id);
+          this.allEvents = Store.events.list(this.user.id);
+        },
+        openAdd() {
+          this.editingId = null;
+          this.form = { first_name: '', last_name: '', relationship: 'friend', gift_categories: [], gift_other: '', budget_tier: '', notes: '' };
+          this.showModal = true;
+        },
+        openEdit(contact) {
+          this.editingId = contact.id;
+          this.form = { first_name: contact.first_name, last_name: contact.last_name, relationship: contact.relationship, gift_categories: [...(contact.gift_categories || [])], gift_other: contact.gift_other || '', high_importance: !!contact.high_importance, budget_tier: contact.budget_tier || '', notes: contact.notes };
+          this.showModal = true;
+        },
+        closeModal() { this.showModal = false; },
+        toggleFormGift(value) {
+          const idx = this.form.gift_categories.indexOf(value);
+          if (idx > -1) this.form.gift_categories.splice(idx, 1);
+          else this.form.gift_categories.push(value);
+        },
+        saveContact() {
+          if (!this.form.first_name.trim()) return;
+          if (this.editingId) {
+            Store.contacts.update(this.editingId, this.form);
+          } else {
+            Store.contacts.create(this.user.id, this.form);
+          }
+          this.loadData();
+          this.closeModal();
+        },
+        confirmDelete(contact) { this.deleteTarget = contact; },
+        doDelete() {
+          if (!this.deleteTarget) return;
+          Store.contacts.delete(this.deleteTarget.id);
+          this.deleteTarget = null;
+          this.loadData();
+        },
+        signOut() { Store.auth.signOut(); window.location.href = 'index.html'; },
+
+        avatarColor(rel) {
+          return {
+            family: 'bg-pink-100 text-pink-700',
+            friend: 'bg-blue-100 text-blue-700',
+            colleague: 'bg-amber-100 text-amber-700',
+            other: 'bg-gray-100 text-gray-700',
+          }[rel] || 'bg-brand-100 text-brand-700';
+        },
+        relBadge(rel) {
+          return {
+            family: 'bg-pink-50 text-pink-700',
+            friend: 'bg-blue-50 text-blue-700',
+            colleague: 'bg-amber-50 text-amber-700',
+            other: 'bg-gray-100 text-gray-600',
+          }[rel] || 'bg-brand-50 text-brand-700';
+        },
+      };
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard – Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/store.js"></script>
+  <style>
+    .gradient-text { background: linear-gradient(135deg, #d05a32, #ed8c5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sidebar-link { transition: all 0.15s; }
+    .sidebar-link.active, .sidebar-link:hover { background: #fdf5f0; color: #d05a32; }
+    .sidebar-link.active { font-weight: 600; }
+    .reminder-card { transition: all 0.2s; }
+    .reminder-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-1px); }
+    .badge-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-soon { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+    .badge-upcoming { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50" x-data="dashboardApp()" x-init="init()">
+
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+      <!-- Logo -->
+      <div class="p-6 border-b border-gray-100">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+            </svg>
+          </div>
+          <span class="font-bold text-gray-900">Landmarks</span>
+        </a>
+      </div>
+
+      <!-- Nav -->
+      <nav class="p-4 flex-1 space-y-1">
+        <a href="dashboard.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Contacts
+          <span class="ml-auto bg-brand-100 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full" x-text="contactCount"></span>
+        </a>
+        <a href="settings.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+          Settings
+        </a>
+        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Email Preview
+          <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
+        </a>
+      </nav>
+
+      <!-- User -->
+      <div class="p-4 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-semibold text-sm" x-text="initials"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate" x-text="profile?.display_name || user?.email"></div>
+            <div class="text-xs text-gray-400 truncate" x-text="user?.email"></div>
+          </div>
+          <button @click="signOut" class="text-gray-400 hover:text-red-500 transition-colors" title="Sign out">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto">
+
+      <!-- Header -->
+      <div class="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">Dashboard</h1>
+          <p class="text-sm text-gray-500 mt-0.5" x-text="greetingLine"></p>
+        </div>
+        <a href="contacts.html?new=1"
+           class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Contact
+        </a>
+      </div>
+
+      <div class="p-8 space-y-8">
+
+        <!-- Empty state -->
+        <div x-show="!loading && contactCount === 0" class="text-center py-20 fade-in">
+          <div class="w-20 h-20 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">Add your first contact</h2>
+          <p class="text-gray-500 max-w-sm mx-auto mb-8">Start by adding the people whose birthdays and anniversaries you never want to miss.</p>
+          <a href="contacts.html?new=1" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add your first contact
+          </a>
+        </div>
+
+        <!-- Content (when contacts exist) -->
+        <template x-if="contactCount > 0">
+          <div class="space-y-8 fade-in">
+
+            <!-- Stats row -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="bg-white rounded-xl p-5 border border-gray-100">
+                <div class="text-3xl font-bold text-gray-900" x-text="contactCount"></div>
+                <div class="text-sm text-gray-500 mt-1">Contacts</div>
+              </div>
+              <div class="bg-white rounded-xl p-5 border border-gray-100">
+                <div class="text-3xl font-bold text-gray-900" x-text="eventCount"></div>
+                <div class="text-sm text-gray-500 mt-1">Events tracked</div>
+              </div>
+              <div class="bg-white rounded-xl p-5 border border-gray-100">
+                <div class="text-3xl font-bold text-amber-500" x-text="urgentCount"></div>
+                <div class="text-sm text-gray-500 mt-1">Coming up soon</div>
+                <div class="text-xs text-gray-400">(within 7 days)</div>
+              </div>
+              <div class="bg-white rounded-xl p-5 border border-gray-100">
+                <div class="text-3xl font-bold text-brand-600" x-text="thisMonthCount"></div>
+                <div class="text-sm text-gray-500 mt-1">This month</div>
+              </div>
+            </div>
+
+            <!-- Upcoming reminders -->
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Upcoming reminders</h2>
+                <div class="flex gap-2">
+                  <button @click="filterDays = 30" :class="filterDays === 30 ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'" class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">Next 30 days</button>
+                  <button @click="filterDays = 90" :class="filterDays === 90 ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'" class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">Next 90 days</button>
+                </div>
+              </div>
+
+              <!-- No upcoming -->
+              <div x-show="filteredReminders.length === 0" class="bg-white rounded-xl border border-gray-100 p-10 text-center">
+                <div class="text-4xl mb-3">🎉</div>
+                <p class="text-gray-500">No upcoming events in the next <span x-text="filterDays"></span> days.</p>
+                <p class="text-sm text-gray-400 mt-1">You're all caught up!</p>
+              </div>
+
+              <!-- Reminder cards -->
+              <div class="space-y-3">
+                <template x-for="item in filteredReminders" :key="item.event.id">
+                  <div class="reminder-card bg-white rounded-xl border border-gray-100 p-5 flex items-center gap-5">
+                    <!-- Avatar -->
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0"
+                         :class="{
+                           'bg-red-100 text-red-600': item.days_until <= 3,
+                           'bg-amber-100 text-amber-600': item.days_until > 3 && item.days_until <= 7,
+                           'bg-brand-100 text-brand-600': item.days_until > 7
+                         }"
+                         x-text="item.contact.first_name[0]">
+                    </div>
+
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-semibold text-gray-900" x-text="item.contact.first_name + ' ' + item.contact.last_name"></span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                              :class="{
+                                'badge-urgent': item.days_until <= 3,
+                                'badge-soon': item.days_until > 3 && item.days_until <= 7,
+                                'badge-upcoming': item.days_until > 7
+                              }"
+                              x-text="Store.utils.daysUntilLabel(item.days_until)">
+                        </span>
+                      </div>
+                      <div class="text-sm text-gray-500 mt-0.5">
+                        <span x-text="Store.utils.eventTypeLabel(item.event.event_type)"></span>
+                        · <span x-text="Store.utils.formatDate(item.event.month, item.event.day)"></span>
+                      </div>
+                      <div class="text-xs text-gray-400 mt-0.5" x-text="Store.utils.relationshipLabel(item.contact.relationship)"></div>
+                    </div>
+
+                    <!-- Gift pref -->
+                    <div class="hidden md:block text-sm text-gray-500 text-right">
+                      <div x-text="Store.utils.giftLabelsForContact(item.contact, profile)"></div>
+                      <div class="text-xs text-gray-400 mt-0.5">Gift preference</div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <a :href="'contact.html?id=' + item.contact.id"
+                         class="text-xs bg-brand-50 hover:bg-brand-100 text-brand-700 font-medium px-3 py-1.5 rounded-lg transition-colors">
+                        View
+                      </a>
+                      <a href="email-preview.html"
+                         class="text-xs bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium px-3 py-1.5 rounded-lg transition-colors">
+                        Preview email
+                      </a>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Quick add -->
+            <div class="bg-brand-50 border border-brand-200 rounded-xl p-6 flex items-center justify-between gap-6">
+              <div>
+                <h3 class="font-semibold text-brand-900">Got someone new to add?</h3>
+                <p class="text-sm text-brand-700 mt-1">Takes 30 seconds per contact. Your future self will thank you.</p>
+              </div>
+              <a href="contacts.html?new=1" class="flex-shrink-0 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap">
+                Add contact
+              </a>
+            </div>
+
+          </div>
+        </template>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function dashboardApp() {
+      return {
+        user: null,
+        profile: null,
+        upcomingReminders: [],
+        filterDays: 30,
+        loading: true,
+
+        get initials() {
+          const name = this.profile?.display_name || this.user?.email || '';
+          return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        },
+        get greetingLine() {
+          const hour = new Date().getHours();
+          const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+          const name = this.profile?.display_name?.split(' ')[0] || '';
+          return `${greeting}${name ? ', ' + name : ''} — here's what's coming up.`;
+        },
+        get contactCount() {
+          return Store.contacts.list(this.user?.id || '').length;
+        },
+        get eventCount() {
+          return Store.events.list(this.user?.id || '').length;
+        },
+        get filteredReminders() {
+          return Store.reminders.upcoming(this.user?.id || '', this.filterDays);
+        },
+        get urgentCount() {
+          return Store.reminders.upcoming(this.user?.id || '', 7).length;
+        },
+        get thisMonthCount() {
+          const now = new Date();
+          return Store.reminders.upcoming(this.user?.id || '', 60).filter(r => {
+            const d = new Date(r.next_date);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          }).length;
+        },
+
+        init() {
+          this.user = Store.auth.currentUser();
+          if (!this.user) { window.location.href = 'auth.html'; return; }
+          this.profile = Store.profile.get(this.user.id);
+          this.loading = false;
+        },
+
+        signOut() {
+          Store.auth.signOut();
+          window.location.href = 'index.html';
+        },
+      };
+    }
+  </script>
+</body>
+</html>
