@@ -107,6 +107,9 @@
             Your message and email address will be used only to respond to your inquiry and won't be added to any marketing list. See our <a href="privacy.html" class="underline hover:text-brand-900">Privacy Policy</a>.
           </div>
 
+          <!-- Prototype notice -->
+          <p class="text-xs text-gray-400 italic">This form is a prototype preview — messages are not delivered yet. To reach us now, email <a href="mailto:hello@landmarks.app" class="text-brand-600 hover:underline">hello@landmarks.app</a> directly.</p>
+
           <button type="submit"
                   class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
             Send message
@@ -156,7 +159,8 @@
         submitted: false,
         form: { name: '', email: '', subject: '', message: '' },
         send() {
-          // TODO: wire to backend email (e.g. hello@landmarks.app via Resend or Formspree)
+          // Prototype: no backend wired yet. Shows success state for UX demo.
+          // Production: wire to hello@landmarks.app via Resend or Formspree.
           this.submitted = true;
           window.scrollTo({ top: 0, behavior: 'smooth' });
         },

@@ -54,7 +54,7 @@ These are the eight dimensions a target user (busy professional, 24–40, time-c
 
 - **Best-in-class:** None of the reminder apps do this well. The theoretical best is an AI concierge fed a freeform note ("Mike, hikes, reads fantasy, allergic to tree nuts") plus past gift history.
 - **Landmarks today:** A `notes` field and a `gift_category` override exist in the schema but are not used in curation logic.
-- **Gap:** Large — but it's also Landmarks' single largest untapped advantage. The schema is already right; the missing layer is LLM-based recommendation that uses the notes field. This is weeks of work, not months.
+- **Gap:** Large — but it's also Landmarks' single largest untapped advantage. The schema is already right; the missing layer is a scoring-based recommendation engine that uses keyword-extracted tags from the notes field, relationship/event affinities, click history, and purchase feedback to rank gift catalog items. No LLM required — a deterministic scoring function with zero per-query cost is the right architecture for an affiliate-funded free service. This is weeks of work, not months.
 
 ### Dimension 5 — Contact & event management
 *How rich is the underlying data model, and how painful is day-to-day maintenance?*
@@ -72,7 +72,7 @@ These are the eight dimensions a target user (busy professional, 24–40, time-c
   - Per-gift ($5–$45 + shipping): Postable, Greetabl
   - Subscription-per-recipient ($30–$60/mo): Giftagram
 - **Landmarks:** Free to the user, affiliate commission on purchases (target avg $8–$12/order).
-- **Assessment:** This is Landmarks' strongest positioning dimension. The affiliate model is genuinely aligned — revenue only flows when the user gets real value (a gift actually arrives). It sidesteps subscription-fatigue and the "but Google Calendar is free" objection. The risk is purely revenue concentration: affiliate terms can change (Amazon has cut rates three times since 2017), and a 25% click-to-purchase rate is a hopeful baseline.
+- **Assessment:** This is Landmarks' strongest positioning dimension. The affiliate model is genuinely aligned — revenue only flows when the user gets real value (a gift actually arrives). It sidesteps subscription-fatigue and the "but Google Calendar is free" objection. The risk is purely revenue concentration: affiliate terms can change (Amazon has cut rates three times since 2017), and a realistic 10% click-to-purchase rate (not 25% — see Section 5) is the planning baseline.
 - **Gap:** None on positioning. The work is in execution — diversifying partners, optimizing email CTR, and building a credible Plan B if any single partner cuts commissions.
 
 ### Dimension 7 — Privacy posture
@@ -114,7 +114,7 @@ Ratings: ● strong, ◐ partial/weak, ○ absent. Landmarks column reflects the
 
 Ordered by expected impact on conversion to purchase (the single metric that determines whether this business works).
 
-**1. Make gift curation actually smart.** Right now, a category-to-affiliate-URL lookup table is not curation, and a user who has tried Etsy Gift Mode or GiftList will see the difference instantly. Use the existing `notes` field plus `relationship` and `event_type` as input to an LLM-generated shortlist that pulls from the affiliate partner catalogs. Two emails for a single user — one generic, one personalized — are effectively different products. Budget this as the single biggest pre-launch investment.
+**1. Make gift curation actually smart.** Right now, a category-to-affiliate-URL lookup table is not curation, and a user who has tried Etsy Gift Mode or GiftList will see the difference instantly. Build a scoring-based recommendation engine: a structured gift catalog with tags, a keyword-to-tag parser for the `notes` field, and a weighted scoring function that combines category match, tag match, relationship/event-type affinity, click history, purchase history, price-tier inference, seasonality, and diversity constraints. No LLM — per-query cost must be zero for a free affiliate-funded service. The scoring system is deterministic, debuggable, and improves automatically as behavioral data accumulates. Two emails for a single user — one generic, one with scoring-driven personalization — are effectively different products. Budget this as the single biggest pre-launch investment.
 
 **2. Add one-click contact import.** CSV upload, Google Contacts OAuth, and vCard paste. A user with 30 friends should not be hand-typing 30 birthdays. This alone is probably the difference between "finished onboarding" and "closed the tab."
 
@@ -128,7 +128,7 @@ Ordered by expected impact on conversion to purchase (the single metric that det
 
 **7. Add lightweight group coordination.** Not a full Elfster clone — just "share this gift idea with one other person" (a link that lets a partner/sibling see what you're considering for your mother's birthday). Elfster and Giftster own group gifting, but the professional-audience slice of that is a tiny feature, not a separate product.
 
-**8. Track click-to-purchase by gift category and iterate weekly.** The 25% click-to-purchase assumption in the blueprint is the single number that determines whether this is a viable business. Build a minimal dashboard that shows the rate by affiliate partner, gift category, and reminder timing (7-day vs 3-day) from day one. Without this, all optimization is guesswork.
+**8. Track click-to-purchase by gift category and iterate weekly.** The click-to-purchase rate (realistic baseline: 10%) is the single number that determines whether this is a viable business. Build a minimal dashboard that shows the rate by affiliate partner, gift category, and reminder timing (7-day vs 3-day) from day one. Without this, all optimization is guesswork.
 
 **What to explicitly *not* do (yet).** Don't build a native mobile app — a responsive web + email is right for this audience and budget. Don't add SMS-primary reminders — that changes cost structure and deliverability complexity for marginal coverage gain. Don't add AI gift autonomy ("we'll just send something") — reputational risk is asymmetric and the margin doesn't support it at MVP. Don't add a subscription tier — one of Landmarks' clearest advantages is being the non-subscription option in a subscription-fatigued category.
 
@@ -138,9 +138,9 @@ Ordered by expected impact on conversion to purchase (the single metric that det
 
 The affiliate model is the right call for this product and audience, with three qualifications.
 
-The **structural case is strong**: zero friction to adopt, aligned incentives, cash-flow positive at low user counts, no churn management, no dunning, no billing support. The blueprint's math is directionally correct — at 1,500 users with 8 contacts each and a 25% click-to-purchase rate, ~$2,000–3,000/month is achievable.
+The **structural case is strong**: zero friction to adopt, aligned incentives, cash-flow positive at low user counts, no churn management, no dunning, no billing support. At 1,500 users with 8 contacts each and a realistic 10% click-to-purchase rate, ~$1,000/month is achievable — lower than the original blueprint's projection but still comfortably above infrastructure costs.
 
-**The 25% click-to-purchase rate is the load-bearing assumption**, and it's optimistic. Well-designed transactional emails in retail run 15–25% CTR; click-to-*purchase* (a completed transaction at a partner site, attributed correctly, with no cart abandonment) is typically 30–50% of that number. A more honest baseline is probably 8–12% click-to-purchase at MVP quality, climbing toward 20%+ as curation gets smarter. Plan the unit economics at 10%, not 25%.
+**The click-to-purchase rate is the load-bearing assumption.** Well-designed transactional emails in retail run 15–25% CTR; click-to-*purchase* (a completed transaction at a partner site, attributed correctly, with no cart abandonment) is typically 30–50% of that number. A realistic baseline is 8–12% click-to-purchase at MVP quality, climbing toward 15–20% as the scoring-based curation engine accumulates click and purchase data and the recommendation weights are tuned. The blueprint's revenue projections have been updated to use 10% as the planning baseline.
 
 **Affiliate revenue is not defensible** in the way SaaS revenue is. Any partner can change commission rates or close their program. Three mitigations, in order of importance: (1) diversify across 6+ partners before launch; (2) own the relationship with the user (email list) so you can route around any single partner; (3) build gift-category depth such that substitution across partners is low-pain.
 

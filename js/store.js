@@ -12,6 +12,7 @@ const Store = (() => {
     contacts: 'lm_contacts',
     events: 'lm_events',
     reminderLog: 'lm_reminder_log',
+    conversion: 'lm_conversion_events',
   };
 
   const get = (key) => {
@@ -114,7 +115,7 @@ const Store = (() => {
         first_name: data.first_name,
         last_name: data.last_name || '',
         relationship: data.relationship || 'friend',
-        gift_categories: Array.isArray(data.gift_categories) ? data.gift_categories : (data.gift_category ? [data.gift_category] : []),
+        gift_categories: Array.isArray(data.gift_categories) ? data.gift_categories : [],
         gift_other: data.gift_other || '',
         high_importance: !!data.high_importance,
         budget_tier: data.budget_tier || null,  // null = any budget
@@ -167,6 +168,8 @@ const Store = (() => {
         year_started: data.year_started ? parseInt(data.year_started) : null,
         one_time: !!data.one_time,   // true = don't repeat (e.g. graduation)
         event_year: data.event_year ? parseInt(data.event_year) : null,  // the specific year for one-time events
+        high_importance: !!data.high_importance,  // extra early reminder for this event
+        suppress_gifts: !!data.suppress_gifts,   // skip gift suggestions for this event
         created_at: now(),
       };
       all.push(event);
@@ -311,7 +314,6 @@ const Store = (() => {
         gift_card: '🎁 Gift Card',
         experiences: '✨ Experience',
         donation: '❤️ Donation',
-        remind_only: '🔔 Just remind me',
       }[cat] || cat;
     },
     /** Accepts a single string, an array, or a contact object with gift_categories */
@@ -324,8 +326,8 @@ const Store = (() => {
     },
     /** Convenience: pass a contact and optional profile, get a display string */
     giftLabelsForContact(contact, profile) {
-      const cats = contact?.gift_categories || (contact?.gift_category ? [contact.gift_category] : []);
-      const defaults = profile?.default_gift_categories || (profile?.default_gift_category ? [profile.default_gift_category] : []);
+      const cats = contact?.gift_categories || [];
+      const defaults = profile?.default_gift_categories || [];
       const useCats = cats.length > 0 ? cats : defaults;
       const otherText = contact?.gift_other || '';
       return utils.giftLabel(useCats, otherText);
@@ -340,12 +342,21 @@ const Store = (() => {
       return { low: '💵', mid: '💳', high: '💎' }[tier] || null;
     },
     /**
-     * Reminder schedule based on importance flag.
-     * High importance: 21, 7, and 3 days before (more lead time to plan).
-     * Normal: 7 and 3 days before.
+     * Reminder schedule using the user's saved preference (from Settings),
+     * with an extra 21-day lead added for high-importance events.
+     * Falls back to [7, 3] if no profile preference is stored.
+     *
+     * @param {object} event   – event object
+     * @param {object} contact – contact object
+     * @param {object} [prof]  – profile object (optional; avoids extra lookup if caller already has it)
      */
-    reminderDaysForContact(contact) {
-      return contact?.high_importance ? [21, 7, 3] : [7, 3];
+    reminderDaysForEvent(event, contact, prof) {
+      const baseDays = (prof?.reminder_days_before?.length > 0)
+        ? [...prof.reminder_days_before]
+        : [7, 3];
+      const important = event?.high_importance || contact?.high_importance;
+      if (important && !baseDays.includes(21)) baseDays.push(21);
+      return baseDays.sort((a, b) => b - a);
     },
     daysUntilLabel(days) {
       if (days === 0) return 'Today!';
@@ -415,11 +426,12 @@ const Store = (() => {
      * Sorted by send date (soonest first). Used by the admin dashboard.
      */
     getFullSchedule(userId, days = 90) {
+      const prof = profile.get(userId);
       const upcoming = reminders.upcoming(userId, days);
       const schedule = [];
 
       for (const item of upcoming) {
-        const reminderDays = utils.reminderDaysForContact(item.contact);
+        const reminderDays = utils.reminderDaysForEvent(item.event, item.contact, prof);
         for (const db of reminderDays) {
           const sendInfo = scheduler.getScheduledSendTime(userId, item.event, db);
           if (!sendInfo) continue;
@@ -439,26 +451,18 @@ const Store = (() => {
   // Here: localStorage with seeded demo data so the admin dashboard has
   // something to show.
   //
-  const CONVERSION_KEY = 'lm_conversion_events';
-
   const conversion = {
-    KEY: CONVERSION_KEY,
-
-    log(data) {
-      const all = get(CONVERSION_KEY);
-      all.push({ id: uuid(), timestamp: now(), ...data });
-      set(CONVERSION_KEY, all);
-    },
+    KEY: KEYS.conversion,
 
     getAll() {
-      return get(CONVERSION_KEY);
+      return get(KEYS.conversion);
     },
 
     /** Aggregate funnel metrics for the admin dashboard. */
     getFunnelMetrics(daysBack = 30) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - daysBack);
-      const all = get(CONVERSION_KEY).filter(e => new Date(e.timestamp) >= cutoff);
+      const all = get(KEYS.conversion).filter(e => new Date(e.timestamp) >= cutoff);
 
       const sent     = all.filter(e => e.type === 'sent').length;
       const opened   = all.filter(e => e.type === 'opened').length;
@@ -475,7 +479,7 @@ const Store = (() => {
     getBreakdown(groupKey, daysBack = 30) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - daysBack);
-      const all = get(CONVERSION_KEY).filter(e => new Date(e.timestamp) >= cutoff);
+      const all = get(KEYS.conversion).filter(e => new Date(e.timestamp) >= cutoff);
 
       const groups = {};
       for (const evt of all) {
@@ -491,7 +495,7 @@ const Store = (() => {
     getTimeSeries(daysBack = 30) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - daysBack);
-      const all = get(CONVERSION_KEY).filter(e => new Date(e.timestamp) >= cutoff);
+      const all = get(KEYS.conversion).filter(e => new Date(e.timestamp) >= cutoff);
 
       const series = {};
       for (let i = daysBack; i >= 0; i--) {
@@ -509,7 +513,7 @@ const Store = (() => {
 
     /** Seed realistic demo data for the admin dashboard preview. */
     seedDemo() {
-      if (get(CONVERSION_KEY).length > 0) return; // already seeded
+      if (get(KEYS.conversion).length > 0) return; // already seeded
 
       const partners  = ['Bouqs', '1-800-Flowers', 'Wine.com', 'Amazon', 'Sugarfina', 'TodayTix', 'Nordstrom', 'Starbucks'];
       const categories = ['flowers', 'wine', 'treats', 'gift_card', 'experiences'];
@@ -551,7 +555,80 @@ const Store = (() => {
         }
       }
 
-      set(CONVERSION_KEY, events);
+      set(KEYS.conversion, events);
+    },
+  };
+
+  // ── Admin gift overrides ───────────────────────────────────────────────────
+  // Stores admin-chosen gift replacements for specific upcoming emails.
+  // Key format: `${userId}::${eventId}::${daysBefore}`
+  // Value: array of gift objects that replace the auto-selected ones.
+  const OVERRIDE_KEY = 'lm_admin_gift_overrides';
+
+  const adminQueue = {
+    /**
+     * Returns every pending reminder email across ALL users for the next N days.
+     * Each item includes user, profile, contact, event, send info, and gift data.
+     * Sorted by sendDate ascending.
+     */
+    getPendingEmails(days = 7) {
+      const allUsers = get(KEYS.users);
+      const pending = [];
+
+      for (const user of allUsers) {
+        const prof = profile.get(user.id);
+        const schedule = scheduler.getFullSchedule(user.id, days + 30);
+
+        // Filter to emails whose send date is within the next N days
+        const today = new Date();
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() + days);
+        const todayStr = today.toISOString().split('T')[0];
+        const cutoffStr = cutoff.toISOString().split('T')[0];
+
+        for (const item of schedule) {
+          if (item.sendDate >= todayStr && item.sendDate <= cutoffStr) {
+            const overrideKey = `${user.id}::${item.event.id}::${item.days_before}`;
+            const override = adminQueue.getOverride(overrideKey);
+            pending.push({
+              ...item,
+              user,
+              profile: prof,
+              overrideKey,
+              hasOverride: !!override,
+              overriddenGifts: override,
+            });
+          }
+        }
+      }
+
+      pending.sort((a, b) => a.sendDate.localeCompare(b.sendDate));
+      return pending;
+    },
+
+    /** Get all overrides */
+    getAllOverrides() {
+      try { return JSON.parse(localStorage.getItem(OVERRIDE_KEY)) || {}; } catch { return {}; }
+    },
+
+    /** Get override for a specific email */
+    getOverride(key) {
+      const all = adminQueue.getAllOverrides();
+      return all[key] || null;
+    },
+
+    /** Set override for a specific email */
+    setOverride(key, gifts) {
+      const all = adminQueue.getAllOverrides();
+      all[key] = gifts;
+      localStorage.setItem(OVERRIDE_KEY, JSON.stringify(all));
+    },
+
+    /** Remove override for a specific email */
+    removeOverride(key) {
+      const all = adminQueue.getAllOverrides();
+      delete all[key];
+      localStorage.setItem(OVERRIDE_KEY, JSON.stringify(all));
     },
   };
 
@@ -590,5 +667,65 @@ const Store = (() => {
     },
   };
 
-  return { auth, profile, contacts, events, reminders, scheduler, conversion, admin, seed, utils, KEYS };
+  // ── Calendar feed (.ics) ────────────────────────────────────────────────────
+  const calendar = {
+    /**
+     * Generates an iCalendar (.ics) string for all of a user's events.
+     * In production this would be served at a per-user URL endpoint.
+     * Here it generates the text for download or data-URL subscription.
+     */
+    generateICS(userId) {
+      const userEvents = events.list(userId);
+      const contactList = contacts.list(userId);
+
+      const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Landmarks//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'X-WR-CALNAME:Landmarks Dates',
+        'X-WR-CALDESC:Birthdays and important dates from Landmarks',
+      ];
+
+      for (const evt of userEvents) {
+        const contact = contactList.find(c => c.id === evt.contact_id);
+        if (!contact) continue;
+
+        const name = contact.first_name + (contact.last_name ? ' ' + contact.last_name : '');
+        const typeLabel = utils.eventTypeLabel(evt.event_type);
+        const label = evt.event_type === 'custom' && evt.event_label ? evt.event_label : typeLabel;
+        const summary = `${name} — ${label}`;
+
+        // Format month/day as MMDD
+        const mm = String(evt.month).padStart(2, '0');
+        const dd = String(evt.day).padStart(2, '0');
+
+        if (evt.one_time && evt.event_year) {
+          // One-time event: single occurrence
+          const yyyy = String(evt.event_year);
+          lines.push('BEGIN:VEVENT');
+          lines.push(`DTSTART;VALUE=DATE:${yyyy}${mm}${dd}`);
+          lines.push(`DTEND;VALUE=DATE:${yyyy}${mm}${dd}`);
+          lines.push(`SUMMARY:${summary}`);
+          lines.push(`UID:${evt.id}@landmarks.app`);
+          lines.push('END:VEVENT');
+        } else {
+          // Recurring annual event
+          lines.push('BEGIN:VEVENT');
+          lines.push(`DTSTART;VALUE=DATE:${new Date().getFullYear()}${mm}${dd}`);
+          lines.push(`DTEND;VALUE=DATE:${new Date().getFullYear()}${mm}${dd}`);
+          lines.push(`RRULE:FREQ=YEARLY`);
+          lines.push(`SUMMARY:${summary}`);
+          lines.push(`UID:${evt.id}@landmarks.app`);
+          lines.push('END:VEVENT');
+        }
+      }
+
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    },
+  };
+
+  return { auth, profile, contacts, events, reminders, scheduler, conversion, admin, adminQueue, seed, utils, calendar, KEYS };
 })();

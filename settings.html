@@ -30,13 +30,16 @@
     .toast { animation: slideInRight 0.3s ease, fadeOut 0.4s ease 2.2s forwards; }
     @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+    @media (max-width: 767px) {
+      .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 40; }
+    }
   </style>
 </head>
 <body class="font-sans antialiased bg-gray-50" x-data="settingsApp()" x-init="init()" x-cloak>
 
   <div class="flex h-screen overflow-hidden">
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out md:translate-x-0" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
       <div class="p-6 border-b border-gray-100">
         <a href="index.html" class="flex items-center gap-2">
           <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
@@ -46,19 +49,19 @@
         </a>
       </div>
       <nav class="p-4 flex-1 space-y-1">
-        <a href="dashboard.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="dashboard.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Dashboard
         </a>
-        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Contacts
         </a>
-        <a href="settings.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm">
+        <a href="settings.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
           Settings
         </a>
-        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
@@ -78,9 +81,15 @@
       </div>
     </aside>
 
+    <!-- Mobile overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="sidebar-overlay md:hidden" x-transition.opacity></div>
+
     <!-- Main -->
     <main class="flex-1 overflow-y-auto">
       <div class="bg-white border-b border-gray-100 px-8 py-5">
+        <button @click="sidebarOpen = !sidebarOpen" class="md:hidden mr-3 text-gray-600 hover:text-gray-900">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <h1 class="text-xl font-bold text-gray-900">Settings</h1>
         <p class="text-sm text-gray-500 mt-0.5">Manage your account and reminder preferences</p>
       </div>
@@ -158,7 +167,7 @@
 
             <div class="mt-6 pt-5 border-t border-gray-100">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Preferred send time</label>
-              <p class="text-xs text-gray-400 mb-3">Reminders arrive at this hour in your local timezone (<span x-text="form.timezone.split('/').pop().replace(/_/g, ' ')"></span>).</p>
+              <p class="text-xs text-gray-400 mb-3">Reminders arrive at this hour in your local timezone (<span x-text="form.timezone"></span>).</p>
               <select x-model.number="form.preferred_send_hour" class="w-full sm:w-48 px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all">
                 <option value="6">6:00 AM</option>
                 <option value="7">7:00 AM</option>
@@ -167,6 +176,15 @@
                 <option value="10">10:00 AM</option>
                 <option value="11">11:00 AM</option>
                 <option value="12">12:00 PM</option>
+                <option value="13">1:00 PM</option>
+                <option value="14">2:00 PM</option>
+                <option value="15">3:00 PM</option>
+                <option value="16">4:00 PM</option>
+                <option value="17">5:00 PM</option>
+                <option value="18">6:00 PM</option>
+                <option value="19">7:00 PM</option>
+                <option value="20">8:00 PM</option>
+                <option value="21">9:00 PM</option>
               </select>
             </div>
 
@@ -178,13 +196,13 @@
         <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div class="px-6 py-4 border-b bg-gray-50/50">
             <h2 class="font-semibold text-gray-900">Monthly Preview Email</h2>
-            <p class="text-xs text-gray-400 mt-0.5">A planning email on the 1st of each month showing everything coming up</p>
+            <p class="text-xs text-gray-400 mt-0.5">A planning email on the 1st of each month — only sent when you have dates ahead</p>
           </div>
           <div class="p-6">
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-sm font-medium text-gray-900">Send me a monthly preview</div>
-                <div class="text-xs text-gray-500 mt-0.5">A single email at the start of each month with all upcoming events — great for ordering gifts with regular shipping.</div>
+                <div class="text-xs text-gray-500 mt-0.5">A single email at the start of each month — only when you have events coming up. Great for ordering gifts with regular shipping.</div>
               </div>
               <!-- Toggle switch -->
               <button type="button"
@@ -199,6 +217,28 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
               Preview what this email looks like →
             </a>
+          </div>
+        </section>
+
+        <!-- Calendar feed -->
+        <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50/50">
+            <h2 class="font-semibold text-gray-900">Calendar Feed</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Add your Landmarks dates to Google Calendar, Apple Calendar, or Outlook</p>
+          </div>
+          <div class="p-6">
+            <p class="text-sm text-gray-600 mb-4">Download your dates as a calendar file, or copy the feed URL to subscribe. Subscribed calendars update automatically as you add or remove contacts.</p>
+            <div class="flex flex-wrap gap-3">
+              <button @click="downloadICS()" class="flex items-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Download .ics file
+              </button>
+              <button @click="copyCalendarURL()" class="flex items-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                Copy feed URL
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">In production, this will be a live URL that stays in sync. For now, the download reflects your current data.</p>
           </div>
         </section>
 
@@ -265,7 +305,7 @@
           <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
         <h3 class="text-lg font-bold text-gray-900">Delete your account?</h3>
-        <p class="text-sm text-gray-500 mt-2">This will permanently delete your account, all contacts, events, and settings. There is no undo.</p>
+        <p class="text-sm text-gray-500 mt-2">This will permanently delete your account, <strong x-text="contactCount + ' contact' + (contactCount !== 1 ? 's' : '')"></strong>, <strong x-text="eventCount + ' event' + (eventCount !== 1 ? 's' : '')"></strong>, and all your settings. There is no undo.</p>
       </div>
       <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Type <strong>DELETE</strong> to confirm</label>
@@ -291,6 +331,7 @@
     function settingsApp() {
       return {
         user: null, profile: null,
+        sidebarOpen: false,
         form: { display_name: '', timezone: 'America/New_York', preferred_send_hour: 8, reminder_days_before: [7, 3], default_gift_categories: ['gift_card'], monthly_digest_enabled: true },
         showDeleteAccount: false, deleteConfirmText: '', toast: '',
         giftOptions: [
@@ -305,6 +346,12 @@
         get initials() {
           const name = this.profile?.display_name || this.user?.email || '';
           return name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+        },
+        get contactCount() {
+          return this.user ? Store.contacts.list(this.user.id).length : 0;
+        },
+        get eventCount() {
+          return this.user ? Store.events.list(this.user.id).length : 0;
         },
 
         init() {
@@ -349,6 +396,26 @@
           });
           this.profile = Store.profile.get(this.user.id);
           this.showToast('Settings saved!');
+        },
+
+        downloadICS() {
+          const ics = Store.calendar.generateICS(this.user.id);
+          const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'landmarks-dates.ics'; a.click();
+          URL.revokeObjectURL(url);
+          this.showToast('Calendar file downloaded!');
+        },
+
+        copyCalendarURL() {
+          // In production, this would be a live URL like webcal://landmarks.app/cal/{userId}.ics
+          const mockURL = 'webcal://landmarks.app/cal/' + this.user.id + '.ics';
+          navigator.clipboard.writeText(mockURL).then(() => {
+            this.showToast('Feed URL copied! (Production URL — paste into your calendar app)');
+          }).catch(() => {
+            this.showToast('URL: ' + mockURL);
+          });
         },
 
         exportData() {

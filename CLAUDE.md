@@ -42,7 +42,7 @@ Admin panel: `admin.html` — credentials `admin@landmarks.app` / `LM-admin-2026
 
 ```
 projectlandmarks/
-├── index.html              Landing page (marketing, cookie consent, auth redirect)
+├── index.html              Landing page (marketing, privacy promise, cookie consent, auth redirect)
 ├── auth.html               Sign in / sign up (email+password, demo shortcut)
 ├── onboarding.html         Post-signup guided setup (4 steps)
 ├── dashboard.html          Upcoming reminders, stats, urgency badges
@@ -50,24 +50,27 @@ projectlandmarks/
 ├── contact.html            Single contact detail + event management
 ├── settings.html           Profile, reminder timing, gift defaults, data export, account deletion
 ├── email-preview.html      DEV TOOL: live preview of reminder emails with gift data
-├── admin.html              Internal admin dashboard (conversion funnel, partner metrics)
+├── admin.html              Internal admin dashboard (two tabs: analytics funnel + email queue with gift overrides)
 ├── contact-us.html         Contact form (frontend only, backend not wired)
 ├── privacy.html            Privacy policy (static)
 ├── terms.html              Terms of service (static)
 ├── js/
-│   ├── store.js            Data layer — all CRUD, auth, reminders, conversion tracking, utils
+│   ├── store.js            Data layer — all CRUD, auth, reminders, conversion tracking, adminQueue, utils
+│   ├── gift-data.js        Shared gift catalog (GIFT_DATA + GIFT_DATA_LASTMINUTE), used by email-preview and admin
 │   └── email-config.js     Email infra config (DNS records, headers, warmup schedule, thresholds)
 ├── Landmarks_Blueprint.md  Full product + technical blueprint (business model, schema, timeline)
 ├── Competitive_Assessment.md  Competitive landscape analysis
-├── Todos.md                Prioritized feature roadmap (Tier 0–3)
+├── Todos.md                Prioritized feature roadmap (Tier P–3, P = prototype polish)
 └── README.md               Quick start and feature summary
 ```
 
 ## Architecture Notes
 
-**Data layer (`js/store.js`):** An IIFE that returns a `Store` object with namespaced modules: `auth`, `profile`, `contacts`, `events`, `reminders`, `scheduler`, `conversion`, `admin`, `seed`, `utils`. Every page imports this single file. All reads/writes go through `localStorage` with JSON serialization. The schema mirrors the planned Supabase tables (profiles, contacts, events, reminder_log) plus prototype-only additions (conversion_events, admin_session).
+**Data layer (`js/store.js`):** An IIFE that returns a `Store` object with namespaced modules: `auth`, `profile`, `contacts`, `events`, `reminders`, `scheduler`, `conversion`, `admin`, `adminQueue`, `seed`, `utils`, `calendar`. Every page imports this single file. All reads/writes go through `localStorage` with JSON serialization. The schema mirrors the planned Supabase tables (profiles, contacts, events, reminder_log) plus prototype-only additions (conversion_events, admin_session).
 
 **Page architecture:** Each HTML file is self-contained — loads Tailwind + Alpine from CDN, imports `store.js`, defines its own Alpine component as a function (e.g., `dashboardApp()`, `contactsApp()`). Pages share no component library; common patterns (sidebar nav, signOut, initials computation) are duplicated per page. This is acceptable for a prototype but should be componentized during production migration.
+
+**Mobile sidebar pattern:** All authenticated pages (dashboard, contacts, contact, settings, email-preview) implement a responsive sidebar that collapses behind a hamburger button on screens below the `md` breakpoint. Each page manages this via an Alpine.js `sidebarOpen` boolean, a fixed-position sidebar with CSS transform (`-translate-x-full` when closed), and a semi-transparent overlay. The pattern is duplicated per page — same implementation, no shared component.
 
 **Navigation flow:**
 ```
@@ -81,7 +84,7 @@ admin.html (standalone, not linked from public nav)
 
 **Auth model:** Plaintext passwords in localStorage. Acceptable for a local prototype. Must be replaced by Supabase Auth (bcrypt + sessions) before any deployment.
 
-**Email preview (`email-preview.html`):** Contains hardcoded `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` objects (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data should come from affiliate partner APIs or an LLM curation layer.
+**Email preview (`email-preview.html`):** Contains hardcoded `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` objects (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data moves to a structured `gift_catalog` table with tags, relationship/event affinities, and price tiers, and items are selected by a deterministic weighted scoring function (see Landmarks_Blueprint.md Section 11.1). No LLM — per-query cost must be zero for a free affiliate-funded service.
 
 **Admin panel (`admin.html`):** Seeds 60 days of randomized conversion funnel data for demo purposes. Shows KPI cards, funnel visualization, partner/category breakdowns, daily trends, and a deliverability checklist. Production version would read from a `conversion_events` Postgres table populated by Resend webhooks and affiliate postbacks.
 
@@ -93,21 +96,29 @@ admin.html (standalone, not linked from public nav)
 - Gift category preferences (per-contact or global default), budget tiers
 - Upcoming reminders sorted by proximity with urgency color coding
 - Dashboard stats (contact count, events tracked, urgent count)
-- Settings (display name, timezone, reminder timing chip picker, send hour, monthly digest toggle, data export, account deletion)
+- Settings (display name, timezone, reminder timing chip picker, send hour 6AM–9PM, monthly digest toggle, data export, account deletion with cascade warning)
 - Email preview with contact/event/gift swapping and scheduled send time display
-- Admin conversion funnel with seeded demo data
+- Admin conversion funnel with seeded demo data, email queue with gift override capability
 - Cookie consent banner with customization modal
+- Mobile-responsive sidebar on all authenticated pages (hamburger toggle, overlay, collapses below `md` breakpoint)
+- Form validation: month-aware day dropdowns, required custom event labels, disabled submit on empty required fields, email preserved across auth mode toggles
+- Dead UI elements cleaned up: "Forgot password?" replaced with informative text, Google OAuth button visually disabled, contact-us form shows prototype notice
+- Landing page privacy section: dedicated 3-card block (no data selling, encryption, delete anytime), strengthened "how we make money" copy, trust badges in CTA
+- Sensitive-event flag: `suppress_gifts` boolean on events, subtle checkbox on event forms ("Skip gift suggestions"), email preview shows warm gift-free message when active
+- Monthly conditional digest: only sent when user has events in next 30 days (no empty emails), toggle in settings, preview in email-preview.html digest tab
+- Read-only .ics calendar feed: `Store.calendar.generateICS()` generates standard iCalendar with RRULE for recurring events, download button and feed URL copy in Settings
+- Privacy messaging on authenticated pages: "We never contact the people you add" on contacts page, "Your data stays private" on onboarding, "Your data is yours — export or delete anytime" on dashboard
 
 ## Known Limitations
 
 - No real email sending — email-preview.html shows what would be sent
-- No Google OAuth (button shows "coming soon")
+- No Google OAuth (button visually disabled with "coming soon" label)
 - No cron/scheduled jobs — reminder logic is frontend-computed
-- No password recovery
+- No password recovery (auth page shows informative text instead of a dead link)
 - Affiliate links are placeholder alerts
-- Contact form (contact-us.html) has no backend — `send()` only updates UI state
+- Contact form (contact-us.html) has no backend — shows prototype notice, `send()` only updates UI state
 - No contact import (CSV, Google Contacts, vCard)
-- Gift "curation" is a static lookup table, not LLM-driven recommendations
+- Gift "curation" is a static lookup table, not the scoring-based recommendation engine planned for production (see Blueprint Section 11.1)
 
 ## Structural Critique & Migration Notes
 
@@ -118,16 +129,26 @@ admin.html (standalone, not linked from public nav)
 - The email-config.js file is production-ready documentation of DNS records, compliance headers, and warmup schedules.
 - The admin panel with conversion funnel tracking shows the right metrics mindset.
 
-**What needs work before production:**
-- **No component reuse.** Every page re-implements sidebar nav, signOut(), initials getter, auth guards, and utility formatting. During the Next.js migration, extract these into shared components/hooks.
-- **Gift data is hardcoded in HTML.** The `GIFT_DATA` object in email-preview.html should move to a config file or API. In production, this becomes the LLM curation layer (Todos.md item 0.1 — the single most important feature gap).
+**What was fixed in Tier P (prototype polish):**
+- Mobile sidebar collapse on all 5 authenticated pages (P.1)
+- Onboarding: progress bar corrected, validation hints added, month-aware day dropdowns, custom event label required (P.2)
+- Auth form: email preserved across mode toggle, Google OAuth visually disabled, "Forgot password?" replaced with informative text, dead `googleNotAvailable()` removed (P.3, P.6)
+- Contacts: submit button disabled when first name empty (P.3)
+- Settings: send-hour dropdown extended to 6AM–9PM, full IANA timezone displayed, delete account shows cascade count (P.4, P.5)
+- Contact-us: prototype notice added above submit button (P.6)
+- store.js: `daysUntilLabel()` simplified from 3 redundant branches to a clean fallthrough (dead code trim)
+- index.html: removed empty `landingApp()` function (dead code trim)
+
+**What still needs work before production:**
+- **No component reuse.** Every page re-implements sidebar nav, signOut(), initials getter, auth guards, and utility formatting — including the new mobile sidebar pattern. During the Next.js migration, extract these into shared components/hooks.
+- **Gift data is in a shared JS file (`js/gift-data.js`) but still static.** In production, move to a structured `gift_catalog` table with tags, affinities, and price tiers. A deterministic weighted scoring function selects items per reminder — no LLM, zero per-query cost (Todos.md item 0.1 / Blueprint Section 11.1 — the single most important feature gap).
 - **Cookie consent logic is standalone.** The `COOKIE_KEY` and cookie functions in index.html should be centralized in store.js or a dedicated module.
 - **No input sanitization.** The prototype trusts all input. Production must sanitize server-side before DB insertion.
 - **No error boundaries.** If Store calls fail silently, pages may render in broken states. Production needs proper error handling and user-facing error states.
-- **contact-us.html form is non-functional.** Needs a backend (Formspree, Resend, or a Next.js API route).
+- **contact-us.html form is non-functional.** Has a prototype notice now, but still needs a backend (Formspree, Resend, or a Next.js API route) for production.
 - **CSS is repeated across every file.** Common styles (`.sidebar-link`, `.badge-urgent/soon/upcoming`, `.gradient-text`) are copy-pasted. Extract to a shared stylesheet or Tailwind plugin during migration.
 - **No tests.** README has a manual QA checklist but no automated tests. Production should have at minimum: unit tests for Store logic (especially reminder date math and timezone handling), and integration tests for the auth + onboarding flow.
-- **Sensitive-event handling missing (Todos.md 0.6).** No `suppress_gifts` flag on events. This is a pre-launch blocker — a reminder email trying to sell gifts for a death anniversary is a reputational catastrophe.
+- ~~**Sensitive-event handling missing (Todos.md 0.6).**~~ ✅ Fixed. Events now have `suppress_gifts` boolean, subtle checkbox in forms, and email preview respects the flag with a warm gift-free message.
 
 ## Key Files to Understand First
 
@@ -146,3 +167,5 @@ If you're picking this up cold, read in this order:
 - Tailwind brand color palette: orange-warm (`brand-50` through `brand-900`, primary `brand-600` = `#d05a32`)
 - Urgency thresholds: 0-3 days = urgent (red), 4-7 = soon (orange), 8+ = upcoming (green)
 - Demo data seeded via `Store.seed.run()` on landing page load (only if no users exist)
+- Mobile sidebar: `sidebarOpen` Alpine boolean + fixed sidebar with `-translate-x-full` transform + overlay div, toggled by hamburger button visible below `md` breakpoint
+- Form validation pattern: `disabled:opacity-40 disabled:cursor-not-allowed` on submit buttons bound to `:disabled` conditions

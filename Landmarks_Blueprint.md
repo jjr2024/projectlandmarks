@@ -29,11 +29,11 @@ The service is free to use. Revenue comes from affiliate commissions on gift pur
 
   Monthly gift-purchase opportunities      1,000
 
-  Click-through-to-purchase rate           25--30%
+  Click-through-to-purchase rate           8--12% (baseline), 15--20% (target as scoring improves)
 
   Avg. affiliate commission per purchase   \$8--12
 
-  Monthly revenue                          \$2,000--\$3,600
+  Monthly revenue                          \$800--\$1,200 (at 10% baseline)
 
   Monthly infrastructure cost              \<\$50
   -----------------------------------------------------------------------
@@ -290,25 +290,25 @@ A \$0.50--\$1.00/month subscription creates friction (credit card entry, perceiv
 
 Weighted average across categories: approximately \$8--\$12 per completed purchase. This is the number used in revenue projections throughout this document.
 
-**6.3 Revenue Projection (Conservative)**
+**6.3 Revenue Projection (Realistic)**
 
   --------------------------------------------------------------------------------------------------------------------------
-  **Month**   **Users**   **Contacts (avg 8)**   **Monthly Events**   **Click-to-Purchase (25%)**   **Revenue (\$10 avg)**
+  **Month**   **Users**   **Contacts (avg 8)**   **Monthly Events**   **Click-to-Purchase (10%)**   **Revenue (\$10 avg)**
   ----------- ----------- ---------------------- -------------------- ----------------------------- ------------------------
-  3           100         800                    67                   17                            \$170
+  3           100         800                    67                   7                             \$70
 
-  6           400         3,200                  267                  67                            \$670
+  6           400         3,200                  267                  27                            \$270
 
-  9           800         6,400                  533                  133                           \$1,330
+  9           800         6,400                  533                  53                            \$530
 
-  12          1,500       12,000                 1,000                250                           \$2,500
+  12          1,500       12,000                 1,000                100                           \$1,000
 
-  18          3,000       24,000                 2,000                500                           \$5,000
+  18          3,000       24,000                 2,000                200                           \$2,000
 
-  24          5,000       40,000                 3,333                833                           \$8,330
+  24          5,000       40,000                 3,333                333                           \$3,330
   --------------------------------------------------------------------------------------------------------------------------
 
-The "Monthly Events" column divides total contacts by 12 (assuming birthdays are roughly evenly distributed across months). The click-to-purchase rate of 25% is conservative; curated, context-aware gift recommendations in a transactional email typically convert at 20--35%.
+The "Monthly Events" column divides total contacts by 12 (assuming birthdays are roughly evenly distributed across months). The click-to-purchase rate of 10% is a realistic MVP baseline. Well-designed transactional emails in retail run 15--25% CTR, but click-to-*purchase* (a completed transaction at a partner site, attributed correctly, with no cart abandonment) is typically 30--50% of CTR. An honest starting point is 8--12%, climbing toward 15--20% as the scoring-based curation system accumulates click and purchase data and the recommendation weights are tuned. Plan the unit economics at 10%, not 25%.
 
 **7. Data Privacy & Security**
 
@@ -398,7 +398,7 @@ This timeline assumes approximately 8--10 hours of work per weekend (Saturday + 
 
 -   Sign up for affiliate programs (Amazon Associates, 1-800-Flowers, etc.).
 
--   Build the gift link curation logic: map gift categories to affiliate URLs.
+-   Build the gift scoring and curation engine: structured gift catalog with tags, keyword-to-tag parser for contact notes, weighted scoring function that ranks items by category match, relationship affinity, event type, seasonality, and safe-default fallback. See Section 11.1 for architecture details.
 
 -   Add affiliate tracking parameters to all outbound links.
 
@@ -478,7 +478,7 @@ These are ideas to pursue only after the core product is stable and generating r
 
 -   SMS reminders: Offer a premium tier (\$2--3/month) for text message reminders in addition to email. This introduces subscription revenue alongside affiliate income.
 
--   AI gift recommendations: Use contact notes ("likes dark chocolate," "into hiking") to personalize gift suggestions. Could significantly improve click-to-purchase rates.
+-   Scoring-based gift recommendations (core, not future --- build before launch): A weighted scoring function that ranks gift catalog items per reminder using category match, keyword-extracted tags from contact notes, relationship and event-type affinity, click/purchase history, price-tier inference, seasonality, and diversity constraints. No LLM required --- per-query cost is zero, the system is deterministic and debuggable, and it improves automatically as click and feedback data accumulates. See Section 11.1 for full architecture.
 
 -   Shared accounts / couples mode: Let two users manage a combined contact list so both partners are reminded and coordinated on gifts.
 
@@ -487,6 +487,104 @@ These are ideas to pursue only after the core product is stable and generating r
 -   Automatic gift sending: Partner with a fulfillment service to let users pre-authorize a gift that auto-ships on the event date. This is the ultimate convenience play.
 
 -   iOS / Android app: Only if email-first proves limiting. The SwiftUI skills you're building would be directly applicable here.
+
+**11.1 Gift Curation Engine Architecture (No-LLM Scoring System)**
+
+The gift curation system uses a deterministic, weighted scoring function rather than an LLM. This is a deliberate architectural decision: for a free, affiliate-funded service where every reminder email has zero marginal cost, adding a per-query LLM expense (even at cents per call) introduces a cost that scales linearly with the most important usage metric (reminders sent). The scoring approach keeps per-reminder cost at exactly zero, is fully deterministic and debuggable, and improves automatically as behavioral data accumulates.
+
+**Gift Catalog Structure**
+
+Each item in the catalog is a structured record, not a flat URL mapping:
+
+  --------------------------------------------------------------------------------------------
+  **Field**                **Type**          **Purpose**
+  ------------------------ ----------------- -------------------------------------------------
+  id                       UUID              Unique identifier
+
+  name                     TEXT              Display name in reminder email
+
+  partner_id               UUID (FK)         Which affiliate partner
+
+  affiliate_url            TEXT              Tracking-parameterized purchase URL
+
+  price_tier               ENUM              under_25, 25_50, 50_100, over_100
+
+  tags                     TEXT[]            Controlled vocabulary (outdoors, cooking, books, tech, wellness, humor, sentimental, experience, practical, luxury, eco, food_drink, flowers, handmade); 2--4 per item
+
+  relationship_affinities  JSONB             Scores by relationship type, e.g. {"family": 0.9, "friend": 0.7, "colleague": 0.3}
+
+  event_type_affinities    JSONB             Scores by event type, e.g. {"birthday": 0.8, "anniversary": 0.9}
+
+  season_start             SMALLINT          Month (1--12) when item is most appropriate (nullable)
+
+  season_end               SMALLINT          Month (1--12) end of seasonal window (nullable)
+
+  safe_default             BOOLEAN           Show this item when there is zero personalization signal
+
+  active                   BOOLEAN           Can be deactivated without deletion
+  --------------------------------------------------------------------------------------------
+
+A catalog of 100--200 well-tagged items is far more useful than 1,000 items with no structure. Manual curation during affiliate onboarding is the work that makes the system go.
+
+**Keyword-to-Tag Parser (Notes Field)**
+
+A `keyword_tags` reference table maps common words to the controlled tag vocabulary:
+
+  -----------------------------------------------
+  **keyword**     **tag**        **is_negative**
+  --------------- -------------- -----------------
+  hiking          outdoors       false
+  cooking         cooking        false
+  chef            cooking        false
+  vegan           eco            false
+  wine            food_drink     false
+  allergic        (modifier)     true
+  -----------------------------------------------
+
+The parser runs case-insensitive substring matching against the contact's notes field. Negation patterns (regex: `(no|not|don't|doesn't|hate|hates|allergic|never)\s+\w*\s*(keyword)`) trigger tag exclusions. Approximately 150--200 keyword entries cover the majority of what users write. Notes that produce zero tag matches should be logged and reviewed monthly to expand the dictionary.
+
+**Scoring Function**
+
+At reminder-send time, every active catalog item is scored for the specific (user, contact, event) tuple:
+
+`score = (category_match * 5) + (tag_match * 3) + (relationship_affinity * 2) + (click_history_contact * 4) + (click_history_similar * 1.5) + (popularity * 1) + (price_match * 2) + (seasonality * 1) - (repeat_penalty * 10) - (negative_tag * 1000)`
+
+Signal sources, in order of importance once behavioral data exists:
+
+1.  **Category match.** Contact-level or user-default gift category preference. Strongest explicit signal; dominates early.
+2.  **Tag match from notes.** Keywords extracted from the contact's notes field, matched against item tags.
+3.  **Click history for this contact.** If the user clicked "experience" gifts for this contact last year but ignored "flowers," boost experiences and demote flowers for this contact specifically.
+4.  **Relationship affinity.** Each item's pre-set affinity score for the contact's relationship type.
+5.  **Price-tier match.** Inferred from past click/purchase behavior per user per relationship type. No need to ask --- behavior reveals budget preferences.
+6.  **Click history for similar contacts.** If the user clicks "food_drink" for all colleague contacts, apply that pattern to new colleagues.
+7.  **Global popularity.** Across all users, which items get clicked/purchased most. Updated weekly. Cold-start fallback.
+8.  **Seasonality.** Month-range flags on catalog items (beach gear for summer birthdays, hot chocolate for winter).
+9.  **Repeat penalty.** Items purchased for this contact in the prior year are heavily penalized. Items shown in the 7-day reminder but not clicked are penalized in the 3-day reminder.
+10. **Diversity constraint.** Post-scoring, enforce that the final 3--4 items span at least 2--3 different tags. One "obvious match," one "thoughtful surprise," one "safe fallback."
+
+Weights are the tunable parameter. Start with the values above; adjust based on aggregate click-through data as it accumulates.
+
+**Data Collection Schema**
+
+Three tables support the feedback loop:
+
+`click_events`: id, user_id, contact_id, event_id, gift_item_id, reminder_type (7_day / 3_day), clicked_at.
+
+`gift_feedback`: id, user_id, contact_id, gift_item_id, rating (+1 / -1), note (optional text), created_at. Populated via a post-purchase follow-up email ("Did they like it? Thumbs up / thumbs down").
+
+`reminder_log.shown_items`: JSONB column added to the existing reminder_log table, recording the full set of item IDs shown in each reminder. This captures negative signal --- items shown but not clicked.
+
+**Feedback Loops**
+
+-   Click data tunes scoring weights automatically (compare predicted scores vs. actual clicks).
+-   Post-purchase thumbs-up/down strengthens or weakens tag associations for specific contacts.
+-   "None of these feel right?" link in reminder emails captures free-text input that flows into the contact's notes field, improving future keyword-tag extraction.
+-   Implicit budget calibration from purchase price history, per user, per relationship type.
+-   At 1,000+ users with purchase data, a simple collaborative filter (cosine similarity on user-item click matrices) can supplement rule-based scoring for cold-start contacts. Do not build this before that threshold.
+
+**Why Not an LLM**
+
+An LLM could parse notes fields more flexibly and generate more creative recommendations. But for a free service with affiliate-margin economics (\~\$10/order at realistic 10% conversion), per-reminder LLM cost is a direct tax on the only revenue event. The keyword parser + scoring function achieves ~80% of LLM curation quality at zero marginal cost, is fully deterministic (same inputs always produce same outputs, making debugging trivial), and improves with data rather than prompt engineering. An LLM layer can be evaluated later if affiliate margins support it, but the scoring system should be built first regardless --- it provides the behavioral data infrastructure that any future approach (including LLM-based) would need.
 
 **12. Appendix: Quick-Reference Checklists**
 

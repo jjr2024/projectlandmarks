@@ -27,13 +27,16 @@
     [x-cloak] { display: none !important; }
     /* Email preview shadow effect */
     .email-shell { box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 8px 40px rgba(0,0,0,0.12); }
+    @media (max-width: 767px) {
+      .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 40; }
+    }
   </style>
 </head>
 <body class="font-sans antialiased bg-gray-100" x-data="emailPreviewApp()" x-init="init()" x-cloak>
 
   <div class="flex h-screen overflow-hidden">
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out md:translate-x-0" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
       <div class="p-6 border-b border-gray-100">
         <a href="index.html" class="flex items-center gap-2">
           <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
@@ -43,19 +46,19 @@
         </a>
       </div>
       <nav class="p-4 flex-1 space-y-1">
-        <a href="dashboard.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="dashboard.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Dashboard
         </a>
-        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Contacts
         </a>
-        <a href="settings.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="settings.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
           Settings
         </a>
-        <a href="email-preview.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm">
+        <a href="email-preview.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
@@ -75,9 +78,15 @@
       </div>
     </aside>
 
+    <!-- Mobile overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="sidebar-overlay md:hidden" x-transition.opacity></div>
+
     <!-- Main -->
     <main class="flex-1 overflow-y-auto">
       <div class="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
+        <button @click="sidebarOpen = !sidebarOpen" class="md:hidden mr-3 text-gray-600 hover:text-gray-900">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <div>
           <div class="flex items-center gap-3">
             <h1 class="text-xl font-bold text-gray-900">Email Preview</h1>
@@ -158,6 +167,14 @@
                 </div>
 
                 <div>
+                  <label class="flex items-center gap-2.5 cursor-pointer mt-1">
+                    <input type="checkbox" x-model="previewData.suppress_gifts"
+                           class="w-4 h-4 rounded border-gray-300 text-gray-400 focus:ring-gray-300 cursor-pointer" />
+                    <span class="text-xs text-gray-400">Suppress gifts (sensitive date)</span>
+                  </label>
+                </div>
+
+                <div x-show="!previewData.suppress_gifts">
                   <label class="block text-sm font-medium text-gray-700 mb-1.5">Gift category shown</label>
                   <select x-model="previewData.gift_category" @change="updatePreview()" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300">
                     <option value="flowers">🌸 Flowers</option>
@@ -168,6 +185,7 @@
                     <option value="donation">❤️ Donation</option>
                   </select>
                   <p class="text-xs text-gray-400 mt-1" x-show="selectedContact">Contact preferences: <span x-text="selectedContact ? Store.utils.giftLabelsForContact(selectedContact, profile) : ''"></span></p>
+                </div>
                 </div>
               </div>
             </div>
@@ -228,6 +246,17 @@
                       <p style="color: #374151; font-size: 15px; margin: 0 0 20px 0;" x-text="'Hi ' + (profile?.display_name?.split(' ')[0] || 'there') + ' 👋'"></p>
                       <p style="color: #374151; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6;" x-text="emailIntro"></p>
 
+                      <!-- Suppressed gifts: warm message, no affiliate block -->
+                      <template x-if="previewData.suppress_gifts">
+                        <div style="background: #fdf5f0; border: 1px solid #f9cfb8; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; text-align: center;">
+                          <div style="font-size: 24px; margin-bottom: 8px;">💛</div>
+                          <div style="color: #374151; font-size: 14px; line-height: 1.6;">
+                            Just a heads-up so this date doesn't slip by. We're thinking of you.
+                          </div>
+                        </div>
+                      </template>
+
+                      <div x-show="!previewData.suppress_gifts">
                       <!-- Last-minute banner (≤ 2 days) -->
                       <template x-if="isLastMinute">
                         <div style="background: #fff7ed; border: 2px solid #fed7aa; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;">
@@ -287,6 +316,8 @@
                           🎁 Send an Amazon Gift Card
                         </a>
                       </div>
+
+                      </div><!-- end suppress_gifts wrapper -->
 
                       <!-- Footer actions -->
                       <div style="border-top: 1px solid #f3f4f6; padding-top: 20px; text-align: center;">
@@ -388,7 +419,7 @@
           <div class="lg:col-span-1 space-y-5">
             <div class="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 class="font-semibold text-gray-900 mb-2">Monthly Preview Email</h3>
-              <p class="text-sm text-gray-500 mb-4">Sent on the 1st of each month. One glance, full visibility on what's coming up — lets you plan ahead instead of scrambling.</p>
+              <p class="text-sm text-gray-500 mb-4">Sent on the 1st of each month — but only when you have events in the next 30 days. No upcoming dates? No email. One glance, full visibility on what's coming up.</p>
               <div class="space-y-2 text-sm text-gray-600">
                 <div class="flex items-center gap-2"><span class="text-green-500">✓</span> Shows all events for the month</div>
                 <div class="flex items-center gap-2"><span class="text-green-500">✓</span> One-click "start shopping" per contact</div>
@@ -446,7 +477,7 @@
                     <div style="margin-bottom: 24px;">
                       <template x-if="digestUpcoming.length === 0">
                         <div style="text-align: center; padding: 24px; background: #f9fafb; border-radius: 12px; color: #6b7280; font-size: 14px;">
-                          No events coming up in the next 60 days. Add some contacts to get started!
+                          No events in the next 30 days — this email would not be sent.
                         </div>
                       </template>
                       <template x-for="item in digestUpcoming" :key="item.event.id">
@@ -489,81 +520,8 @@
     </main>
   </div>
 
+  <script src="js/gift-data.js"></script>
   <script>
-    // budget: 'low' = under $30, 'mid' = $30-75, 'high' = $75+, null = any
-    const GIFT_DATA = {
-      flowers: [
-        { emoji: '🌷', name: 'Mini Bouquet – Bouqs', description: 'Small, cheerful arrangement · Email delivery option', price: 'From $24 · Affiliate link', partner: 'Bouqs', budget: 'low' },
-        { emoji: '💐', name: 'Tulip Bouquet – Bouqs', description: 'Farm-fresh, sustainably grown · Free delivery', price: 'From $49 · Affiliate link', partner: 'Bouqs', budget: 'mid' },
-        { emoji: '🌹', name: 'Classic Roses – 1-800-Flowers', description: '12 premium roses with vase · Next-day delivery available', price: 'From $59.99 · Affiliate link', partner: '1-800-Flowers', budget: 'mid' },
-        { emoji: '🌸', name: 'Luxury Arrangement – FTD', description: 'Florist-designed premium piece, locally delivered', price: 'From $89.99 · Affiliate link', partner: 'FTD', budget: 'high' },
-        { emoji: '🌺', name: 'Signature Collection – Teleflora', description: 'Exclusive designer arrangement with keepsake vase', price: 'From $99 · Affiliate link', partner: 'Teleflora', budget: 'high' },
-      ],
-      wine: [
-        { emoji: '🍷', name: 'Everyday Red – Wine.com', description: 'Well-rated everyday bottle · Ships next day', price: 'From $18 · Affiliate link', partner: 'Wine.com', budget: 'low' },
-        { emoji: '🥂', name: 'Reserve Cabernet – Wine.com', description: 'Top-rated 92-point Cab Sauv · Gift wrapped', price: 'From $35 · Affiliate link', partner: 'Wine.com', budget: 'mid' },
-        { emoji: '🍷', name: 'Curated Wine Trio – Winc', description: '3 bottles matched to their taste · Free shipping', price: '$50 · Affiliate link', partner: 'Winc', budget: 'mid' },
-        { emoji: '🍾', name: 'Champagne Gift Set – Goldbelly', description: 'Prestige cuvée with 2 crystal flutes', price: 'From $95 · Affiliate link', partner: 'Goldbelly', budget: 'high' },
-      ],
-      treats: [
-        { emoji: '🍬', name: 'Sugarfina Candy Bento Box', description: 'Gourmet candy collection · Ships in 1-2 days', price: 'From $24 · Affiliate link', partner: 'Sugarfina', budget: 'low' },
-        { emoji: '🍫', name: 'Artisan Chocolate Box – Vosges', description: 'Award-winning truffles, 36 pieces', price: 'From $42 · Affiliate link', partner: 'Vosges', budget: 'mid' },
-        { emoji: '🍰', name: 'Harry & David Favorites Tower', description: 'Gourmet snacks, cheese, chocolate, and more', price: 'From $59.99 · Affiliate link', partner: 'Harry & David', budget: 'mid' },
-        { emoji: '🎂', name: 'Iconic Birthday Cake – Goldbelly', description: 'Famous bakery cake shipped nationwide overnight', price: 'From $85 · Affiliate link', partner: 'Goldbelly', budget: 'high' },
-      ],
-      gift_card: [
-        { emoji: '☕', name: 'Starbucks Gift Card', description: 'For the coffee lover in your life', price: 'From $10 · Affiliate link', partner: 'Starbucks', budget: 'low' },
-        { emoji: '🎁', name: 'Amazon Gift Card', description: 'Any amount, instant email delivery', price: 'From $25 · Affiliate link', partner: 'Amazon', budget: 'low' },
-        { emoji: '🛒', name: 'Nordstrom Gift Card', description: 'Fashion-forward, works online & in-store', price: 'From $50 · Affiliate link', partner: 'Nordstrom', budget: 'mid' },
-        { emoji: '✈️', name: 'Delta / United Gift Card', description: 'For the frequent traveler', price: 'From $100 · Affiliate link', partner: 'Delta', budget: 'high' },
-      ],
-      experiences: [
-        { emoji: '🌍', name: 'Airbnb Experience', description: 'Unique local activity with a local guide', price: 'From $30 · Affiliate link', partner: 'Airbnb', budget: 'low' },
-        { emoji: '🎭', name: 'Broadway or Show Tickets – TodayTix', description: 'Live events in their city', price: 'From $50 · Affiliate link', partner: 'TodayTix', budget: 'mid' },
-        { emoji: '✨', name: 'Uncommon Goods Experience Box', description: 'Spa, cooking class, wine tasting & more', price: 'From $75 · Affiliate link', partner: 'Uncommon Goods', budget: 'mid' },
-        { emoji: '🍽️', name: 'Omakase Dining Experience – Tock', description: 'Chef's table reservation at a top restaurant', price: 'From $150 · Affiliate link', partner: 'Tock', budget: 'high' },
-      ],
-      donation: [
-        { emoji: '🌱', name: 'Plant a Tree – One Tree Planted', description: 'Plant 10 trees in their honor · Certificate included', price: '$10 · Affiliate link', partner: 'One Tree Planted', budget: 'low' },
-        { emoji: '🐾', name: 'Animal Rescue Donation', description: 'Support shelter animals in their name', price: 'From $25 · Affiliate link', partner: 'Best Friends', budget: 'low' },
-        { emoji: '❤️', name: 'Charity of their choice – JustGiving', description: 'Donate in their name to a cause they love', price: 'Any amount · Affiliate link', partner: 'JustGiving', budget: 'mid' },
-      ],
-    };
-
-    // Same-day / last-minute gifts (used when event is ≤ 2 days away)
-    const GIFT_DATA_LASTMINUTE = {
-      flowers: [
-        { emoji: '🌸', name: 'Same-Day Flowers – Instacart', description: 'Fresh flowers delivered within 2 hours from local stores', price: 'From $25 · Affiliate link', partner: 'Instacart' },
-        { emoji: '💐', name: 'Local Florist – 1-800-Flowers', description: 'Same-day delivery from a florist near them', price: 'From $39.99 · Affiliate link', partner: '1-800-Flowers' },
-        { emoji: '🌹', name: 'FTD Same-Day Delivery', description: 'Guaranteed same-day if ordered before 2pm', price: 'From $44.99 · Affiliate link', partner: 'FTD' },
-      ],
-      wine: [
-        { emoji: '🍷', name: 'Wine via Instacart / Drizly', description: 'Delivered in under 60 minutes from a local store', price: 'From $20 · Affiliate link', partner: 'Drizly' },
-        { emoji: '🎁', name: 'Wine.com Express', description: 'Same-day delivery in select cities', price: 'From $30 · Affiliate link', partner: 'Wine.com' },
-        { emoji: '🛒', name: 'Amazon Same-Day Wine', description: 'Prime members: free same-day in eligible zip codes', price: 'Varies · Affiliate link', partner: 'Amazon' },
-      ],
-      treats: [
-        { emoji: '🍫', name: 'Chocolate via Instacart', description: 'Artisan chocolate from local stores, delivered today', price: 'From $15 · Affiliate link', partner: 'Instacart' },
-        { emoji: '🎂', name: 'Edible Arrangements', description: 'Fruit & chocolate arrangements, same-day pickup or delivery', price: 'From $35 · Affiliate link', partner: 'Edible Arrangements' },
-        { emoji: '☕', name: 'GrubHub / DoorDash Sweet Box', description: 'Order from a local bakery for today', price: 'Varies · Affiliate link', partner: 'DoorDash' },
-      ],
-      gift_card: [
-        { emoji: '⚡', name: 'Amazon e-Gift Card', description: 'Sent instantly to their inbox — any amount', price: 'From $10 · Affiliate link', partner: 'Amazon' },
-        { emoji: '🎮', name: 'Apple / Google Play Gift Card', description: 'Instant digital delivery', price: 'From $15 · Affiliate link', partner: 'Apple' },
-        { emoji: '🛒', name: 'Uber / DoorDash Gift Card', description: 'Digital, instant — great for foodies', price: 'From $25 · Affiliate link', partner: 'Uber' },
-      ],
-      experiences: [
-        { emoji: '⚡', name: 'Amazon e-Gift Card', description: 'Let them pick their own experience', price: 'From $25 · Affiliate link', partner: 'Amazon' },
-        { emoji: '🎭', name: 'TodayTix Last-Minute Tickets', description: 'Rush tickets for tonight's shows, available now', price: 'From $20 · Affiliate link', partner: 'TodayTix' },
-        { emoji: '🍽️', name: 'OpenTable Gift Card (Digital)', description: 'Instant email delivery, redeemable at thousands of restaurants', price: 'From $25 · Affiliate link', partner: 'OpenTable' },
-      ],
-      donation: [
-        { emoji: '⚡', name: 'JustGiving Instant Donation', description: 'Donate right now in their name — instant confirmation', price: 'Any amount · Affiliate link', partner: 'JustGiving' },
-        { emoji: '🌱', name: 'One Tree Planted (Instant)', description: 'Immediate confirmation email, shareable certificate', price: 'From $1 · Affiliate link', partner: 'One Tree Planted' },
-        { emoji: '❤️', name: 'GoFundMe Gift', description: 'Support a cause they care about, instantly', price: 'Any amount · Affiliate link', partner: 'GoFundMe' },
-      ],
-    };
-
     function emailPreviewApp() {
       return {
         user: null, profile: null,
@@ -571,7 +529,8 @@
         selectedContactId: '',
         activeTab: 'reminder', // 'reminder' | 'digest'
         showHeaders: false,
-        previewData: { event_type: 'birthday', days_before: '7', gift_category: 'flowers' },
+        sidebarOpen: false,
+        previewData: { event_type: 'birthday', days_before: '7', gift_category: 'flowers', suppress_gifts: false },
 
         get initials() {
           const name = this.profile?.display_name || this.user?.email || '';

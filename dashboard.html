@@ -33,6 +33,9 @@
     .badge-upcoming { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { animation: fadeIn 0.3s ease forwards; }
+    @media (max-width: 767px) {
+      .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 40; }
+    }
   </style>
 </head>
 <body class="font-sans antialiased bg-gray-50" x-data="dashboardApp()" x-init="init()">
@@ -40,7 +43,7 @@
   <div class="flex h-screen overflow-hidden">
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out md:translate-x-0" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
       <!-- Logo -->
       <div class="p-6 border-b border-gray-100">
         <a href="index.html" class="flex items-center gap-2">
@@ -55,20 +58,20 @@
 
       <!-- Nav -->
       <nav class="p-4 flex-1 space-y-1">
-        <a href="dashboard.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm">
+        <a href="dashboard.html" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Dashboard
         </a>
-        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="contacts.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Contacts
           <span class="ml-auto bg-brand-100 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full" x-text="contactCount"></span>
         </a>
-        <a href="settings.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="settings.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
           Settings
         </a>
-        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+        <a href="email-preview.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
@@ -90,11 +93,17 @@
       </div>
     </aside>
 
+    <!-- Mobile overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="sidebar-overlay md:hidden" x-transition.opacity></div>
+
     <!-- Main content -->
     <main class="flex-1 overflow-y-auto">
 
       <!-- Header -->
       <div class="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
+        <button @click="sidebarOpen = !sidebarOpen" class="md:hidden mr-3 text-gray-600 hover:text-gray-900">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <div>
           <h1 class="text-xl font-bold text-gray-900">Dashboard</h1>
           <p class="text-sm text-gray-500 mt-0.5" x-text="greetingLine"></p>
@@ -126,23 +135,23 @@
           <div class="space-y-8 fade-in">
 
             <!-- Stats row -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div class="bg-white rounded-xl p-5 border border-gray-100">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div class="bg-white rounded-xl px-4 py-3 border border-gray-100">
                 <div class="text-3xl font-bold text-gray-900" x-text="contactCount"></div>
-                <div class="text-sm text-gray-500 mt-1">Contacts</div>
+                <div class="text-sm text-gray-500 mt-0.5">Contacts</div>
               </div>
-              <div class="bg-white rounded-xl p-5 border border-gray-100">
+              <div class="bg-white rounded-xl px-4 py-3 border border-gray-100">
                 <div class="text-3xl font-bold text-gray-900" x-text="eventCount"></div>
-                <div class="text-sm text-gray-500 mt-1">Events tracked</div>
+                <div class="text-sm text-gray-500 mt-0.5">Events tracked</div>
               </div>
-              <div class="bg-white rounded-xl p-5 border border-gray-100">
+              <div class="bg-white rounded-xl px-4 py-3 border border-gray-100">
                 <div class="text-3xl font-bold text-amber-500" x-text="urgentCount"></div>
-                <div class="text-sm text-gray-500 mt-1">Coming up soon</div>
+                <div class="text-sm text-gray-500 mt-0.5">Coming up soon</div>
                 <div class="text-xs text-gray-400">(within 7 days)</div>
               </div>
-              <div class="bg-white rounded-xl p-5 border border-gray-100">
+              <div class="bg-white rounded-xl px-4 py-3 border border-gray-100">
                 <div class="text-3xl font-bold text-brand-600" x-text="thisMonthCount"></div>
-                <div class="text-sm text-gray-500 mt-1">This month</div>
+                <div class="text-sm text-gray-500 mt-0.5">This month</div>
               </div>
             </div>
 
@@ -230,6 +239,11 @@
               </a>
             </div>
 
+            <!-- Privacy footer -->
+            <div class="text-center">
+              <p class="text-xs text-gray-400">Your data is yours. <a href="settings.html" class="text-gray-500 hover:text-brand-600">Export</a> or <a href="settings.html" class="text-gray-500 hover:text-brand-600">delete</a> anytime.</p>
+            </div>
+
           </div>
         </template>
       </div>
@@ -244,6 +258,7 @@
         upcomingReminders: [],
         filterDays: 30,
         loading: true,
+        sidebarOpen: false,
 
         get initials() {
           const name = this.profile?.display_name || this.user?.email || '';
