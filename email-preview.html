@@ -63,6 +63,10 @@
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
         </a>
+        <a href="about.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          About
+        </a>
       </nav>
       <div class="p-4 border-t border-gray-100">
         <div class="flex items-center gap-3">
@@ -105,6 +109,11 @@
                   :class="activeTab === 'digest' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
                   class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all">
             Monthly Digest
+          </button>
+          <button @click="activeTab = 'reengagement'"
+                  :class="activeTab === 'reengagement' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                  class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all">
+            Re-engagement
           </button>
         </div>
       </div>
@@ -154,13 +163,13 @@
                     <option value="10">10-day reminder (friend)</option>
                     <option value="7">7-day reminder</option>
                     <option value="3">3-day reminder</option>
-                    <option value="2">2-day reminder ⚡ last-minute</option>
-                    <option value="1">Tomorrow ⚡ last-minute</option>
+                    <option value="2">2-day reminder — last-minute</option>
+                    <option value="1">Tomorrow — last-minute</option>
                   </select>
                   <!-- Last-minute indicator -->
                   <template x-if="isLastMinute">
                     <div class="mt-2 flex items-center gap-1.5 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5">
-                      <span>⚡</span>
+                      <svg class="w-3.5 h-3.5 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                       <span>Last-minute mode — showing same-day & instant-delivery gifts only</span>
                     </div>
                   </template>
@@ -177,12 +186,12 @@
                 <div x-show="!previewData.suppress_gifts">
                   <label class="block text-sm font-medium text-gray-700 mb-1.5">Gift category shown</label>
                   <select x-model="previewData.gift_category" @change="updatePreview()" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-300">
-                    <option value="flowers">🌸 Flowers</option>
-                    <option value="wine">🍷 Wine</option>
-                    <option value="treats">🍫 Treats</option>
-                    <option value="gift_card">🎁 Gift Card</option>
-                    <option value="experiences">✨ Experiences</option>
-                    <option value="donation">❤️ Donation</option>
+                    <option value="flowers">Flowers</option>
+                    <option value="wine">Wine</option>
+                    <option value="treats">Treats</option>
+                    <option value="gift_card">Gift Card</option>
+                    <option value="experiences">Experiences</option>
+                    <option value="donation">Donation</option>
                   </select>
                   <p class="text-xs text-gray-400 mt-1" x-show="selectedContact">Contact preferences: <span x-text="selectedContact ? Store.utils.giftLabelsForContact(selectedContact, profile) : ''"></span></p>
                 </div>
@@ -243,13 +252,15 @@
                     <div style="background: white; padding: 32px 40px; border-radius: 0 0 16px 16px;">
 
                       <!-- Greeting -->
-                      <p style="color: #374151; font-size: 15px; margin: 0 0 20px 0;" x-text="'Hi ' + (profile?.display_name?.split(' ')[0] || 'there') + ' 👋'"></p>
+                      <p style="color: #374151; font-size: 15px; margin: 0 0 20px 0;" x-text="'Hi ' + (profile?.display_name?.split(' ')[0] || 'there') + ','"></p>
                       <p style="color: #374151; font-size: 15px; margin: 0 0 24px 0; line-height: 1.6;" x-text="emailIntro"></p>
 
                       <!-- Suppressed gifts: warm message, no affiliate block -->
                       <template x-if="previewData.suppress_gifts">
                         <div style="background: #fdf5f0; border: 1px solid #f9cfb8; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; text-align: center;">
-                          <div style="font-size: 24px; margin-bottom: 8px;">💛</div>
+                          <div style="margin-bottom: 8px;">
+                            <svg style="width: 24px; height: 24px; display: inline-block;" viewBox="0 0 24 24" fill="#d05a32" stroke="none"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                          </div>
                           <div style="color: #374151; font-size: 14px; line-height: 1.6;">
                             Just a heads-up so this date doesn't slip by. We're thinking of you.
                           </div>
@@ -261,7 +272,7 @@
                       <template x-if="isLastMinute">
                         <div style="background: #fff7ed; border: 2px solid #fed7aa; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;">
                           <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                            <span style="font-size: 20px;">⚡</span>
+                            <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                             <div>
                               <div style="color: #c2410c; font-weight: 700; font-size: 14px;">You still have options.</div>
                               <div style="color: #ea580c; font-size: 12px; margin-top: 2px;">Every gift below ships today or delivers instantly.</div>
@@ -269,7 +280,7 @@
                           </div>
                           <a href="#" onclick="alert('Amazon e-gift card — instant delivery, any amount'); return false;"
                              style="display: block; background: #c2410c; color: white; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 20px; border-radius: 8px; text-align: center;">
-                            ⚡ Send an e-gift card right now →
+                            Send an e-gift card right now →
                           </a>
                         </div>
                       </template>
@@ -277,7 +288,7 @@
                       <!-- Standard urgency banner (3-day, non-last-minute) -->
                       <template x-if="parseInt(previewData.days_before) === 3">
                         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;">
-                          <span style="font-size: 18px;">⏰</span>
+                          <svg style="width: 18px; height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                           <div>
                             <div style="color: #dc2626; font-weight: 600; font-size: 13px;">Time is running short!</div>
                             <div style="color: #ef4444; font-size: 12px; margin-top: 2px;">Only 3 days left — order soon to ensure delivery in time.</div>
@@ -287,14 +298,14 @@
 
                       <!-- Gift suggestions header -->
                       <div style="color: #111827; font-size: 14px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
-                        🎁 Gift Ideas
+                        Gift Ideas
                       </div>
 
                       <!-- Gift cards -->
                       <div class="space-y-3" style="margin-bottom: 28px;">
                         <template x-for="gift in giftSuggestions" :key="gift.name">
                           <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; background: #fafafa;">
-                            <div style="font-size: 28px; flex-shrink: 0;" x-text="gift.emoji"></div>
+                            <div style="width: 40px; height: 40px; background: #fdf5f0; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #d05a32; font-weight: 700; font-size: 14px;" x-text="gift.partner ? gift.partner.charAt(0) : 'G'"></div>
                             <div style="flex: 1;">
                               <div style="font-weight: 600; color: #111827; font-size: 14px;" x-text="gift.name"></div>
                               <div style="color: #6b7280; font-size: 12px; margin-top: 2px;" x-text="gift.description"></div>
@@ -313,7 +324,7 @@
                         <div style="color: #6b7280; font-size: 13px; margin-bottom: 10px;">Not sure? Can't go wrong with this:</div>
                         <a href="#" onclick="alert('Amazon gift card affiliate link'); return false;"
                            style="display: inline-block; background: white; border: 2px solid #d05a32; color: #d05a32; text-decoration: none; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 8px;">
-                          🎁 Send an Amazon Gift Card
+                          Send an Amazon Gift Card
                         </a>
                       </div>
 
@@ -343,24 +354,24 @@
               <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
                 <div class="font-bold text-gray-900" x-text="emailSubject.length"></div>
                 <div class="text-xs text-gray-400">Subject line chars</div>
-                <div class="text-xs mt-1" :class="emailSubject.length > 60 ? 'text-red-500' : 'text-green-500'" x-text="emailSubject.length > 60 ? '⚠ Consider shorter' : '✓ Good length'"></div>
+                <div class="text-xs mt-1" :class="emailSubject.length > 60 ? 'text-red-500' : 'text-green-500'" x-text="emailSubject.length > 60 ? 'Consider shorter' : 'Good length'"></div>
               </div>
               <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-                <div class="font-bold text-gray-900" x-text="isLastMinute ? '⚡ Same-day' : (giftSuggestions.length + ' gifts')"></div>
+                <div class="font-bold text-gray-900" x-text="isLastMinute ? 'Same-day' : (giftSuggestions.length + ' gifts')"></div>
                 <div class="text-xs text-gray-400">Shown in email</div>
                 <div class="text-xs mt-1" :class="isLastMinute ? 'text-orange-500' : 'text-green-500'" x-text="isLastMinute ? 'Last-minute mode' : '+ 1 fallback card'"></div>
               </div>
               <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
                 <div class="font-bold text-gray-900">~4 sec</div>
                 <div class="text-xs text-gray-400">Avg time to act</div>
-                <div class="text-xs mt-1 text-green-500">✓ Frictionless</div>
+                <div class="text-xs mt-1 text-green-500">Frictionless</div>
               </div>
             </div>
 
             <!-- Timezone-aware send time -->
             <div class="mt-4 bg-white rounded-xl border border-gray-100 p-4">
               <div class="flex items-center gap-2 mb-2">
-                <span class="text-base">🕐</span>
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/></svg>
                 <span class="font-semibold text-gray-900 text-sm">Scheduled send time</span>
                 <span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">TZ-aware</span>
               </div>
@@ -372,7 +383,7 @@
             <div class="mt-4 bg-white rounded-xl border border-gray-100 overflow-hidden">
               <button @click="showHeaders = !showHeaders" class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                 <div class="flex items-center gap-2">
-                  <span class="text-base">📨</span>
+                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   <span class="font-semibold text-gray-900 text-sm">Email headers</span>
                   <span class="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">Deliverability</span>
                 </div>
@@ -421,9 +432,9 @@
               <h3 class="font-semibold text-gray-900 mb-2">Monthly Preview Email</h3>
               <p class="text-sm text-gray-500 mb-4">Sent on the 1st of each month — but only when you have events in the next 30 days. No upcoming dates? No email. One glance, full visibility on what's coming up.</p>
               <div class="space-y-2 text-sm text-gray-600">
-                <div class="flex items-center gap-2"><span class="text-green-500">✓</span> Shows all events for the month</div>
-                <div class="flex items-center gap-2"><span class="text-green-500">✓</span> One-click "start shopping" per contact</div>
-                <div class="flex items-center gap-2"><span class="text-green-500">✓</span> Time to use regular shipping — save on overnight</div>
+                <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Shows all events for the month</div>
+                <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> One-click "start shopping" per contact</div>
+                <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Time to use regular shipping — save on overnight</div>
               </div>
             </div>
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
@@ -451,7 +462,7 @@
                     <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                   </div>
                   <div class="flex-1">
-                    <div class="font-semibold text-gray-900 text-sm">📅 Your April reminders — plan ahead this month</div>
+                    <div class="font-semibold text-gray-900 text-sm">Your April reminders — plan ahead this month</div>
                     <div class="text-xs text-gray-400 mt-0.5">From: Landmarks &lt;reminders@landmarks.app&gt; · To: <span x-text="user?.email"></span></div>
                   </div>
                   <div class="text-xs text-gray-400">Apr 1</div>
@@ -465,12 +476,12 @@
                   <!-- Header -->
                   <div style="background: linear-gradient(135deg, #d05a32, #ad4628); border-radius: 16px 16px 0 0; padding: 28px 40px; text-align: center;">
                     <div style="color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500; margin-bottom: 4px;">Monthly Planning Digest</div>
-                    <div style="color: white; font-size: 22px; font-weight: 700;">📅 April's coming up</div>
+                    <div style="color: white; font-size: 22px; font-weight: 700;">April's coming up</div>
                     <div style="color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 6px;">Here's everyone with an event this month.</div>
                   </div>
 
                   <div style="background: white; padding: 28px 40px; border-radius: 0 0 16px 16px;">
-                    <p style="color: #374151; font-size: 15px; margin: 0 0 20px 0;" x-text="'Hi ' + (profile?.display_name?.split(' ')[0] || 'there') + ' 👋'"></p>
+                    <p style="color: #374151; font-size: 15px; margin: 0 0 20px 0;" x-text="'Hi ' + (profile?.display_name?.split(' ')[0] || 'there') + ','"></p>
                     <p style="color: #374151; font-size: 14px; margin: 0 0 24px 0; line-height: 1.6;">Here's a look at everyone who has something special coming up this month. You've got plenty of time to order with standard shipping — no rush yet.</p>
 
                     <!-- Event list -->
@@ -482,7 +493,12 @@
                       </template>
                       <template x-for="item in digestUpcoming" :key="item.event.id">
                         <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; background: #fafafa;">
-                          <div style="font-size: 24px; flex-shrink: 0;" x-text="item.event.event_type === 'birthday' ? '🎂' : item.event.event_type === 'anniversary' ? '💕' : '📅'"></div>
+                          <div style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
+                               :style="item.event.event_type === 'birthday' ? 'background: #fef3c7; color: #b45309;' : item.event.event_type === 'anniversary' ? 'background: #ffe4e6; color: #be123c;' : 'background: #f3f4f6; color: #6b7280;'">
+                            <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path :d="item.event.event_type === 'birthday' ? 'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z' : item.event.event_type === 'anniversary' ? 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' : 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'"/>
+                            </svg>
+                          </div>
                           <div style="flex: 1;">
                             <div style="font-weight: 600; color: #111827; font-size: 14px;" x-text="item.contact.first_name + (item.contact.last_name ? ' ' + item.contact.last_name : '')"></div>
                             <div style="color: #6b7280; font-size: 12px; margin-top: 2px;">
@@ -516,6 +532,169 @@
           </div>
         </div>
 
+        <!-- ── Re-engagement Drip Tab ─────────────────────────────────────── -->
+        <div x-show="activeTab === 'reengagement'" class="grid lg:grid-cols-3 gap-8">
+
+          <!-- Info panel -->
+          <div class="lg:col-span-1 space-y-5">
+            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 class="font-semibold text-gray-900 mb-2">Re-engagement Drip</h3>
+              <p class="text-sm text-gray-500 mb-4">A 3-email sequence sent to users who sign up but don't add any contacts. The goal is to convert silent signups into activated users — without being annoying.</p>
+              <div class="space-y-2 text-sm text-gray-600">
+                <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> D+3: Nudge to add first contact</div>
+                <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> D+10: Show what a reminder looks like</div>
+                <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> D+30: Reply-to-add concierge offer</div>
+              </div>
+            </div>
+
+            <!-- Drip selector -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 class="font-semibold text-gray-900 mb-3">Preview email</h3>
+              <div class="space-y-2">
+                <template x-for="(tmpl, idx) in dripTemplates" :key="tmpl.key">
+                  <button @click="selectedDripIndex = idx"
+                          :class="selectedDripIndex === idx ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+                          class="w-full text-left px-4 py-3 rounded-xl border text-sm transition-all">
+                    <div class="font-medium" x-text="tmpl.label"></div>
+                    <div class="text-xs mt-0.5 opacity-70" x-text="tmpl.subject"></div>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+              <strong>Dev note:</strong> In production, these are sent via Vercel Cron + Resend. The sequence stops automatically once a user adds their first contact.
+            </div>
+          </div>
+
+          <!-- Drip email preview -->
+          <div class="lg:col-span-2">
+            <div class="email-shell rounded-2xl overflow-hidden bg-white">
+              <!-- Inbox chrome -->
+              <div class="bg-gray-800 px-4 py-3 flex items-center gap-3">
+                <div class="flex gap-1.5">
+                  <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <div class="text-gray-400 text-xs">Inbox</div>
+              </div>
+
+              <!-- Email meta bar -->
+              <div class="bg-white border-b border-gray-100 px-6 py-4">
+                <div class="flex items-start gap-3">
+                  <div class="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="font-semibold text-gray-900 text-sm" x-text="currentDrip.subject"></div>
+                    <div class="text-xs text-gray-400 mt-0.5">From: Landmarks &lt;hello@landmarks.app&gt; · To: <span x-text="user?.email"></span></div>
+                  </div>
+                  <div class="text-xs text-gray-400" x-text="dripSendDateLabel"></div>
+                </div>
+              </div>
+
+              <!-- Drip email body -->
+              <div class="bg-gray-50 p-6">
+                <div class="max-w-lg mx-auto" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto;">
+
+                  <!-- Header -->
+                  <div style="background: linear-gradient(135deg, #d05a32, #ad4628); border-radius: 16px 16px 0 0; padding: 28px 40px; text-align: center;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                      <div style="width: 28px; height: 28px; background: rgba(255,255,255,0.2); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px;">★</div>
+                      <span style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">Landmarks</span>
+                    </div>
+                    <div style="color: white; font-size: 22px; font-weight: 700; line-height: 1.3;" x-text="currentDrip.headline"></div>
+                  </div>
+
+                  <!-- Body -->
+                  <div style="background: white; padding: 32px 40px; border-radius: 0 0 16px 16px;">
+
+                    <!-- Body text (rendered from newlines) -->
+                    <template x-for="(para, i) in currentDrip.body.split('\n\n')" :key="i">
+                      <p style="color: #374151; font-size: 15px; margin: 0 0 18px 0; line-height: 1.6;" x-text="para"></p>
+                    </template>
+
+                    <!-- Sample reminder inline (D+10 only) -->
+                    <template x-if="currentDrip.showSampleReminder">
+                      <div style="border: 2px solid #e5e7eb; border-radius: 16px; padding: 24px; margin: 20px 0 24px; background: #fafafa;">
+                        <div style="text-align: center; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px;">Sample Reminder</div>
+                        <div style="background: linear-gradient(135deg, #d05a32, #ad4628); border-radius: 12px; padding: 18px 24px; text-align: center; margin-bottom: 16px;">
+                          <div style="color: white; font-size: 17px; font-weight: 700;">Sarah's birthday is in 7 days</div>
+                        </div>
+                        <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: white; margin-bottom: 8px;">
+                          <div style="width: 36px; height: 36px; background: #fdf5f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #d05a32; font-weight: 700; font-size: 13px;">B</div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #111827; font-size: 13px;">Spring Bouquet</div>
+                            <div style="color: #6b7280; font-size: 11px;">The Bouqs Co. · $45</div>
+                          </div>
+                          <div style="background: #d05a32; color: white; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px;">Buy →</div>
+                        </div>
+                        <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: white;">
+                          <div style="width: 36px; height: 36px; background: #fdf5f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #d05a32; font-weight: 700; font-size: 13px;">W</div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #111827; font-size: 13px;">Curated Wine Box</div>
+                            <div style="color: #6b7280; font-size: 11px;">Wine.com · $55</div>
+                          </div>
+                          <div style="background: #d05a32; color: white; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px;">Buy →</div>
+                        </div>
+                        <div style="text-align: center; color: #9ca3af; font-size: 11px; margin-top: 12px;">One click to order. That's the whole idea.</div>
+                      </div>
+                    </template>
+
+                    <!-- CTA button -->
+                    <template x-if="currentDrip.ctaUrl">
+                      <div style="text-align: center; margin: 24px 0;">
+                        <a :href="currentDrip.ctaUrl" onclick="alert('In production, this links to the user\'s Landmarks account'); return false;"
+                           style="display: inline-block; background: #d05a32; color: white; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 10px;">
+                          <span x-text="currentDrip.ctaText"></span>
+                        </a>
+                      </div>
+                    </template>
+
+                    <!-- Reply CTA (D+30) -->
+                    <template x-if="currentDrip.isReplyAction">
+                      <div style="text-align: center; margin: 24px 0;">
+                        <div style="background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 12px; padding: 20px 24px;">
+                          <div style="color: #374151; font-size: 14px; font-weight: 600; margin-bottom: 6px;" x-text="currentDrip.ctaText"></div>
+                          <div style="color: #6b7280; font-size: 13px; line-height: 1.5;">For example: <em>"Mom, birthday, June 14"</em> or <em>"Jake, anniversary, October 3, likes hiking gear"</em></div>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Footer -->
+                    <div style="border-top: 1px solid #f3f4f6; padding-top: 20px; margin-top: 8px; text-align: center;">
+                      <div style="color: #9ca3af; font-size: 11px; line-height: 1.6;">
+                        Landmarks · <a href="#" style="color: #9ca3af;">Unsubscribe</a> · <a href="#" style="color: #9ca3af;">Privacy Policy</a><br>
+                        You're receiving this because you recently signed up for Landmarks.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Drip email metrics -->
+            <div class="mt-4 grid grid-cols-3 gap-3">
+              <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                <div class="font-bold text-gray-900" x-text="'Day ' + currentDrip.day"></div>
+                <div class="text-xs text-gray-400">Trigger timing</div>
+                <div class="text-xs mt-1 text-gray-500" x-text="currentDrip.day + ' days after signup'"></div>
+              </div>
+              <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                <div class="font-bold text-gray-900">0 contacts</div>
+                <div class="text-xs text-gray-400">Send condition</div>
+                <div class="text-xs mt-1 text-gray-500">Only to lapsed users</div>
+              </div>
+              <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                <div class="font-bold text-gray-900" x-text="currentDrip.subject.length"></div>
+                <div class="text-xs text-gray-400">Subject line chars</div>
+                <div class="text-xs mt-1" :class="currentDrip.subject.length > 60 ? 'text-red-500' : 'text-green-500'" x-text="currentDrip.subject.length > 60 ? 'Consider shorter' : 'Good length'"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   </div>
@@ -527,9 +706,10 @@
         user: null, profile: null,
         contacts: [],
         selectedContactId: '',
-        activeTab: 'reminder', // 'reminder' | 'digest'
+        activeTab: 'reminder', // 'reminder' | 'digest' | 'reengagement'
         showHeaders: false,
         sidebarOpen: false,
+        selectedDripIndex: 0,
         previewData: { event_type: 'birthday', days_before: '7', gift_category: 'flowers', suppress_gifts: false },
 
         get initials() {
@@ -595,15 +775,14 @@
         get emailSubject() {
           const days = parseInt(this.previewData.days_before);
           const type = this.eventTypeLabel;
-          if (days === 1) return `⏰ Last chance — ${this.contactFirstName}'s ${type} is tomorrow`;
+          if (days === 1) return `Last chance — ${this.contactFirstName}'s ${type} is tomorrow`;
           if (days <= 3) return `${this.contactFirstName}'s ${type} is in ${days} days — here's what to get`;
           return `${this.contactFirstName}'s ${type} is in ${days} days — here's what to get`;
         },
         get emailHeadline() {
           const days = parseInt(this.previewData.days_before);
-          const type = this.previewData.event_type === 'birthday' ? '🎂' : this.previewData.event_type === 'anniversary' ? '💕' : '📅';
-          if (days === 1) return `${type} ${this.contactFirstName}'s ${this.eventTypeLabel} is tomorrow`;
-          return `${type} ${this.contactFirstName}'s ${this.eventTypeLabel} is in ${days} days`;
+          if (days === 1) return `${this.contactFirstName}'s ${this.eventTypeLabel} is tomorrow`;
+          return `${this.contactFirstName}'s ${this.eventTypeLabel} is in ${days} days`;
         },
         get scheduledSendInfo() {
           const tz = this.profile?.timezone || 'America/New_York';
@@ -625,6 +804,19 @@
             feedbackId: `${this.previewData.event_type}:${this.previewData.gift_category}:landmarks`,
           };
         },
+        get dripTemplates() {
+          return Store.reengagement.getEmailTemplates(this.user?.id);
+        },
+        get currentDrip() {
+          const templates = this.dripTemplates;
+          return templates[this.selectedDripIndex] || templates[0];
+        },
+        get dripSendDateLabel() {
+          const d = new Date();
+          d.setDate(d.getDate() + (this.currentDrip?.day || 3));
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        },
+
         get emailIntro() {
           const days = parseInt(this.previewData.days_before);
           const name = this.contactFirstName;

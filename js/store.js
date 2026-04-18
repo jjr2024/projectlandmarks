@@ -55,6 +55,11 @@ const Store = (() => {
         reminder_days_before: [7, 3],
         default_gift_categories: ['gift_card'],
         monthly_digest_enabled: true,
+        email_reminders_enabled: true,
+        gift_suggestions_enabled: true,
+        product_updates_enabled: true,
+        partner_offers_enabled: true,
+        email_pause_until: null,
         created_at: now(),
         updated_at: now(),
       });
@@ -308,21 +313,21 @@ const Store = (() => {
     },
     giftLabelSingle(cat) {
       return {
-        flowers: '🌸 Flowers',
-        wine: '🍷 Wine',
-        treats: '🍫 Treats',
-        gift_card: '🎁 Gift Card',
-        experiences: '✨ Experience',
-        donation: '❤️ Donation',
+        flowers: 'Flowers',
+        wine: 'Wine',
+        treats: 'Treats',
+        gift_card: 'Gift Card',
+        experiences: 'Experience',
+        donation: 'Donation',
       }[cat] || cat;
     },
     /** Accepts a single string, an array, or a contact object with gift_categories */
     giftLabel(catOrArr, other) {
-      if (!catOrArr) return '🎁 Not set';
+      if (!catOrArr) return 'Not set';
       const arr = Array.isArray(catOrArr) ? catOrArr : [catOrArr];
       const labels = arr.map(c => utils.giftLabelSingle(c));
       if (other) labels.push(other);
-      return labels.length === 0 ? '🎁 Not set' : labels.join(', ');
+      return labels.length === 0 ? 'Not set' : labels.join(', ');
     },
     /** Convenience: pass a contact and optional profile, get a display string */
     giftLabelsForContact(contact, profile) {
@@ -339,7 +344,7 @@ const Store = (() => {
       return { low: 'Under $30', mid: '$30–75', high: '$75+' }[tier] || null;
     },
     budgetEmoji(tier) {
-      return { low: '💵', mid: '💳', high: '💎' }[tier] || null;
+      return { low: '$', mid: '$$', high: '$$$' }[tier] || null;
     },
     /**
      * Reminder schedule using the user's saved preference (from Settings),
@@ -727,5 +732,112 @@ const Store = (() => {
     },
   };
 
-  return { auth, profile, contacts, events, reminders, scheduler, conversion, admin, adminQueue, seed, utils, calendar, KEYS };
+  // ── Re-engagement drip ───────────────────────────────────────────────────
+  //
+  // In production: a Vercel Cron job checks user activation state and queues
+  // emails via Resend at D+3, D+10, D+30 after signup for users with zero
+  // contacts. Here: localStorage-based simulation for the email-preview tool.
+  //
+  const REENGAGEMENT_KEY = 'lm_reengagement_log';
+
+  const reengagement = {
+    /** Drip schedule: days after signup → email template key */
+    DRIP_SCHEDULE: [
+      { day: 3,  key: 'import_nudge',     label: 'D+3 — Contact Import Nudge' },
+      { day: 10, key: 'sample_reminder',   label: 'D+10 — Sample Reminder Preview' },
+      { day: 30, key: 'concierge_add',     label: 'D+30 — Reply-to-Add Concierge' },
+    ],
+
+    /** Get the log of which drip emails have been "sent" for a user. */
+    getLog(userId) {
+      try {
+        const all = JSON.parse(localStorage.getItem(REENGAGEMENT_KEY)) || {};
+        return all[userId] || {};
+      } catch { return {}; }
+    },
+
+    /** Mark a drip email as sent for a user. */
+    markSent(userId, dripKey) {
+      try {
+        const all = JSON.parse(localStorage.getItem(REENGAGEMENT_KEY)) || {};
+        if (!all[userId]) all[userId] = {};
+        all[userId][dripKey] = now();
+        localStorage.setItem(REENGAGEMENT_KEY, JSON.stringify(all));
+      } catch { /* silent */ }
+    },
+
+    /**
+     * Compute activation state for a user.
+     * Returns { daysSinceSignup, contactCount, isLapsed, dueDrip }.
+     * `dueDrip` is the next unsent drip that's past its trigger day, or null.
+     */
+    getActivationState(userId) {
+      const prof = profile.get(userId);
+      const user = get(KEYS.users).find(u => u.id === userId);
+      if (!user || !prof) return null;
+
+      const created = new Date(user.created_at || prof.created_at);
+      const daysSinceSignup = Math.floor((new Date() - created) / (1000 * 60 * 60 * 24));
+      const contactCount = contacts.list(userId).length;
+      const isLapsed = contactCount === 0 && daysSinceSignup >= 3;
+
+      const log = reengagement.getLog(userId);
+      let dueDrip = null;
+      for (const drip of reengagement.DRIP_SCHEDULE) {
+        if (daysSinceSignup >= drip.day && !log[drip.key]) {
+          dueDrip = drip;
+          break;
+        }
+      }
+
+      return { daysSinceSignup, contactCount, isLapsed, dueDrip, log };
+    },
+
+    /**
+     * Get all three drip email templates with personalized content.
+     * Used by email-preview.html to render the re-engagement tab.
+     */
+    getEmailTemplates(userId) {
+      const prof = profile.get(userId);
+      const user = get(KEYS.users).find(u => u.id === userId);
+      const firstName = prof?.display_name?.split(' ')[0] || 'there';
+
+      return [
+        {
+          key: 'import_nudge',
+          label: 'D+3 — Contact Import Nudge',
+          day: 3,
+          subject: `${firstName}, add your first birthday in 60 seconds`,
+          headline: 'Never miss a birthday again',
+          body: `Hi ${firstName},\n\nYou signed up for Landmarks a few days ago — great call. But right now your account is empty, which means we can't help you yet.\n\nAdding your first contact takes about 60 seconds: a name, a date, and optionally a note about what they like. That's it.\n\nOnce you do, we'll send you a reminder before their next birthday with a handful of curated gift ideas you can order in one click. No more last-minute gas station flowers.`,
+          ctaText: 'Add your first contact →',
+          ctaUrl: 'contacts.html',
+        },
+        {
+          key: 'sample_reminder',
+          label: 'D+10 — Sample Reminder Preview',
+          day: 10,
+          subject: `Here's what a Landmarks reminder actually looks like`,
+          headline: 'This is what you\'ll get',
+          body: `Hi ${firstName},\n\nWe noticed you haven't added anyone to Landmarks yet. Fair enough — maybe you weren't sure what to expect.\n\nBelow is an example of the reminder email you'd receive a week before a friend's birthday. It includes a few curated gift ideas based on what you tell us they like, with one-click ordering. No scrolling through endless product pages.\n\nThe whole point is to make you the person who always remembers — without any effort on your part.`,
+          ctaText: 'Try it — add someone now →',
+          ctaUrl: 'contacts.html',
+          showSampleReminder: true,
+        },
+        {
+          key: 'concierge_add',
+          label: 'D+30 — Reply-to-Add Concierge',
+          day: 30,
+          subject: `One last thing — let us add your first contact for you`,
+          headline: 'Let us set it up for you',
+          body: `Hi ${firstName},\n\nWe get it — life is busy, and setting up yet another app isn't always at the top of the list.\n\nSo here's an easy way to try Landmarks out: just hit reply to this email and type a person's name, the event type (birthday, anniversary, etc.), and the date. Our team will add them to your account so you can see how it works.\n\nThis is just to help you get started — once you see your first reminder, you'll have a feel for whether Landmarks is useful for you. No pressure either way.`,
+          ctaText: 'Just hit reply — we\'ll take it from here',
+          ctaUrl: null, // reply action, no link
+          isReplyAction: true,
+        },
+      ];
+    },
+  };
+
+  return { auth, profile, contacts, events, reminders, scheduler, conversion, admin, adminQueue, seed, utils, calendar, reengagement, KEYS };
 })();

@@ -83,7 +83,9 @@
       <!-- ───── Step 1: Welcome ───── -->
       <div x-show="step === 1" class="step-enter">
         <div class="text-center mb-10">
-          <div class="text-5xl mb-5">👋</div>
+          <div class="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg class="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
+          </div>
           <h1 class="text-3xl font-bold text-gray-900 mb-3">
             Welcome, <span class="text-brand-600" x-text="firstName || 'there'"></span>!
           </h1>
@@ -94,7 +96,9 @@
 
         <div class="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 mb-8">
           <div class="flex items-center gap-4 p-5">
-            <div class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0 text-lg">👤</div>
+            <div class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            </div>
             <div>
               <div class="font-semibold text-gray-900 text-sm">Add a contact and their dates</div>
               <div class="text-gray-500 text-sm">Name, birthday, anniversary — all in one go</div>
@@ -102,7 +106,9 @@
             <div class="ml-auto text-xs text-gray-400">~1 min</div>
           </div>
           <div class="flex items-center gap-4 p-5">
-            <div class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0 text-lg">🎁</div>
+            <div class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+            </div>
             <div>
               <div class="font-semibold text-gray-900 text-sm">Pick their gift preferences</div>
               <div class="text-gray-500 text-sm">So your reminders include the right ideas</div>
@@ -165,19 +171,22 @@
                 <div class="event-row bg-gray-50 rounded-xl p-4">
                   <div class="flex items-center gap-2 mb-3">
                     <button type="button" @click="evt.event_type='birthday'"
-                            :class="evt.event_type==='birthday' ? 'event-type-btn active' : 'event-type-btn'"
-                            class="rounded-lg px-3 py-1.5 text-xs font-semibold">
-                      🎂 Birthday
+                            :class="evt.event_type==='birthday' ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-600 hover:border-amber-300'"
+                            class="border-2 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A1.75 1.75 0 003 16.5v-9A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v8.046zM12 3v2"/></svg>
+                      Birthday
                     </button>
                     <button type="button" @click="evt.event_type='anniversary'"
-                            :class="evt.event_type==='anniversary' ? 'event-type-btn active' : 'event-type-btn'"
-                            class="rounded-lg px-3 py-1.5 text-xs font-semibold">
-                      💕 Anniversary
+                            :class="evt.event_type==='anniversary' ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-600 hover:border-rose-300'"
+                            class="border-2 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                      Anniversary
                     </button>
                     <button type="button" @click="evt.event_type='custom'"
-                            :class="evt.event_type==='custom' ? 'event-type-btn active' : 'event-type-btn'"
-                            class="rounded-lg px-3 py-1.5 text-xs font-semibold">
-                      📅 Custom
+                            :class="evt.event_type==='custom' ? 'border-gray-400 bg-gray-100 text-gray-700' : 'border-gray-200 text-gray-600 hover:border-gray-400'"
+                            class="border-2 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      Other
                     </button>
                     <button x-show="eventsToAdd.length > 1" type="button" @click="removeEvent(idx)"
                             class="ml-auto text-gray-400 hover:text-red-500 transition-colors p-1">
@@ -217,8 +226,8 @@
                     </div>
                   </div>
 
-                  <!-- High importance per event -->
-                  <div class="mb-3">
+                  <!-- High importance + Suppress gifts row -->
+                  <div class="mb-3 flex items-center justify-between">
                     <label class="flex items-center gap-2.5 cursor-pointer">
                       <input type="checkbox" x-model="evt.high_importance"
                              class="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer" />
@@ -230,15 +239,13 @@
                         </span>
                       </span>
                     </label>
-                  </div>
-
-                  <!-- Suppress gifts (subtle) -->
-                  <div class="mb-3">
-                    <label class="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" x-model="evt.suppress_gifts"
-                             class="w-4 h-4 rounded border-gray-300 text-gray-400 focus:ring-gray-300 cursor-pointer" />
-                      <span class="text-xs text-gray-400">Skip gift suggestions</span>
-                    </label>
+                    <!-- Skip gifts toggle (subtle, right-aligned) -->
+                    <button type="button" @click="evt.suppress_gifts = !evt.suppress_gifts"
+                            class="flex items-center gap-1.5 text-xs transition-colors rounded-full px-2.5 py-1"
+                            :class="evt.suppress_gifts ? 'bg-gray-200 text-gray-600' : 'text-gray-400 hover:text-gray-500'">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                      Skip gifts
+                    </button>
                   </div>
 
                   <div class="grid grid-cols-2 gap-3">
@@ -322,7 +329,10 @@
         <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-2.5 mb-4">
           <template x-for="opt in giftOptions" :key="opt.value">
             <label class="gift-option" :class="selectedGifts.includes(opt.value) ? 'selected' : ''" @click="toggleGift(opt.value)">
-              <span class="text-2xl" x-text="opt.emoji"></span>
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                   :class="selectedGifts.includes(opt.value) ? 'bg-brand-100' : 'bg-gray-100'">
+                <svg class="w-5 h-5" :class="selectedGifts.includes(opt.value) ? 'text-brand-600' : 'text-gray-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="opt.icon"></path></svg>
+              </div>
               <div class="flex-1">
                 <div class="font-semibold text-gray-900 text-sm" x-text="opt.label"></div>
                 <div class="text-gray-500 text-xs mt-0.5" x-text="opt.description"></div>
@@ -364,10 +374,12 @@
         </div>
       </div>
 
-      <!-- ───── Step 4: Done! ───── -->
+      <!-- ───── Step 4: Done! ─────  -->
       <div x-show="step === 4" class="step-enter text-center">
         <div class="mb-8">
-          <div class="text-6xl mb-5">🎉</div>
+          <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
           <h2 class="text-3xl font-bold text-gray-900 mb-3">You're all set!</h2>
           <p class="text-gray-500 text-lg max-w-sm mx-auto leading-relaxed">
             <span class="font-semibold text-gray-700" x-text="contact.first_name"></span> is saved.
@@ -385,15 +397,9 @@
           </div>
           <div class="space-y-2 text-sm">
             <template x-for="(evt, idx) in savedEvents" :key="idx">
-              <div class="flex items-center gap-2 text-gray-600">
-                <span x-text="evt.event_type === 'birthday' ? '🎂' : evt.event_type === 'anniversary' ? '💕' : '📅'"></span>
-                <span x-text="Store.utils.eventTypeLabel(evt.event_type) + ' · ' + Store.utils.formatDate(evt.month, evt.day)"></span>
-              </div>
+              <div class="text-gray-600" x-text="Store.utils.eventTypeLabel(evt.event_type) + ' · ' + Store.utils.formatDate(evt.month, evt.day)"></div>
             </template>
-            <div class="flex items-center gap-2 text-gray-600">
-              <span>🎁</span>
-              <span x-text="Store.utils.giftLabel(selectedGifts, giftOther)"></span>
-            </div>
+            <div class="text-gray-600" x-text="'Gifts: ' + Store.utils.giftLabel(selectedGifts, giftOther)"></div>
           </div>
         </div>
 
@@ -456,12 +462,12 @@
         },
 
         giftOptions: [
-          { value: 'flowers', emoji: '🌸', label: 'Flowers', description: 'Bouquets, arrangements, succulents' },
-          { value: 'treats', emoji: '🍫', label: 'Food & Treats', description: 'Chocolates, cakes, gourmet baskets' },
-          { value: 'wine', emoji: '🍷', label: 'Wine & Drinks', description: 'Wine, champagne, spirits' },
-          { value: 'gift_card', emoji: '🎁', label: 'Gift Cards', description: 'Amazon, Nordstrom, Starbucks & more' },
-          { value: 'experiences', emoji: '✨', label: 'Experiences', description: 'Shows, activities, unique outings' },
-          { value: 'donation', emoji: '❤️', label: 'Charitable Donation', description: 'Give to a cause in their name' },
+          { value: 'flowers', icon: 'M12 3c-1.5 0-3 .5-4 2-1.5 2.5-1 5 .5 6.5C7 13 5.5 14 5.5 16c0 2 1.5 3.5 3.5 4 .5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2V22m0-2c.5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2 2-.5 3.5-2 3.5-4 0-2-1.5-3-3-4.5 1.5-1.5 2-4 .5-6.5-1-1.5-2.5-2-4-2', label: 'Flowers', description: 'Bouquets, arrangements, succulents' },
+          { value: 'treats', icon: 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zm4-5v5m4-5v5m4-5v5', label: 'Food & Treats', description: 'Chocolates, cakes, gourmet baskets' },
+          { value: 'wine', icon: 'M8 22h8M12 15v7m0-7a5 5 0 005-5V2H7v8a5 5 0 005 5z', label: 'Wine & Drinks', description: 'Wine, champagne, spirits' },
+          { value: 'gift_card', icon: 'M3 10h18V6a2 2 0 00-2-2H5a2 2 0 00-2 2v4zm0 0v8a2 2 0 002 2h14a2 2 0 002-2v-8m-9-4v12', label: 'Gift Cards', description: 'Amazon, Nordstrom, Starbucks & more' },
+          { value: 'experiences', icon: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', label: 'Experiences', description: 'Shows, activities, unique outings' },
+          { value: 'donation', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', label: 'Charitable Donation', description: 'Give to a cause in their name' },
         ],
 
         init() {

@@ -66,6 +66,10 @@
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
         </a>
+        <a href="about.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          About
+        </a>
       </nav>
       <div class="p-4 border-t border-gray-100">
         <div class="flex items-center gap-3">
@@ -114,6 +118,30 @@
                      class="w-full px-3 py-2.5 border border-gray-100 rounded-lg text-sm bg-gray-50 text-gray-400"/>
               <p class="text-xs text-gray-400 mt-1">Email changes coming soon</p>
             </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">ZIP code <span class="text-gray-400 font-normal">(US)</span></label>
+                <input type="text" x-model="form.zipcode" maxlength="10" placeholder="e.g. 90210"
+                       class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all"/>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Country</label>
+                <select x-model="form.country" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all">
+                  <option value="">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="JP">Japan</option>
+                  <option value="IN">India</option>
+                  <option value="BR">Brazil</option>
+                  <option value="MX">Mexico</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 -mt-2">Helps us suggest gifts with accurate shipping and local availability</p>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Timezone</label>
               <select x-model="form.timezone" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all">
@@ -142,7 +170,7 @@
           <div class="p-6">
 
             <div class="bg-brand-50 border border-brand-100 rounded-xl p-4 mb-5 flex gap-3">
-              <span class="text-lg flex-shrink-0">📬</span>
+              <svg class="w-5 h-5 text-brand-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               <div>
                 <div class="text-sm font-semibold text-brand-800 mb-1">How reminders work</div>
                 <div class="text-xs text-brand-700 leading-relaxed">Everyone gets reminders at the times you pick below. Contacts marked as <strong>High importance</strong> get an extra reminder 21 days out so you have more time to plan.</div>
@@ -192,31 +220,113 @@
           </div>
         </section>
 
-        <!-- Monthly digest -->
+        <!-- Email Preferences -->
         <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div class="px-6 py-4 border-b bg-gray-50/50">
-            <h2 class="font-semibold text-gray-900">Monthly Preview Email</h2>
-            <p class="text-xs text-gray-400 mt-0.5">A planning email on the 1st of each month — only sent when you have dates ahead</p>
+            <h2 class="font-semibold text-gray-900">Email Preferences</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Choose which emails you receive from Landmarks</p>
           </div>
-          <div class="p-6">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm font-medium text-gray-900">Send me a monthly preview</div>
-                <div class="text-xs text-gray-500 mt-0.5">A single email at the start of each month — only when you have events coming up. Great for ordering gifts with regular shipping.</div>
+          <div class="p-6 space-y-0">
+
+            <!-- Pause banner (shown when active) -->
+            <template x-if="isEmailPaused">
+              <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="flex-1">
+                  <div class="text-sm font-semibold text-amber-800">All emails are paused</div>
+                  <div class="text-xs text-amber-700 mt-0.5">Emails will automatically resume on <span x-text="new Date(form.email_pause_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })"></span>.</div>
+                </div>
+                <button @click="form.email_pause_until = null; saveProfile()" class="text-xs font-medium text-amber-700 hover:text-amber-900 underline flex-shrink-0">Resume now</button>
               </div>
-              <!-- Toggle switch -->
+            </template>
+
+            <!-- 1. Event Reminders -->
+            <div class="flex items-start justify-between py-4 border-b border-gray-100">
+              <div class="flex-1 pr-4">
+                <div class="text-sm font-medium text-gray-900">Event reminders</div>
+                <div class="text-xs text-gray-500 mt-0.5">Timely reminders before birthdays, anniversaries, and other dates — with curated gift ideas. This is the core of Landmarks.</div>
+                <!-- Pause option (nested under reminders) -->
+                <div class="mt-3" x-show="form.email_reminders_enabled && !isEmailPaused">
+                  <button @click="pauseEmailsForOneMonth()"
+                          class="text-xs text-gray-400 hover:text-brand-600 transition-colors flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Pause all emails for 1 month
+                  </button>
+                </div>
+              </div>
               <button type="button"
-                      @click="form.monthly_digest_enabled = !form.monthly_digest_enabled; saveProfile()"
+                      @click="toggleEmailPref('email_reminders_enabled')"
+                      :class="form.email_reminders_enabled ? 'bg-brand-600' : 'bg-gray-200'"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 mt-1">
+                <span :class="form.email_reminders_enabled ? 'translate-x-5' : 'translate-x-0'"
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"></span>
+              </button>
+            </div>
+
+            <!-- 2. Monthly Digest -->
+            <div class="flex items-start justify-between py-4 border-b border-gray-100">
+              <div class="flex-1 pr-4">
+                <div class="text-sm font-medium text-gray-900">Monthly digest</div>
+                <div class="text-xs text-gray-500 mt-0.5">A planning email on the 1st of each month — only sent when you have events ahead. Great for ordering gifts with regular shipping.</div>
+                <a href="email-preview.html#digest" class="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline mt-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  Preview this email →
+                </a>
+              </div>
+              <button type="button"
+                      @click="toggleEmailPref('monthly_digest_enabled')"
                       :class="form.monthly_digest_enabled ? 'bg-brand-600' : 'bg-gray-200'"
-                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ml-4">
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 mt-1">
                 <span :class="form.monthly_digest_enabled ? 'translate-x-5' : 'translate-x-0'"
                       class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"></span>
               </button>
             </div>
-            <a href="email-preview.html#digest" class="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline mt-3">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-              Preview what this email looks like →
-            </a>
+
+            <!-- 3. Gift Suggestions -->
+            <div class="flex items-start justify-between py-4 border-b border-gray-100">
+              <div class="flex-1 pr-4">
+                <div class="text-sm font-medium text-gray-900">Gift suggestions</div>
+                <div class="text-xs text-gray-500 mt-0.5">Include curated gift ideas and one-click shopping links in your reminder emails. Turning this off means you'll still get reminders, just without gift recommendations.</div>
+              </div>
+              <button type="button"
+                      @click="toggleEmailPref('gift_suggestions_enabled')"
+                      :class="form.gift_suggestions_enabled ? 'bg-brand-600' : 'bg-gray-200'"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 mt-1">
+                <span :class="form.gift_suggestions_enabled ? 'translate-x-5' : 'translate-x-0'"
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"></span>
+              </button>
+            </div>
+
+            <!-- 4. Product Updates -->
+            <div class="flex items-start justify-between py-4 border-b border-gray-100">
+              <div class="flex-1 pr-4">
+                <div class="text-sm font-medium text-gray-900">Product updates &amp; tips</div>
+                <div class="text-xs text-gray-500 mt-0.5">Occasional emails about new Landmarks features and gifting tips. We send these sparingly — a few times a year at most.</div>
+              </div>
+              <button type="button"
+                      @click="toggleEmailPref('product_updates_enabled')"
+                      :class="form.product_updates_enabled ? 'bg-brand-600' : 'bg-gray-200'"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 mt-1">
+                <span :class="form.product_updates_enabled ? 'translate-x-5' : 'translate-x-0'"
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"></span>
+              </button>
+            </div>
+
+            <!-- 5. Partner Offers -->
+            <div class="flex items-start justify-between py-4">
+              <div class="flex-1 pr-4">
+                <div class="text-sm font-medium text-gray-900">Partner offers</div>
+                <div class="text-xs text-gray-500 mt-0.5">Special deals and seasonal promotions from our gifting partners. These help keep Landmarks free and are always relevant to gifting.</div>
+              </div>
+              <button type="button"
+                      @click="toggleEmailPref('partner_offers_enabled')"
+                      :class="form.partner_offers_enabled ? 'bg-brand-600' : 'bg-gray-200'"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 mt-1">
+                <span :class="form.partner_offers_enabled ? 'translate-x-5' : 'translate-x-0'"
+                      class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200"></span>
+              </button>
+            </div>
+
           </div>
         </section>
 
@@ -238,7 +348,11 @@
                 Copy feed URL
               </button>
             </div>
-            <p class="text-xs text-gray-400 mt-3">In production, this will be a live URL that stays in sync. For now, the download reflects your current data.</p>
+            <button @click="showICSHelp = true" class="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline mt-3">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              What do I do with a .ics file?
+            </button>
+            <p class="text-xs text-gray-400 mt-2">In production, this will be a live URL that stays in sync. For now, the download reflects your current data.</p>
           </div>
         </section>
 
@@ -254,7 +368,9 @@
                 <button type="button" @click="toggleDefaultGift(opt.value)"
                         class="border rounded-xl p-3 text-left transition-all"
                         :class="form.default_gift_categories.includes(opt.value) ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300'">
-                  <div class="text-xl mb-1" x-text="opt.emoji"></div>
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-1" :class="form.default_gift_categories.includes(opt.value) ? 'bg-brand-100' : 'bg-gray-100'">
+                    <svg class="w-4 h-4" :class="form.default_gift_categories.includes(opt.value) ? 'text-brand-600' : 'text-gray-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="opt.icon"></path></svg>
+                  </div>
                   <div class="text-sm font-medium text-gray-800" x-text="opt.label"></div>
                 </button>
               </template>
@@ -275,7 +391,7 @@
               </div>
               <div>
                 <div class="font-medium text-gray-900 text-sm">Export my data</div>
-                <div class="text-xs text-gray-400 mt-0.5">Download all your contacts and events as JSON</div>
+                <div class="text-xs text-gray-400 mt-0.5">Download your contacts and events as a CSV spreadsheet</div>
               </div>
               <svg class="w-5 h-5 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -319,6 +435,75 @@
     </div>
   </div>
 
+  <!-- ICS Help Modal -->
+  <div x-show="showICSHelp" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-gray-900">How to use your .ics calendar file</h3>
+        <button @click="showICSHelp = false" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <p class="text-sm text-gray-600 mb-5">An .ics file is a standard calendar format that works with virtually every calendar app. Here's how to import it:</p>
+
+      <!-- Gmail / Google Calendar -->
+      <div class="mb-5">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <h4 class="font-semibold text-gray-900 text-sm">Google Calendar (Gmail)</h4>
+        </div>
+        <ol class="text-sm text-gray-600 space-y-1.5 ml-9 list-decimal">
+          <li>Open <strong>Google Calendar</strong> on your computer (calendar.google.com)</li>
+          <li>Click the <strong>gear icon</strong> in the top right, then <strong>Settings</strong></li>
+          <li>In the left sidebar, click <strong>Import & Export</strong></li>
+          <li>Click <strong>Select file from your computer</strong> and choose the downloaded .ics file</li>
+          <li>Pick which calendar to add the events to, then click <strong>Import</strong></li>
+        </ol>
+      </div>
+
+      <!-- Outlook -->
+      <div class="mb-5">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <h4 class="font-semibold text-gray-900 text-sm">Outlook (Desktop or Web)</h4>
+        </div>
+        <ol class="text-sm text-gray-600 space-y-1.5 ml-9 list-decimal">
+          <li>Open <strong>Outlook Calendar</strong></li>
+          <li>Click <strong>Add calendar</strong> (or <strong>File > Open & Export > Import</strong> on desktop)</li>
+          <li>Choose <strong>Upload from file</strong></li>
+          <li>Select the .ics file and choose your target calendar</li>
+          <li>Click <strong>Import</strong> — your Landmarks dates will appear</li>
+        </ol>
+      </div>
+
+      <!-- Apple Calendar -->
+      <div class="mb-5">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <h4 class="font-semibold text-gray-900 text-sm">Apple Calendar (Mac / iPhone)</h4>
+        </div>
+        <ol class="text-sm text-gray-600 space-y-1.5 ml-9 list-decimal">
+          <li>Simply <strong>double-click</strong> the downloaded .ics file</li>
+          <li>Apple Calendar will open and ask which calendar to add events to</li>
+          <li>Click <strong>OK</strong> — done!</li>
+        </ol>
+      </div>
+
+      <div class="bg-gray-50 rounded-xl p-3 text-xs text-gray-500">
+        <strong>Tip:</strong> Use the "Copy feed URL" button above for a subscribable calendar that updates automatically as you add or remove contacts. The .ics download is a one-time snapshot.
+      </div>
+
+      <button @click="showICSHelp = false" class="w-full mt-4 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">Got it</button>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div x-show="toast" class="fixed bottom-6 right-6 z-50">
     <div class="toast bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
@@ -332,15 +517,15 @@
       return {
         user: null, profile: null,
         sidebarOpen: false,
-        form: { display_name: '', timezone: 'America/New_York', preferred_send_hour: 8, reminder_days_before: [7, 3], default_gift_categories: ['gift_card'], monthly_digest_enabled: true },
-        showDeleteAccount: false, deleteConfirmText: '', toast: '',
+        form: { display_name: '', timezone: 'America/New_York', preferred_send_hour: 8, reminder_days_before: [7, 3], default_gift_categories: ['gift_card'], monthly_digest_enabled: true, email_reminders_enabled: true, gift_suggestions_enabled: true, product_updates_enabled: true, partner_offers_enabled: true, email_pause_until: null, zipcode: '', country: '' },
+        showDeleteAccount: false, showICSHelp: false, deleteConfirmText: '', toast: '',
         giftOptions: [
-          { value: 'flowers', emoji: '🌸', label: 'Flowers' },
-          { value: 'wine', emoji: '🍷', label: 'Wine' },
-          { value: 'treats', emoji: '🍫', label: 'Treats' },
-          { value: 'gift_card', emoji: '🎁', label: 'Gift Card' },
-          { value: 'experiences', emoji: '✨', label: 'Experiences' },
-          { value: 'donation', emoji: '❤️', label: 'Donation' },
+          { value: 'flowers', icon: 'M12 3c-1.5 0-3 .5-4 2-1.5 2.5-1 5 .5 6.5C7 13 5.5 14 5.5 16c0 2 1.5 3.5 3.5 4 .5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2V22m0-2c.5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2 2-.5 3.5-2 3.5-4 0-2-1.5-3-3-4.5 1.5-1.5 2-4 .5-6.5-1-1.5-2.5-2-4-2', label: 'Flowers' },
+          { value: 'wine', icon: 'M8 22h8M12 15v7m0-7a5 5 0 005-5V2H7v8a5 5 0 005 5z', label: 'Wine' },
+          { value: 'treats', icon: 'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zm4-5v5m4-5v5m4-5v5', label: 'Treats' },
+          { value: 'gift_card', icon: 'M3 10h18V6a2 2 0 00-2-2H5a2 2 0 00-2 2v4zm0 0v8a2 2 0 002 2h14a2 2 0 002-2v-8m-9-4v12', label: 'Gift Card' },
+          { value: 'experiences', icon: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', label: 'Experiences' },
+          { value: 'donation', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', label: 'Donation' },
         ],
 
         get initials() {
@@ -366,6 +551,13 @@
             const cats = this.profile.default_gift_categories || (this.profile.default_gift_category ? [this.profile.default_gift_category] : ['gift_card']);
             this.form.default_gift_categories = [...cats];
             this.form.monthly_digest_enabled = this.profile.monthly_digest_enabled !== false; // default true
+            this.form.email_reminders_enabled = this.profile.email_reminders_enabled !== false;
+            this.form.gift_suggestions_enabled = this.profile.gift_suggestions_enabled !== false;
+            this.form.product_updates_enabled = this.profile.product_updates_enabled !== false;
+            this.form.partner_offers_enabled = this.profile.partner_offers_enabled !== false;
+            this.form.email_pause_until = this.profile.email_pause_until || null;
+            this.form.zipcode = this.profile.zipcode || '';
+            this.form.country = this.profile.country || '';
           }
         },
 
@@ -385,6 +577,24 @@
           }
         },
 
+        get isEmailPaused() {
+          if (!this.form.email_pause_until) return false;
+          return new Date(this.form.email_pause_until) > new Date();
+        },
+
+        toggleEmailPref(field) {
+          this.form[field] = !this.form[field];
+          this.saveProfile();
+        },
+
+        pauseEmailsForOneMonth() {
+          const resume = new Date();
+          resume.setMonth(resume.getMonth() + 1);
+          this.form.email_pause_until = resume.toISOString();
+          this.saveProfile();
+          this.showToast('All emails paused for 1 month.');
+        },
+
         saveProfile() {
           Store.profile.update(this.user.id, {
             display_name: this.form.display_name,
@@ -393,6 +603,13 @@
             reminder_days_before: this.form.reminder_days_before,
             default_gift_categories: this.form.default_gift_categories,
             monthly_digest_enabled: this.form.monthly_digest_enabled,
+            email_reminders_enabled: this.form.email_reminders_enabled,
+            gift_suggestions_enabled: this.form.gift_suggestions_enabled,
+            product_updates_enabled: this.form.product_updates_enabled,
+            partner_offers_enabled: this.form.partner_offers_enabled,
+            email_pause_until: this.form.email_pause_until,
+            zipcode: this.form.zipcode,
+            country: this.form.country,
           });
           this.profile = Store.profile.get(this.user.id);
           this.showToast('Settings saved!');
@@ -421,11 +638,24 @@
         exportData() {
           const contacts = Store.contacts.list(this.user.id);
           const events = Store.events.list(this.user.id);
-          const data = { exported_at: new Date().toISOString(), profile: this.profile, contacts, events };
-          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const rows = [['Contact First Name', 'Contact Last Name', 'Contact Event', 'Contact Event Date']];
+          for (const contact of contacts) {
+            const contactEvents = events.filter(e => e.contact_id === contact.id);
+            if (contactEvents.length === 0) {
+              rows.push([contact.first_name, contact.last_name || '', '', '']);
+            } else {
+              for (const evt of contactEvents) {
+                const eventLabel = evt.event_type === 'custom' && evt.event_label ? evt.event_label : Store.utils.eventTypeLabel(evt.event_type);
+                const eventDate = Store.utils.formatDate(evt.month, evt.day);
+                rows.push([contact.first_name, contact.last_name || '', eventLabel, eventDate]);
+              }
+            }
+          }
+          const csvContent = rows.map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = url; a.download = 'landmarks-export.json'; a.click();
+          a.href = url; a.download = 'landmarks-export.csv'; a.click();
           URL.revokeObjectURL(url);
           this.showToast('Data exported!');
         },

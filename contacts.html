@@ -69,6 +69,10 @@
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
         </a>
+        <a href="about.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          About
+        </a>
       </nav>
       <div class="p-4 border-t border-gray-100">
         <div class="flex items-center gap-3">
@@ -183,7 +187,7 @@
               <div class="space-y-1 mb-4">
                 <template x-for="evt in eventsForContact(contact.id)" :key="evt.id">
                   <div class="flex items-center gap-2 text-sm text-gray-600">
-                    <span x-text="evt.event_type === 'birthday' ? '🎂' : evt.event_type === 'anniversary' ? '💕' : '📅'"></span>
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" :class="evt.event_type === 'birthday' ? 'text-amber-500' : evt.event_type === 'anniversary' ? 'text-rose-500' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="evt.event_type === 'birthday' ? 'M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A1.75 1.75 0 003 16.5v-9A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v8.046zM12 3v2' : evt.event_type === 'anniversary' ? 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' : 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'"></path></svg>
                     <span x-text="Store.utils.eventTypeLabel(evt.event_type)"></span>
                     <span class="text-gray-400">·</span>
                     <span x-text="Store.utils.formatDate(evt.month, evt.day)"></span>

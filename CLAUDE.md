@@ -44,13 +44,14 @@ Admin panel: `admin.html` — credentials `admin@landmarks.app` / `LM-admin-2026
 projectlandmarks/
 ├── index.html              Landing page (marketing, privacy promise, cookie consent, auth redirect)
 ├── auth.html               Sign in / sign up (email+password, demo shortcut)
-├── onboarding.html         Post-signup guided setup (4 steps)
+├── onboarding.html         Post-signup guided setup (4 steps: welcome, contact+events, gift prefs, done)
 ├── dashboard.html          Upcoming reminders, stats, urgency badges
 ├── contacts.html           Contact list with search/filter, add/edit/delete modals
 ├── contact.html            Single contact detail + event management
 ├── settings.html           Profile, reminder timing, gift defaults, data export, account deletion
 ├── email-preview.html      DEV TOOL: live preview of reminder emails with gift data
 ├── admin.html              Internal admin dashboard (two tabs: analytics funnel + email queue with gift overrides)
+├── about.html              Origin story, privacy philosophy, business model
 ├── contact-us.html         Contact form (frontend only, backend not wired)
 ├── privacy.html            Privacy policy (static)
 ├── terms.html              Terms of service (static)
@@ -68,7 +69,7 @@ projectlandmarks/
 
 **Data layer (`js/store.js`):** An IIFE that returns a `Store` object with namespaced modules: `auth`, `profile`, `contacts`, `events`, `reminders`, `scheduler`, `conversion`, `admin`, `adminQueue`, `seed`, `utils`, `calendar`. Every page imports this single file. All reads/writes go through `localStorage` with JSON serialization. The schema mirrors the planned Supabase tables (profiles, contacts, events, reminder_log) plus prototype-only additions (conversion_events, admin_session).
 
-**Page architecture:** Each HTML file is self-contained — loads Tailwind + Alpine from CDN, imports `store.js`, defines its own Alpine component as a function (e.g., `dashboardApp()`, `contactsApp()`). Pages share no component library; common patterns (sidebar nav, signOut, initials computation) are duplicated per page. This is acceptable for a prototype but should be componentized during production migration.
+**Page architecture:** Each HTML file is self-contained — loads Tailwind + Alpine from CDN, imports `store.js`, defines its own Alpine component as a function (e.g., `dashboardApp()`, `contactsApp()`). Pages share no component library beyond `store.js` and `gift-data.js`; common patterns (sidebar nav, signOut, initials computation) are duplicated per page. This is acceptable for a prototype but should be componentized during production migration.
 
 **Mobile sidebar pattern:** All authenticated pages (dashboard, contacts, contact, settings, email-preview) implement a responsive sidebar that collapses behind a hamburger button on screens below the `md` breakpoint. Each page manages this via an Alpine.js `sidebarOpen` boolean, a fixed-position sidebar with CSS transform (`-translate-x-full` when closed), and a semi-transparent overlay. The pattern is duplicated per page — same implementation, no shared component.
 
@@ -79,12 +80,13 @@ index.html → auth.html → onboarding.html (new users) → dashboard.html
 dashboard.html ↔ contacts.html ↔ contact.html
 dashboard.html ↔ settings.html
 dashboard.html ↔ email-preview.html
+about.html (linked from index.html footer + all authenticated page sidebars)
 admin.html (standalone, not linked from public nav)
 ```
 
 **Auth model:** Plaintext passwords in localStorage. Acceptable for a local prototype. Must be replaced by Supabase Auth (bcrypt + sessions) before any deployment.
 
-**Email preview (`email-preview.html`):** Contains hardcoded `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` objects (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data moves to a structured `gift_catalog` table with tags, relationship/event affinities, and price tiers, and items are selected by a deterministic weighted scoring function (see Landmarks_Blueprint.md Section 11.1). No LLM — per-query cost must be zero for a free affiliate-funded service.
+**Email preview (`email-preview.html`):** Imports `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` from the shared `js/gift-data.js` file (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data moves to a structured `gift_catalog` table with tags, relationship/event affinities, and price tiers, and items are selected by a deterministic weighted scoring function (see Landmarks_Blueprint.md Section 11.1). No LLM — per-query cost must be zero for a free affiliate-funded service.
 
 **Admin panel (`admin.html`):** Seeds 60 days of randomized conversion funnel data for demo purposes. Shows KPI cards, funnel visualization, partner/category breakdowns, daily trends, and a deliverability checklist. Production version would read from a `conversion_events` Postgres table populated by Resend webhooks and affiliate postbacks.
 

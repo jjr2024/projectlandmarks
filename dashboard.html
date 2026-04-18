@@ -76,6 +76,10 @@
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
         </a>
+        <a href="about.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          About
+        </a>
       </nav>
 
       <!-- User -->
@@ -167,7 +171,9 @@
 
               <!-- No upcoming -->
               <div x-show="filteredReminders.length === 0" class="bg-white rounded-xl border border-gray-100 p-10 text-center">
-                <div class="text-4xl mb-3">🎉</div>
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
                 <p class="text-gray-500">No upcoming events in the next <span x-text="filterDays"></span> days.</p>
                 <p class="text-sm text-gray-400 mt-1">You're all caught up!</p>
               </div>

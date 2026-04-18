@@ -67,6 +67,10 @@
           Email Preview
           <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">DEV</span>
         </a>
+        <a href="about.html" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600" @click="sidebarOpen = false">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          About
+        </a>
       </nav>
       <div class="p-4 border-t border-gray-100">
         <div class="flex items-center gap-3">
@@ -147,7 +151,7 @@
         <template x-if="nextEvent">
           <div class="rounded-xl p-4 mb-6 flex items-center gap-4"
                :class="nextEvent.days_until <= 3 ? 'bg-red-50 border border-red-200' : nextEvent.days_until <= 7 ? 'bg-amber-50 border border-amber-200' : 'bg-brand-50 border border-brand-200'">
-            <div class="text-2xl" x-text="nextEvent.event.event_type === 'birthday' ? '🎂' : '💕'"></div>
+            <svg class="w-7 h-7 flex-shrink-0" :class="nextEvent.event.event_type === 'birthday' ? 'text-amber-500' : 'text-rose-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="nextEvent.event.event_type === 'birthday' ? 'M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A1.75 1.75 0 003 16.5v-9A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v8.046zM12 3v2' : 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z'"></path></svg>
             <div class="flex-1">
               <div class="font-semibold text-gray-900"
                    x-text="Store.utils.eventTypeLabel(nextEvent.event.event_type) + ' coming up!'"></div>
@@ -171,7 +175,9 @@
 
           <!-- No events -->
           <div x-show="events.length === 0" class="p-10 text-center">
-            <div class="text-4xl mb-3">📅</div>
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
             <p class="text-gray-500 mb-2">No dates added yet</p>
             <p class="text-sm text-gray-400 mb-5">Add a birthday or anniversary to start receiving reminders.</p>
             <button @click="openAddEvent()" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
@@ -183,7 +189,10 @@
           <div class="divide-y divide-gray-50">
             <template x-for="evt in events" :key="evt.id">
               <div class="px-6 py-4 flex items-center gap-4">
-                <div class="text-2xl flex-shrink-0" x-text="evt.event_type === 'birthday' ? '🎂' : evt.event_type === 'anniversary' ? '💕' : '📅'"></div>
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                     :class="evt.event_type === 'birthday' ? 'bg-amber-50' : evt.event_type === 'anniversary' ? 'bg-rose-50' : 'bg-gray-100'">
+                  <svg class="w-5 h-5" :class="evt.event_type === 'birthday' ? 'text-amber-500' : evt.event_type === 'anniversary' ? 'text-rose-500' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="evt.event_type === 'birthday' ? 'M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A1.75 1.75 0 003 16.5v-9A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v8.046zM12 3v2' : evt.event_type === 'anniversary' ? 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' : 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'"></path></svg>
+                </div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 flex-wrap">
                     <span class="font-medium text-gray-900" x-text="Store.utils.eventTypeLabel(evt.event_type)"></span>
@@ -320,19 +329,22 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Event type *</label>
           <div class="grid grid-cols-3 gap-2">
             <button type="button" @click="eventForm.event_type='birthday'"
-                    :class="eventForm.event_type==='birthday' ? 'bg-brand-600 text-white border-brand-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
-                    class="border rounded-lg py-2.5 text-sm font-medium transition-colors text-center">
-              🎂 Birthday
+                    :class="eventForm.event_type==='birthday' ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-gray-50'"
+                    class="border-2 rounded-lg py-2.5 text-sm font-medium transition-colors text-center flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A1.75 1.75 0 003 16.5v-9A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v8.046zM12 3v2"/></svg>
+              Birthday
             </button>
             <button type="button" @click="eventForm.event_type='anniversary'"
-                    :class="eventForm.event_type==='anniversary' ? 'bg-brand-600 text-white border-brand-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
-                    class="border rounded-lg py-2.5 text-sm font-medium transition-colors text-center">
-              💕 Anniversary
+                    :class="eventForm.event_type==='anniversary' ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-gray-200 text-gray-600 hover:border-rose-300 hover:bg-gray-50'"
+                    class="border-2 rounded-lg py-2.5 text-sm font-medium transition-colors text-center flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+              Anniversary
             </button>
             <button type="button" @click="eventForm.event_type='custom'"
-                    :class="eventForm.event_type==='custom' ? 'bg-brand-600 text-white border-brand-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
-                    class="border rounded-lg py-2.5 text-sm font-medium transition-colors text-center">
-              📅 Custom
+                    :class="eventForm.event_type==='custom' ? 'border-gray-400 bg-gray-100 text-gray-700' : 'border-gray-200 text-gray-600 hover:border-gray-400 hover:bg-gray-50'"
+                    class="border-2 rounded-lg py-2.5 text-sm font-medium transition-colors text-center flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Other
             </button>
           </div>
         </div>
@@ -381,8 +393,8 @@
           <p class="text-xs text-gray-400 mt-1">Used to show "5-year anniversary!" in reminder emails.</p>
         </div>
 
-        <!-- High importance -->
-        <div>
+        <!-- High importance + Skip gifts -->
+        <div class="flex items-center justify-between">
           <label class="flex items-center gap-3 cursor-pointer group">
             <input type="checkbox" x-model="eventForm.high_importance"
                    class="w-4.5 h-4.5 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer" />
@@ -394,15 +406,13 @@
               </span>
             </span>
           </label>
-        </div>
-
-        <!-- Suppress gifts (subtle) -->
-        <div class="border-t border-gray-50 pt-3">
-          <label class="flex items-center gap-3 cursor-pointer group">
-            <input type="checkbox" x-model="eventForm.suppress_gifts"
-                   class="w-4.5 h-4.5 rounded border-gray-300 text-gray-400 focus:ring-gray-300 cursor-pointer" />
-            <span class="text-xs text-gray-400 group-hover:text-gray-500">Skip gift suggestions for this date</span>
-          </label>
+          <!-- Skip gifts toggle -->
+          <button type="button" @click="eventForm.suppress_gifts = !eventForm.suppress_gifts"
+                  class="flex items-center gap-1.5 text-xs transition-colors rounded-full px-3 py-1.5"
+                  :class="eventForm.suppress_gifts ? 'bg-gray-200 text-gray-600' : 'text-gray-400 hover:text-gray-500'">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            Skip gifts
+          </button>
         </div>
 
         <!-- One-time event (custom only) -->

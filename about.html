@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Us – Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' } },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .gradient-text { background: linear-gradient(135deg, #d05a32, #ed8c5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-100">
+    <div class="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+          </svg>
+        </div>
+        <span class="font-bold text-gray-900">Landmarks</span>
+      </a>
+      <nav class="flex items-center gap-6 text-sm text-gray-500">
+        <a href="index.html" class="hover:text-gray-900 transition-colors">Home</a>
+        <a href="auth.html" class="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-700 transition-colors">Sign In</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="max-w-3xl mx-auto px-6 py-16">
+
+    <!-- Origin story -->
+    <section class="mb-16">
+      <h1 class="text-3xl font-bold text-gray-900 mb-6">About Landmarks</h1>
+      <div class="prose prose-gray max-w-none space-y-5 text-gray-600 leading-relaxed">
+        <p>
+          When I was a young finance professional in NYC, I remembered birthdays too late to actually do anything for them (if I remembered them at all!). I started Landmarks to help you (and me!) stop making the same mistake.
+        </p>
+        <p>
+          A calendar reminder the day-of at 9am isn't that helpful. Landmarks sends you a heads-up early enough to act on it, with a gift idea so you're not scrambling.
+        </p>
+      </div>
+    </section>
+
+    <!-- Privacy philosophy -->
+    <section class="mb-16">
+      <div class="bg-white rounded-2xl border border-gray-100 p-8 md:p-10">
+        <div class="flex items-start gap-4 mb-6">
+          <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 pt-1.5">Privacy is the foundation, not a feature</h2>
+        </div>
+        <div class="space-y-4 text-gray-600 leading-relaxed">
+          <p>
+            The data you put into Landmarks is personal: birthdays, relationships, the people who matter most to you. We take that seriously. We will never sell, share, or monetize your personal data.
+          </p>
+          <p>
+            We don't track you across the web. We don't contact the people you add. Your contact list exists for one reason: to help you show up for the people in your life.
+          </p>
+          <p>
+            You're always in control. You can export all of your data at any time, and you can delete your account, along with every piece of data we hold, whenever you choose. No retention periods, no hidden backups, and no hoops to jump through. When we say delete, we mean it.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How we make money -->
+    <section class="mb-16">
+      <div class="bg-white rounded-2xl border border-gray-100 p-8 md:p-10">
+        <div class="flex items-start gap-4 mb-6">
+          <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 pt-1.5">How we keep the lights on</h2>
+        </div>
+        <div class="space-y-4 text-gray-600 leading-relaxed">
+          <p>
+            Landmarks is free to use, and we intend to keep it that way. When we include a gift suggestion in your reminder email, the link is an affiliate link. If you choose to purchase through it, we earn a small commission from the retailer — at no extra cost to you.
+          </p>
+          <p>
+            That's our entire business model. No subscriptions, no ads, and no data sales. Gift suggestions are the value we add: they save you time and mental energy. Affiliate commissions are how we fund the service. Both sides of that equation need to work, and we think that alignment is what makes Landmarks sustainable.
+          </p>
+          <p>
+            You're never obligated to buy through our links. If you already know what to get, or prefer to shop somewhere else, the reminder still does its job. We succeed when we make sure you remember and prepare for the big days.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="text-center">
+      <a href="auth.html" class="inline-flex items-center gap-2 bg-brand-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-brand-700 transition-colors text-base">
+        Get started — it's free
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </a>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-12 px-6 bg-gray-900 mt-16">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="flex items-center justify-center gap-2 mb-4">
+        <div class="w-6 h-6 bg-brand-600 rounded-md flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+          </svg>
+        </div>
+        <span class="text-white font-semibold">Landmarks</span>
+      </div>
+      <div class="flex justify-center gap-6 text-sm text-gray-400 mb-6">
+        <a href="about.html" class="hover:text-white transition-colors">About</a>
+        <a href="privacy.html" class="hover:text-white transition-colors">Privacy Policy</a>
+        <a href="terms.html" class="hover:text-white transition-colors">Terms of Service</a>
+        <a href="contact-us.html" class="hover:text-white transition-colors">Contact</a>
+      </div>
+      <p class="text-gray-500 text-xs">Landmarks. Never forget what matters.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
