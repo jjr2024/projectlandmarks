@@ -59,10 +59,9 @@ projectlandmarks/
 │   ├── store.js            Data layer — all CRUD, auth, reminders, conversion tracking, adminQueue, utils
 │   ├── gift-data.js        Shared gift catalog (GIFT_DATA + GIFT_DATA_LASTMINUTE), used by email-preview and admin
 │   └── email-config.js     Email infra config (DNS records, headers, warmup schedule, thresholds)
-├── Landmarks_Blueprint.md  Full product + technical blueprint (business model, schema, timeline)
-├── Competitive_Assessment.md  Competitive landscape analysis
-├── Todos.md                Prioritized feature roadmap (Tier P–3, P = prototype polish)
-└── README.md               Quick start and feature summary
+├── Landmarks_Technical_Architecture.docx   Technical architecture documentation (data model, Store API, conventions, tech debt)
+├── Landmarks_Competitive_Assessment.docx   Competitive landscape analysis and strategic takeaways
+└── Landmarks_Go_Live_Plan.docx             Phased production migration plan (Phase 1: launch, Phase 2: post-launch, Phase 3: future)
 ```
 
 ## Architecture Notes
@@ -86,7 +85,7 @@ admin.html (standalone, not linked from public nav)
 
 **Auth model:** Plaintext passwords in localStorage. Acceptable for a local prototype. Must be replaced by Supabase Auth (bcrypt + sessions) before any deployment.
 
-**Email preview (`email-preview.html`):** Imports `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` from the shared `js/gift-data.js` file (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data moves to a structured `gift_catalog` table with tags, relationship/event affinities, and price tiers, and items are selected by a deterministic weighted scoring function (see Landmarks_Blueprint.md Section 11.1). No LLM — per-query cost must be zero for a free affiliate-funded service.
+**Email preview (`email-preview.html`):** Imports `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` from the shared `js/gift-data.js` file (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data moves to a structured `gift_catalog` table with tags, relationship/event affinities, and price tiers, and items are selected by a deterministic weighted scoring function (see Go-Live Plan Phase 1.4). No LLM — per-query cost must be zero for a free affiliate-funded service.
 
 **Admin panel (`admin.html`):** Seeds 60 days of randomized conversion funnel data for demo purposes. Shows KPI cards, funnel visualization, partner/category breakdowns, daily trends, and a deliverability checklist. Production version would read from a `conversion_events` Postgres table populated by Resend webhooks and affiliate postbacks.
 
@@ -143,14 +142,14 @@ admin.html (standalone, not linked from public nav)
 
 **What still needs work before production:**
 - **No component reuse.** Every page re-implements sidebar nav, signOut(), initials getter, auth guards, and utility formatting — including the new mobile sidebar pattern. During the Next.js migration, extract these into shared components/hooks.
-- **Gift data is in a shared JS file (`js/gift-data.js`) but still static.** In production, move to a structured `gift_catalog` table with tags, affinities, and price tiers. A deterministic weighted scoring function selects items per reminder — no LLM, zero per-query cost (Todos.md item 0.1 / Blueprint Section 11.1 — the single most important feature gap).
+- **Gift data is in a shared JS file (`js/gift-data.js`) but still static.** In production, move to a structured `gift_catalog` table with tags, affinities, and price tiers. A deterministic weighted scoring function selects items per reminder — no LLM, zero per-query cost (see Go-Live Plan Phase 1.4 — the single most important feature gap).
 - **Cookie consent logic is standalone.** The `COOKIE_KEY` and cookie functions in index.html should be centralized in store.js or a dedicated module.
 - **No input sanitization.** The prototype trusts all input. Production must sanitize server-side before DB insertion.
 - **No error boundaries.** If Store calls fail silently, pages may render in broken states. Production needs proper error handling and user-facing error states.
 - **contact-us.html form is non-functional.** Has a prototype notice now, but still needs a backend (Formspree, Resend, or a Next.js API route) for production.
 - **CSS is repeated across every file.** Common styles (`.sidebar-link`, `.badge-urgent/soon/upcoming`, `.gradient-text`) are copy-pasted. Extract to a shared stylesheet or Tailwind plugin during migration.
 - **No tests.** README has a manual QA checklist but no automated tests. Production should have at minimum: unit tests for Store logic (especially reminder date math and timezone handling), and integration tests for the auth + onboarding flow.
-- ~~**Sensitive-event handling missing (Todos.md 0.6).**~~ ✅ Fixed. Events now have `suppress_gifts` boolean, subtle checkbox in forms, and email preview respects the flag with a warm gift-free message.
+- ~~**Sensitive-event handling missing.**~~ ✅ Fixed. Events now have `suppress_gifts` boolean, subtle checkbox in forms, and email preview respects the flag with a warm gift-free message.
 
 ## Key Files to Understand First
 
@@ -158,8 +157,9 @@ If you're picking this up cold, read in this order:
 1. `js/store.js` — the entire data model and business logic
 2. `dashboard.html` — the core user experience
 3. `email-preview.html` — what the actual product delivers (the reminder email)
-4. `Todos.md` — what's missing and in what priority order
-5. `Landmarks_Blueprint.md` — full context on the business model and technical plan
+4. `Landmarks_Go_Live_Plan.docx` — phased plan for production migration and what's missing
+5. `Landmarks_Technical_Architecture.docx` — full architecture documentation
+6. `Landmarks_Competitive_Assessment.docx` — competitive landscape and strategic positioning
 
 ## Conventions
 
