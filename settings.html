@@ -396,6 +396,42 @@
               <svg class="w-5 h-5 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
 
+            <!-- Recycling Bin -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+              <button @click="showRecyclingBin = !showRecyclingBin" class="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left">
+                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="font-medium text-gray-900 text-sm">Recycling bin</div>
+                  <div class="text-xs text-gray-400 mt-0.5" x-text="trashedContacts.length ? trashedContacts.length + ' contact' + (trashedContacts.length !== 1 ? 's' : '') + ' — auto-deleted after 7 days' : 'No deleted contacts'"></div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="showRecyclingBin ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+              <div x-show="showRecyclingBin" class="border-t border-gray-100">
+                <template x-if="trashedContacts.length === 0">
+                  <div class="p-4 text-center text-sm text-gray-400">The recycling bin is empty.</div>
+                </template>
+                <template x-if="trashedContacts.length > 0">
+                  <ul class="divide-y divide-gray-100">
+                    <template x-for="tc in trashedContacts" :key="tc.id">
+                      <li class="flex items-center gap-3 px-4 py-3">
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-800 truncate" x-text="tc.first_name + (tc.last_name ? ' ' + tc.last_name : '')"></div>
+                          <div class="text-xs text-gray-400" x-text="tc.relationship ? tc.relationship.charAt(0).toUpperCase() + tc.relationship.slice(1) : ''"></div>
+                        </div>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
+                              :class="tc.days_left <= 1 ? 'bg-red-100 text-red-700' : tc.days_left <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'"
+                              x-text="tc.days_left + 'd left'"></span>
+                        <button @click="restoreContact(tc.id)" class="text-xs font-medium text-brand-600 hover:text-brand-700 px-2 py-1 rounded hover:bg-brand-50 transition-colors flex-shrink-0">Restore</button>
+                        <button @click="confirmPermanentDelete(tc)" class="text-xs font-medium text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors flex-shrink-0">Delete</button>
+                      </li>
+                    </template>
+                  </ul>
+                </template>
+              </div>
+            </div>
+
             <button @click="showDeleteAccount=true" class="w-full flex items-center gap-3 border border-red-100 rounded-xl p-4 hover:bg-red-50 transition-colors text-left">
               <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -504,6 +540,26 @@
     </div>
   </div>
 
+  <!-- Permanent Delete Confirmation Modal -->
+  <div x-show="permanentDeleteTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900">Permanently delete this contact?</h3>
+        <p class="text-sm text-gray-500 mt-2">
+          <strong x-text="permanentDeleteTarget?.first_name + (permanentDeleteTarget?.last_name ? ' ' + permanentDeleteTarget.last_name : '')"></strong>
+          and all their events and history will be gone forever. This cannot be undone.
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <button @click="permanentDeleteTarget = null" class="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        <button @click="doPermanentDelete()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">Delete forever</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div x-show="toast" class="fixed bottom-6 right-6 z-50">
     <div class="toast bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
@@ -518,7 +574,8 @@
         user: null, profile: null,
         sidebarOpen: false,
         form: { display_name: '', timezone: 'America/New_York', preferred_send_hour: 8, reminder_days_before: [7, 3], default_gift_categories: ['gift_card'], monthly_digest_enabled: true, email_reminders_enabled: true, gift_suggestions_enabled: true, product_updates_enabled: true, partner_offers_enabled: true, email_pause_until: null, zipcode: '', country: '' },
-        showDeleteAccount: false, showICSHelp: false, deleteConfirmText: '', toast: '',
+        showDeleteAccount: false, showICSHelp: false, showRecyclingBin: false, deleteConfirmText: '', toast: '',
+        permanentDeleteTarget: null,
         giftOptions: [
           { value: 'flowers', icon: 'M12 3c-1.5 0-3 .5-4 2-1.5 2.5-1 5 .5 6.5C7 13 5.5 14 5.5 16c0 2 1.5 3.5 3.5 4 .5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2V22m0-2c.5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2 2-.5 3.5-2 3.5-4 0-2-1.5-3-3-4.5 1.5-1.5 2-4 .5-6.5-1-1.5-2.5-2-4-2', label: 'Flowers' },
           { value: 'wine', icon: 'M8 22h8M12 15v7m0-7a5 5 0 005-5V2H7v8a5 5 0 005 5z', label: 'Wine' },
@@ -538,10 +595,14 @@
         get eventCount() {
           return this.user ? Store.events.list(this.user.id).length : 0;
         },
+        get trashedContacts() {
+          return this.user ? Store.contacts.listTrashed(this.user.id) : [];
+        },
 
         init() {
           this.user = Store.auth.currentUser();
           if (!this.user) { window.location.href = 'auth.html'; return; }
+          Store.contacts.purgeExpired(this.user.id);
           this.profile = Store.profile.get(this.user.id);
           if (this.profile) {
             this.form.display_name = this.profile.display_name || '';
@@ -663,9 +724,11 @@
         deleteAccount() {
           if (this.deleteConfirmText !== 'DELETE') return;
           const userId = this.user.id;
-          // Hard delete all user data
+          // Hard delete all user data (active + trashed contacts)
           const contacts = Store.contacts.list(userId);
-          contacts.forEach(c => Store.contacts.delete(c.id));
+          const trashed = Store.contacts.listTrashed(userId);
+          contacts.forEach(c => Store.contacts.permanentDelete(c.id));
+          trashed.forEach(c => Store.contacts.permanentDelete(c.id));
           // Clear profile
           const profiles = JSON.parse(localStorage.getItem(Store.KEYS.profiles) || '[]').filter(p => p.id !== userId);
           localStorage.setItem(Store.KEYS.profiles, JSON.stringify(profiles));
@@ -674,6 +737,24 @@
           localStorage.setItem(Store.KEYS.users, JSON.stringify(users));
           Store.auth.signOut();
           window.location.href = 'index.html';
+        },
+
+        restoreContact(id) {
+          const result = Store.contacts.restore(id);
+          if (!result.error) {
+            this.showToast('Contact restored!');
+          }
+        },
+
+        confirmPermanentDelete(contact) {
+          this.permanentDeleteTarget = contact;
+        },
+
+        doPermanentDelete() {
+          if (!this.permanentDeleteTarget) return;
+          Store.contacts.permanentDelete(this.permanentDeleteTarget.id);
+          this.permanentDeleteTarget = null;
+          this.showToast('Contact permanently deleted.');
         },
 
         showToast(msg) {

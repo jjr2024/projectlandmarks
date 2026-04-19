@@ -13,6 +13,7 @@ const Store = (() => {
     events: 'lm_events',
     reminderLog: 'lm_reminder_log',
     conversion: 'lm_conversion_events',
+    shownGifts: 'lm_shown_gifts',
   };
 
   const get = (key) => {
@@ -105,12 +106,26 @@ const Store = (() => {
   };
 
   // ── Contacts ─────────────────────────────────────────────────────────────────
+  //
+  // Soft-delete: trashing a contact sets `deleted_at` timestamp instead of
+  // removing the row. Trashed contacts are hidden from list() and all
+  // reminder logic. After 7 days they can be purged, or a user can restore
+  // or permanently delete them from the recycling bin in Settings.
+  //
+  // In production: same pattern — a `deleted_at` nullable TIMESTAMPTZ column
+  // on the contacts table, with RLS filtering trashed rows from normal queries.
+  //
+  const TRASH_HOLD_DAYS = 7;
+
   const contacts = {
+    /** List active (non-trashed) contacts for a user. */
     list(userId) {
-      return get(KEYS.contacts).filter(c => c.user_id === userId);
+      return get(KEYS.contacts).filter(c => c.user_id === userId && !c.deleted_at);
     },
+    /** Get a single contact by ID (active only). */
     get(id) {
-      return get(KEYS.contacts).find(c => c.id === id) || null;
+      const c = get(KEYS.contacts).find(c => c.id === id) || null;
+      return (c && !c.deleted_at) ? c : null;
     },
     create(userId, data) {
       const all = get(KEYS.contacts);
@@ -125,6 +140,7 @@ const Store = (() => {
         high_importance: !!data.high_importance,
         budget_tier: data.budget_tier || null,  // null = any budget
         notes: data.notes || '',
+        deleted_at: null,
         created_at: now(),
       };
       all.push(contact);
@@ -139,13 +155,71 @@ const Store = (() => {
       set(KEYS.contacts, all);
       return { contact: all[idx] };
     },
-    delete(id) {
+
+    // ── Soft delete (recycling bin) ──────────────────────────
+    /** Move a contact to the recycling bin. */
+    trash(id) {
+      const all = get(KEYS.contacts);
+      const idx = all.findIndex(c => c.id === id);
+      if (idx === -1) return { error: 'Contact not found.' };
+      all[idx].deleted_at = now();
+      set(KEYS.contacts, all);
+      return { contact: all[idx] };
+    },
+
+    /** Restore a trashed contact. */
+    restore(id) {
+      const all = get(KEYS.contacts);
+      const idx = all.findIndex(c => c.id === id);
+      if (idx === -1) return { error: 'Contact not found.' };
+      all[idx].deleted_at = null;
+      set(KEYS.contacts, all);
+      return { contact: all[idx] };
+    },
+
+    /** List trashed contacts for a user, with days remaining before auto-purge. */
+    listTrashed(userId) {
+      const now_ = new Date();
+      return get(KEYS.contacts)
+        .filter(c => c.user_id === userId && c.deleted_at)
+        .map(c => {
+          const deletedAt = new Date(c.deleted_at);
+          const expiresAt = new Date(deletedAt.getTime() + TRASH_HOLD_DAYS * 24 * 60 * 60 * 1000);
+          const daysLeft = Math.max(0, Math.ceil((expiresAt - now_) / (1000 * 60 * 60 * 24)));
+          return { ...c, days_left: daysLeft, expires_at: expiresAt.toISOString() };
+        })
+        .sort((a, b) => a.days_left - b.days_left);
+    },
+
+    /** Permanently delete a contact and all associated data. */
+    permanentDelete(id) {
       const all = get(KEYS.contacts).filter(c => c.id !== id);
       set(KEYS.contacts, all);
       // cascade delete events
       const evts = get(KEYS.events).filter(e => e.contact_id !== id);
       set(KEYS.events, evts);
+      // cascade delete shown-gift history
+      const gifts = get(KEYS.shownGifts).filter(r => r.contact_id !== id);
+      set(KEYS.shownGifts, gifts);
       return { success: true };
+    },
+
+    /** Purge all trashed contacts past the 7-day hold. Called on app load. */
+    purgeExpired(userId) {
+      const trashed = contacts.listTrashed(userId);
+      let purged = 0;
+      for (const c of trashed) {
+        if (c.days_left === 0) {
+          contacts.permanentDelete(c.id);
+          purged++;
+        }
+      }
+      return { purged };
+    },
+
+    // Legacy alias — kept so existing callers don't break, but now maps to trash.
+    delete(id) {
+      return contacts.trash(id);
     },
   };
 
@@ -296,6 +370,21 @@ const Store = (() => {
           year_started: type === 'anniversary' ? 2021 : null,
         });
       });
+
+      // Seed shown-gift history for last year's events (Sarah and Marcus)
+      const lastYear = today.getFullYear() - 1;
+      const sarahDate = addDays(5);  // Sarah's event offset
+      const marcusDate = addDays(12); // Marcus's event offset
+      giftHistory.log(userId, createdContacts[0].id, '', sarahDate.month, sarahDate.day, lastYear, [
+        { name: 'a tulip bouquet', category: 'flowers', partner: 'Bouqs' },
+        { name: 'an artisan chocolate box', category: 'treats', partner: 'Vosges' },
+        { name: 'a spa experience', category: 'experiences', partner: 'Uncommon Goods' },
+      ]);
+      giftHistory.log(userId, createdContacts[1].id, '', marcusDate.month, marcusDate.day, lastYear, [
+        { name: 'a reserve cabernet', category: 'wine', partner: 'Wine.com' },
+        { name: 'Broadway tickets', category: 'experiences', partner: 'TodayTix' },
+        { name: 'a curated wine trio', category: 'wine', partner: 'Winc' },
+      ]);
     },
   };
 
@@ -839,5 +928,85 @@ const Store = (() => {
     },
   };
 
-  return { auth, profile, contacts, events, reminders, scheduler, conversion, admin, adminQueue, seed, utils, calendar, reengagement, KEYS };
+  // ── Gift History (shown suggestions) ──────────────────────────────────────
+  //
+  // Tracks what gift items Landmarks *showed* in reminder emails, not what
+  // the user clicked or bought. Displayed as: "Last year we suggested
+  // flowers, cookies, and a necklace." — honest, non-invasive, privacy-safe.
+  //
+  // In production: a `shown_gifts` Postgres table with the same shape,
+  // RLS-protected, cascade-deleted with the contact.
+  //
+  const giftHistory = {
+    /**
+     * Log the items shown in a reminder email.
+     * @param {string} userId
+     * @param {string} contactId
+     * @param {string} eventId
+     * @param {number} eventMonth
+     * @param {number} eventDay
+     * @param {number} year      – the year this reminder was for
+     * @param {Array}  items     – array of { name, category, partner }
+     */
+    log(userId, contactId, eventId, eventMonth, eventDay, year, items) {
+      const all = get(KEYS.shownGifts);
+      all.push({
+        id: uuid(),
+        user_id: userId,
+        contact_id: contactId,
+        event_id: eventId,
+        event_month: eventMonth,
+        event_day: eventDay,
+        year,
+        items: items.map(i => ({ name: i.name, category: i.category || null, partner: i.partner || null })),
+        created_at: now(),
+      });
+      set(KEYS.shownGifts, all);
+    },
+
+    /**
+     * Get all shown-gift records for a contact, sorted newest first.
+     */
+    getForContact(contactId) {
+      return get(KEYS.shownGifts)
+        .filter(r => r.contact_id === contactId)
+        .sort((a, b) => (b.year || 0) - (a.year || 0));
+    },
+
+    /**
+     * Get the shown-gift record for a specific contact + event + year.
+     * Returns null if none found.
+     */
+    getForEvent(contactId, eventMonth, eventDay, year) {
+      return get(KEYS.shownGifts).find(r =>
+        r.contact_id === contactId &&
+        r.event_month === eventMonth &&
+        r.event_day === eventDay &&
+        r.year === year
+      ) || null;
+    },
+
+    /**
+     * Build the "Last year we suggested..." sentence for a contact + event.
+     * Returns null if no history exists.
+     */
+    getLastYearSummary(contactId, eventMonth, eventDay) {
+      const lastYear = new Date().getFullYear() - 1;
+      const record = giftHistory.getForEvent(contactId, eventMonth, eventDay, lastYear);
+      if (!record || !record.items || record.items.length === 0) return null;
+
+      const names = record.items.map(i => i.name);
+      if (names.length === 1) return `Last year we suggested ${names[0]}.`;
+      if (names.length === 2) return `Last year we suggested ${names[0]} and ${names[1]}.`;
+      return `Last year we suggested ${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}.`;
+    },
+
+    /** Delete all shown-gift records for a contact (called on contact delete). */
+    deleteForContact(contactId) {
+      const filtered = get(KEYS.shownGifts).filter(r => r.contact_id !== contactId);
+      set(KEYS.shownGifts, filtered);
+    },
+  };
+
+  return { auth, profile, contacts, events, reminders, scheduler, conversion, admin, adminQueue, seed, utils, calendar, reengagement, giftHistory, KEYS };
 })();

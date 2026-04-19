@@ -302,19 +302,20 @@
   </div>
 
   <!-- Delete confirm -->
+  <!-- Trash contact confirmation modal -->
   <div x-show="deleteTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4"
        style="background: rgba(0,0,0,0.4)" @click.self="deleteTarget = null">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 slide-up">
       <div class="text-center mb-5">
-        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
-        <h3 class="text-lg font-semibold text-gray-900">Delete contact?</h3>
-        <p class="text-gray-500 text-sm mt-2">This will permanently delete <strong x-text="deleteTarget?.first_name"></strong> and all their events. This can't be undone.</p>
+        <h3 class="text-lg font-semibold text-gray-900">Remove contact?</h3>
+        <p class="text-gray-500 text-sm mt-2"><strong x-text="deleteTarget?.first_name"></strong> will be moved to the recycling bin and held for 7 days before permanent deletion. You can restore them from Settings anytime during that window.</p>
       </div>
       <div class="flex gap-3">
         <button @click="deleteTarget = null" class="flex-1 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
-        <button @click="doDelete()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">Delete</button>
+        <button @click="doDelete()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">Move to bin</button>
       </div>
     </div>
   </div>

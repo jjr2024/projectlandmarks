@@ -255,6 +255,31 @@
           </div>
         </div>
 
+        <!-- Past gift suggestions (read-only history) -->
+        <template x-if="shownGiftHistory.length > 0">
+          <div class="mt-6 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b">
+              <h2 class="font-semibold text-gray-900">Past Suggestions</h2>
+              <p class="text-xs text-gray-400 mt-0.5">What we showed in previous reminder emails</p>
+            </div>
+            <div class="divide-y divide-gray-50">
+              <template x-for="record in shownGiftHistory" :key="record.id">
+                <div class="px-6 py-3">
+                  <div class="text-xs font-medium text-gray-400 mb-1.5" x-text="record.year + ' · ' + Store.utils.formatDate(record.event_month, record.event_day)"></div>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="item in record.items" :key="item.name">
+                      <span class="inline-flex items-center gap-1 bg-gray-50 border border-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-full">
+                        <span x-text="item.name"></span>
+                        <span x-show="item.partner" class="text-gray-400" x-text="item.partner ? '· ' + item.partner : ''"></span>
+                      </span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
       </div>
     </main>
   </div>
@@ -480,6 +505,10 @@
           if (!this.user || !this.contact) return null;
           const upcoming = Store.reminders.upcoming(this.user.id, 365);
           return upcoming.find(r => r.contact.id === this.contact.id) || null;
+        },
+        get shownGiftHistory() {
+          if (!this.contact) return [];
+          return Store.giftHistory.getForContact(this.contact.id);
         },
         daysUntil(evt) {
           const today = new Date();

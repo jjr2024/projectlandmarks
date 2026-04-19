@@ -66,7 +66,9 @@ projectlandmarks/
 
 ## Architecture Notes
 
-**Data layer (`js/store.js`):** An IIFE that returns a `Store` object with namespaced modules: `auth`, `profile`, `contacts`, `events`, `reminders`, `scheduler`, `conversion`, `admin`, `adminQueue`, `seed`, `utils`, `calendar`. Every page imports this single file. All reads/writes go through `localStorage` with JSON serialization. The schema mirrors the planned Supabase tables (profiles, contacts, events, reminder_log) plus prototype-only additions (conversion_events, admin_session).
+**Data layer (`js/store.js`):** An IIFE that returns a `Store` object with namespaced modules: `auth`, `profile`, `contacts`, `events`, `reminders`, `scheduler`, `conversion`, `admin`, `adminQueue`, `seed`, `utils`, `calendar`, `reengagement`, `giftHistory`. Every page imports this single file. All reads/writes go through `localStorage` with JSON serialization. The schema mirrors the planned Supabase tables (profiles, contacts, events, reminder_log, shown_gifts) plus prototype-only additions (conversion_events, admin_session).
+
+**Soft-delete (contacts):** Contacts use a `deleted_at` timestamp as both a trash flag and expiry clock (`TRASH_HOLD_DAYS = 7`). `contacts.list()` and `contacts.get()` filter out trashed contacts automatically, so all downstream consumers (reminders, dashboard stats, event lists) exclude them without changes. `contacts.delete()` is aliased to `trash()` for backward compatibility. `purgeExpired()` is called on Settings page init to garbage-collect expired contacts. In production, a Vercel Cron job would handle purging instead.
 
 **Page architecture:** Each HTML file is self-contained — loads Tailwind + Alpine from CDN, imports `store.js`, defines its own Alpine component as a function (e.g., `dashboardApp()`, `contactsApp()`). Pages share no component library beyond `store.js` and `gift-data.js`; common patterns (sidebar nav, signOut, initials computation) are duplicated per page. This is acceptable for a prototype but should be componentized during production migration.
 
@@ -109,6 +111,8 @@ admin.html (standalone, not linked from public nav)
 - Monthly conditional digest: only sent when user has events in next 30 days (no empty emails), toggle in settings, preview in email-preview.html digest tab
 - Read-only .ics calendar feed: `Store.calendar.generateICS()` generates standard iCalendar with RRULE for recurring events, download button and feed URL copy in Settings
 - Privacy messaging on authenticated pages: "We never contact the people you add" on contacts page, "Your data stays private" on onboarding, "Your data is yours — export or delete anytime" on dashboard
+- Shown-gift history: `Store.giftHistory` tracks what items Landmarks showed in past reminder emails (not what the user clicked or bought). Email preview renders a "Last year we suggested flowers, cookies, and a necklace" line. Contact detail page shows a "Past Suggestions" section. Seeded for demo contacts Sarah and Marcus. Cascade-deleted with contacts.
+- Contact recycling bin: soft-delete with 7-day hold before permanent deletion. `Store.contacts.trash(id)` sets `deleted_at` timestamp; `Store.contacts.restore(id)` clears it. `listTrashed(userId)` returns trashed contacts with `days_left` countdown. `purgeExpired(userId)` permanently deletes contacts past the 7-day window. Contacts page "Delete" modal reworded to amber "Move to bin" with 7-day notice. Settings page has a collapsible recycling bin section in Data & Privacy showing trashed contacts with restore/permanent-delete actions and an "Are you sure?" confirmation. `contacts.list()` and `contacts.get()` automatically filter out trashed contacts, so reminders and all other views exclude them without additional changes.
 
 ## Known Limitations
 
