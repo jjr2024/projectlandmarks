@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset Password – Landmarks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#fdf5f0',100:'#fce8db',200:'#f9cfb8',300:'#f4ae8a',400:'#ed8c5e',500:'#e47243',600:'#d05a32',700:'#ad4628',800:'#8c3a24',900:'#743220' }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/store.js"></script>
+  <style>
+    .gradient-text { background: linear-gradient(135deg, #d05a32, #ed8c5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .auth-bg { background: linear-gradient(135deg, #fdf5f0 0%, #fce8db 50%, #f9cfb8 100%); }
+    input:focus { outline: none; box-shadow: 0 0 0 3px rgba(208,90,50,0.15); }
+    .btn-primary { background: linear-gradient(135deg, #d05a32, #ad4628); transition: all 0.15s; }
+    .btn-primary:hover { background: linear-gradient(135deg, #ad4628, #8c3a24); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(208,90,50,0.3); }
+    .btn-primary:active { transform: translateY(0); }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="font-sans antialiased auth-bg min-h-screen flex items-center justify-center p-6" x-data="recoveryApp()" x-cloak>
+
+  <div class="w-full max-w-md">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <a href="index.html" class="inline-flex items-center gap-2 mb-6">
+        <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+          </svg>
+        </div>
+        <span class="font-bold text-gray-900 text-xl">Landmarks</span>
+      </a>
+
+      <!-- Step-specific headings -->
+      <template x-if="step === 'email'">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Reset your password</h1>
+          <p class="text-gray-500 mt-2 text-sm">Enter your email and we'll send you a one-time code</p>
+        </div>
+      </template>
+      <template x-if="step === 'code'">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Check your email</h1>
+          <p class="text-gray-500 mt-2 text-sm">Enter the 6-digit code we sent to <strong x-text="email" class="text-gray-700"></strong></p>
+        </div>
+      </template>
+      <template x-if="step === 'reset'">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Choose a new password</h1>
+          <p class="text-gray-500 mt-2 text-sm">Make it at least 8 characters</p>
+        </div>
+      </template>
+      <template x-if="step === 'done'">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Password updated</h1>
+          <p class="text-gray-500 mt-2 text-sm">You can now sign in with your new password</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+
+      <!-- Error alert -->
+      <div x-show="error" x-transition class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-6 flex items-center gap-2">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span x-text="error"></span>
+      </div>
+
+      <!-- Success alert -->
+      <div x-show="success" x-transition class="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mb-6 flex items-center gap-2">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span x-text="success"></span>
+      </div>
+
+      <!-- Step 1: Email -->
+      <form x-show="step === 'email'" @submit.prevent="sendCode" class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+          <input
+            type="email"
+            x-model="email"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all"
+          />
+        </div>
+        <button
+          type="submit"
+          :disabled="loading || !email"
+          class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          <span x-text="loading ? 'Sending...' : 'Send recovery code'"></span>
+        </button>
+      </form>
+
+      <!-- Step 2: Code verification -->
+      <form x-show="step === 'code'" @submit.prevent="verifyCode" class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">6-digit code</label>
+          <input
+            type="text"
+            x-model="code"
+            placeholder="000000"
+            maxlength="6"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            required
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all text-center text-2xl tracking-[0.3em] font-mono"
+          />
+          <p class="text-xs text-gray-400 mt-2">Code expires in 15 minutes</p>
+        </div>
+        <button
+          type="submit"
+          :disabled="loading || code.length !== 6"
+          class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          <span x-text="loading ? 'Verifying...' : 'Verify code'"></span>
+        </button>
+        <button type="button" @click="sendCode" class="w-full text-sm text-brand-600 hover:underline">
+          Didn't get it? Send a new code
+        </button>
+      </form>
+
+      <!-- Step 3: New password -->
+      <form x-show="step === 'reset'" @submit.prevent="resetPassword" class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">New password</label>
+          <div class="relative">
+            <input
+              :type="showPassword ? 'text' : 'password'"
+              x-model="newPassword"
+              placeholder="At least 8 characters"
+              required
+              class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all pr-12"
+            />
+            <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              <svg x-show="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirm new password</label>
+          <input
+            type="password"
+            x-model="confirmPassword"
+            placeholder="Re-enter password"
+            required
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all"
+          />
+          <p x-show="confirmPassword && newPassword !== confirmPassword" class="text-xs text-red-500 mt-1.5">Passwords don't match.</p>
+        </div>
+        <button
+          type="submit"
+          :disabled="loading || newPassword.length < 8 || newPassword !== confirmPassword"
+          class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <svg x-show="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          <span x-text="loading ? 'Updating...' : 'Set new password'"></span>
+        </button>
+      </form>
+
+      <!-- Step 4: Done -->
+      <div x-show="step === 'done'" class="text-center space-y-5">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <p class="text-sm text-gray-600">Your password has been successfully reset. Head back to the sign-in page to log in.</p>
+        <a href="auth.html" class="btn-primary inline-block text-white font-semibold py-3.5 px-8 rounded-xl">
+          Sign in
+        </a>
+      </div>
+
+      <!-- Prototype notice -->
+      <div x-show="step !== 'done'" class="mt-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+        <p class="text-xs text-amber-700"><strong>Prototype note:</strong> No email is actually sent. The recovery code is shown in a browser alert so you can test the full flow. In production, this will be delivered via Resend.</p>
+      </div>
+    </div>
+
+    <!-- Back to sign in -->
+    <p class="text-center mt-6 text-sm text-gray-600">
+      <a href="auth.html" class="text-brand-600 font-medium hover:underline">Back to sign in</a>
+    </p>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (Store.auth.isAuthenticated()) {
+      window.location.href = 'dashboard.html';
+    }
+
+    function recoveryApp() {
+      const params = new URLSearchParams(window.location.search);
+
+      return {
+        step: 'email', // email → code → reset → done
+        email: params.get('email') || '',
+        code: '',
+        newPassword: '',
+        confirmPassword: '',
+        resetToken: '',
+        error: '',
+        success: '',
+        loading: false,
+        showPassword: false,
+
+        async sendCode() {
+          this.error = '';
+          this.success = '';
+          if (!this.email) {
+            this.error = 'Please enter your email address.';
+            return;
+          }
+          this.loading = true;
+          await new Promise(r => setTimeout(r, 800));
+          const result = Store.auth.generateRecoveryCode(this.email);
+          this.loading = false;
+
+          if (result.error) {
+            this.error = result.error;
+            return;
+          }
+
+          // Simulate email delivery with a browser alert
+          alert('Your recovery code is: ' + result.code + '\n\n(In production, this code would arrive in your email inbox.)');
+          this.step = 'code';
+          this.success = 'Code sent! Check the alert for your 6-digit code.';
+        },
+
+        async verifyCode() {
+          this.error = '';
+          this.success = '';
+          if (this.code.length !== 6) {
+            this.error = 'Please enter the full 6-digit code.';
+            return;
+          }
+          this.loading = true;
+          await new Promise(r => setTimeout(r, 600));
+          const result = Store.auth.verifyRecoveryCode(this.email, this.code);
+          this.loading = false;
+
+          if (result.error) {
+            this.error = result.error;
+            return;
+          }
+
+          this.resetToken = result.token;
+          this.step = 'reset';
+        },
+
+        async resetPassword() {
+          this.error = '';
+          this.success = '';
+          if (this.newPassword.length < 8) {
+            this.error = 'Password must be at least 8 characters.';
+            return;
+          }
+          if (this.newPassword !== this.confirmPassword) {
+            this.error = 'Passwords don\'t match.';
+            return;
+          }
+          this.loading = true;
+          await new Promise(r => setTimeout(r, 600));
+          const result = Store.auth.resetPassword(this.resetToken, this.newPassword);
+          this.loading = false;
+
+          if (result.error) {
+            this.error = result.error;
+            return;
+          }
+
+          this.step = 'done';
+        },
+      };
+    }
+  </script>
+</body>
+</html>

@@ -47,6 +47,20 @@
       <p class="text-gray-500 mt-2 text-sm" x-text="mode === 'signup' ? 'Free forever · Takes 2 minutes' : 'Sign in to your account'"></p>
     </div>
 
+    <!-- Forgot password banner (shows after 2 failed attempts) -->
+    <div x-show="failedAttempts >= 2 && mode === 'signin'" x-transition class="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-start gap-3">
+      <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="flex-1">
+        <div class="text-sm font-semibold text-amber-800">Having trouble signing in?</div>
+        <p class="text-xs text-amber-700 mt-1">If you've forgotten your password, we can email you a one-time code to reset it.</p>
+        <a :href="'recovery.html' + (form.email ? '?email=' + encodeURIComponent(form.email) : '')"
+           class="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 mt-2">
+          Reset my password
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+
     <!-- Card -->
     <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
 
@@ -86,7 +100,7 @@
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label class="block text-sm font-medium text-gray-700">Password</label>
-            <span x-show="mode === 'signin'" class="text-xs text-gray-400">Password recovery coming soon</span>
+            <a x-show="mode === 'signin'" href="#" @click.prevent="window.location.href = 'recovery.html' + (form.email ? '?email=' + encodeURIComponent(form.email) : '')" class="text-xs text-brand-600 hover:underline">Forgot password?</a>
           </div>
           <div class="relative">
             <input
@@ -164,6 +178,7 @@
         error: '',
         loading: false,
         showPassword: false,
+        failedAttempts: 0,
 
         toggleMode() {
           this.mode = this.mode === 'signup' ? 'signin' : 'signup';
@@ -194,6 +209,7 @@
           this.loading = false;
           if (result.error) {
             this.error = result.error;
+            if (this.mode === 'signin') this.failedAttempts++;
           } else {
             // New signups → guided onboarding. Returning users → dashboard.
             if (this.mode === 'signup') {

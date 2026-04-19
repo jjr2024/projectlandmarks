@@ -88,6 +88,97 @@ const Store = (() => {
     isAuthenticated() {
       return !!getObj(KEYS.currentUser);
     },
+
+    /**
+     * Look up a user by email (case-insensitive).
+     * Returns the user object or null.
+     */
+    findByEmail(email) {
+      const users = get(KEYS.users);
+      return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+    },
+
+    /**
+     * Generate a 6-digit recovery code, store it with a 15-minute expiry.
+     * In production: Supabase Auth reset-token flow via Resend.
+     * Here: code is returned so the caller can show it in an alert.
+     * @returns {{ code: string } | { error: string }}
+     */
+    generateRecoveryCode(email) {
+      const user = auth.findByEmail(email);
+      if (!user) return { error: 'No account found with that email.' };
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const recovery = {
+        email: user.email,
+        code,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      };
+      localStorage.setItem('lm_recovery', JSON.stringify(recovery));
+      return { code };
+    },
+
+    /**
+     * Verify a recovery code and return a one-time reset token.
+     * @returns {{ token: string } | { error: string }}
+     */
+    verifyRecoveryCode(email, code) {
+      try {
+        const recovery = JSON.parse(localStorage.getItem('lm_recovery'));
+        if (!recovery) return { error: 'No recovery code found. Please request a new one.' };
+        if (recovery.email.toLowerCase() !== email.toLowerCase()) return { error: 'Code does not match this email.' };
+        if (new Date(recovery.expires_at) < new Date()) {
+          localStorage.removeItem('lm_recovery');
+          return { error: 'Code has expired. Please request a new one.' };
+        }
+        if (recovery.code !== code) return { error: 'Invalid code. Please try again.' };
+        // Code is valid — clear it and issue a reset token
+        localStorage.removeItem('lm_recovery');
+        const token = uuid();
+        localStorage.setItem('lm_reset_token', JSON.stringify({ email: recovery.email, token, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() }));
+        return { token };
+      } catch { return { error: 'Something went wrong. Please try again.' }; }
+    },
+
+    /**
+     * Reset password using a valid reset token.
+     * @returns {{ success: boolean } | { error: string }}
+     */
+    resetPassword(token, newPassword) {
+      try {
+        const reset = JSON.parse(localStorage.getItem('lm_reset_token'));
+        if (!reset || reset.token !== token) return { error: 'Invalid or expired reset link.' };
+        if (new Date(reset.expires_at) < new Date()) {
+          localStorage.removeItem('lm_reset_token');
+          return { error: 'Reset link has expired. Please start over.' };
+        }
+        const users = get(KEYS.users);
+        const idx = users.findIndex(u => u.email.toLowerCase() === reset.email.toLowerCase());
+        if (idx === -1) return { error: 'Account not found.' };
+        users[idx].password = newPassword;
+        set(KEYS.users, users);
+        localStorage.removeItem('lm_reset_token');
+        return { success: true };
+      } catch { return { error: 'Something went wrong. Please try again.' }; }
+    },
+
+    /**
+     * Change password for a logged-in user.
+     * Requires the current password for verification.
+     * @returns {{ success: boolean } | { error: string }}
+     */
+    changePassword(userId, currentPassword, newPassword) {
+      const users = get(KEYS.users);
+      const idx = users.findIndex(u => u.id === userId);
+      if (idx === -1) return { error: 'User not found.' };
+      if (users[idx].password !== currentPassword) return { error: 'Current password is incorrect.' };
+      if (newPassword.length < 8) return { error: 'New password must be at least 8 characters.' };
+      if (currentPassword === newPassword) return { error: 'New password must be different from current password.' };
+      users[idx].password = newPassword;
+      set(KEYS.users, users);
+      // Update current user session
+      set(KEYS.currentUser, users[idx]);
+      return { success: true };
+    },
   };
 
   // ── Profile ─────────────────────────────────────────────────────────────────

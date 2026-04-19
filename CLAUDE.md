@@ -50,6 +50,7 @@ projectlandmarks/
 ├── contact.html            Single contact detail + event management
 ├── settings.html           Profile, reminder timing, gift defaults, data export, account deletion
 ├── email-preview.html      DEV TOOL: live preview of reminder emails with gift data
+├── recovery.html           Password recovery (email → code → new password, simulated via alert)
 ├── admin.html              Internal admin dashboard (two tabs: analytics funnel + email queue with gift overrides)
 ├── about.html              Origin story, privacy philosophy, business model
 ├── contact-us.html         Contact form (frontend only, backend not wired)
@@ -78,6 +79,7 @@ projectlandmarks/
 ```
 index.html → auth.html → onboarding.html (new users) → dashboard.html
                         → dashboard.html (returning users)
+             auth.html → recovery.html (forgot password) → auth.html (after reset)
 dashboard.html ↔ contacts.html ↔ contact.html
 dashboard.html ↔ settings.html
 dashboard.html ↔ email-preview.html
@@ -85,7 +87,7 @@ about.html (linked from index.html footer + all authenticated page sidebars)
 admin.html (standalone, not linked from public nav)
 ```
 
-**Auth model:** Plaintext passwords in localStorage. Acceptable for a local prototype. Must be replaced by Supabase Auth (bcrypt + sessions) before any deployment.
+**Auth model:** Plaintext passwords in localStorage. Acceptable for a local prototype. Must be replaced by Supabase Auth (bcrypt + sessions) before any deployment. Recovery codes and reset tokens are also localStorage-based with 15-minute and 10-minute TTLs respectively; production uses Supabase Auth's built-in reset-token flow via Resend.
 
 **Email preview (`email-preview.html`):** Imports `GIFT_DATA` and `GIFT_DATA_LASTMINUTE` from the shared `js/gift-data.js` file (~100 lines of gift catalog data). This is the closest thing to "what the product actually recommends." In production, this data moves to a structured `gift_catalog` table with tags, relationship/event affinities, and price tiers, and items are selected by a deterministic weighted scoring function (see Go-Live Plan Phase 1.4). No LLM — per-query cost must be zero for a free affiliate-funded service.
 
@@ -112,6 +114,9 @@ admin.html (standalone, not linked from public nav)
 - Read-only .ics calendar feed: `Store.calendar.generateICS()` generates standard iCalendar with RRULE for recurring events, download button and feed URL copy in Settings
 - Privacy messaging on authenticated pages: "We never contact the people you add" on contacts page, "Your data stays private" on onboarding, "Your data is yours — export or delete anytime" on dashboard
 - Shown-gift history: `Store.giftHistory` tracks what items Landmarks showed in past reminder emails (not what the user clicked or bought). Email preview renders a "Last year we suggested flowers, cookies, and a necklace" line. Contact detail page shows a "Past Suggestions" section. Seeded for demo contacts Sarah and Marcus. Cascade-deleted with contacts.
+- Password recovery flow: standalone `recovery.html` page with 4-step wizard (email → 6-digit code → new password → done). Code simulated via browser alert in prototype; production uses Resend. Auth page links to recovery and shows a "Having trouble?" banner after 2 failed login attempts, auto-filling the attempted email.
+- Password change: dedicated tab in Settings with current-password verification and new-password confirmation. Uses `Store.auth.changePassword()` with full validation (length, mismatch, same-password checks).
+- Settings page tabs: General (profile, reminders, email prefs, calendar, gifts, data/privacy), Password (change password), and Recycling Bin (restored from inline collapsible to full tab with empty-state, contact avatars, and countdown badges).
 - Contact recycling bin: soft-delete with 7-day hold before permanent deletion. `Store.contacts.trash(id)` sets `deleted_at` timestamp; `Store.contacts.restore(id)` clears it. `listTrashed(userId)` returns trashed contacts with `days_left` countdown. `purgeExpired(userId)` permanently deletes contacts past the 7-day window. Contacts page "Delete" modal reworded to amber "Move to bin" with 7-day notice. Settings page has a collapsible recycling bin section in Data & Privacy showing trashed contacts with restore/permanent-delete actions and an "Are you sure?" confirmation. `contacts.list()` and `contacts.get()` automatically filter out trashed contacts, so reminders and all other views exclude them without additional changes.
 
 ## Known Limitations
@@ -119,7 +124,7 @@ admin.html (standalone, not linked from public nav)
 - No real email sending — email-preview.html shows what would be sent
 - No Google OAuth (button visually disabled with "coming soon" label)
 - No cron/scheduled jobs — reminder logic is frontend-computed
-- No password recovery (auth page shows informative text instead of a dead link)
+- ~~No password recovery~~ ✅ Fixed. Full recovery flow via `recovery.html` with simulated one-time codes. Password change available in Settings > Password tab.
 - Affiliate links are placeholder alerts
 - Contact form (contact-us.html) has no backend — shows prototype notice, `send()` only updates UI state
 - No contact import (CSV, Google Contacts, vCard)
@@ -154,6 +159,7 @@ admin.html (standalone, not linked from public nav)
 - **CSS is repeated across every file.** Common styles (`.sidebar-link`, `.badge-urgent/soon/upcoming`, `.gradient-text`) are copy-pasted. Extract to a shared stylesheet or Tailwind plugin during migration.
 - **No tests.** README has a manual QA checklist but no automated tests. Production should have at minimum: unit tests for Store logic (especially reminder date math and timezone handling), and integration tests for the auth + onboarding flow.
 - ~~**Sensitive-event handling missing.**~~ ✅ Fixed. Events now have `suppress_gifts` boolean, subtle checkbox in forms, and email preview respects the flag with a warm gift-free message.
+- ~~**Password recovery missing.**~~ ✅ Fixed. `recovery.html` with 4-step flow (email → code → reset → done). `Store.auth` has `generateRecoveryCode()`, `verifyRecoveryCode()`, `resetPassword()`, and `changePassword()`. Auth page shows recovery link and a "Having trouble?" banner after 2 failed attempts.
 
 ## Key Files to Understand First
 

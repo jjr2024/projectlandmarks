@@ -98,7 +98,27 @@
         <p class="text-sm text-gray-500 mt-0.5">Manage your account and reminder preferences</p>
       </div>
 
-      <div class="p-8 max-w-2xl space-y-6">
+      <div class="p-8 max-w-2xl">
+
+        <!-- Tab navigation -->
+        <div class="flex border-b border-gray-200 mb-6">
+          <button @click="activeTab = 'general'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+                  :class="activeTab === 'general' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+            General
+          </button>
+          <button @click="activeTab = 'password'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+                  :class="activeTab === 'password' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+            Password
+          </button>
+          <button @click="activeTab = 'recycling'" class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-2"
+                  :class="activeTab === 'recycling' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+            Recycling Bin
+            <span x-show="trashedContacts.length > 0" class="bg-amber-100 text-amber-700 text-xs font-medium px-1.5 py-0.5 rounded-full" x-text="trashedContacts.length"></span>
+          </button>
+        </div>
+
+        <!-- ═══ General Tab ═══ -->
+        <div x-show="activeTab === 'general'" class="space-y-6">
 
         <!-- Profile -->
         <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -396,42 +416,6 @@
               <svg class="w-5 h-5 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
 
-            <!-- Recycling Bin -->
-            <div class="border border-gray-200 rounded-xl overflow-hidden">
-              <button @click="showRecyclingBin = !showRecyclingBin" class="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left">
-                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </div>
-                <div class="flex-1">
-                  <div class="font-medium text-gray-900 text-sm">Recycling bin</div>
-                  <div class="text-xs text-gray-400 mt-0.5" x-text="trashedContacts.length ? trashedContacts.length + ' contact' + (trashedContacts.length !== 1 ? 's' : '') + ' — auto-deleted after 7 days' : 'No deleted contacts'"></div>
-                </div>
-                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="showRecyclingBin ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-              </button>
-              <div x-show="showRecyclingBin" class="border-t border-gray-100">
-                <template x-if="trashedContacts.length === 0">
-                  <div class="p-4 text-center text-sm text-gray-400">The recycling bin is empty.</div>
-                </template>
-                <template x-if="trashedContacts.length > 0">
-                  <ul class="divide-y divide-gray-100">
-                    <template x-for="tc in trashedContacts" :key="tc.id">
-                      <li class="flex items-center gap-3 px-4 py-3">
-                        <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium text-gray-800 truncate" x-text="tc.first_name + (tc.last_name ? ' ' + tc.last_name : '')"></div>
-                          <div class="text-xs text-gray-400" x-text="tc.relationship ? tc.relationship.charAt(0).toUpperCase() + tc.relationship.slice(1) : ''"></div>
-                        </div>
-                        <span class="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-                              :class="tc.days_left <= 1 ? 'bg-red-100 text-red-700' : tc.days_left <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'"
-                              x-text="tc.days_left + 'd left'"></span>
-                        <button @click="restoreContact(tc.id)" class="text-xs font-medium text-brand-600 hover:text-brand-700 px-2 py-1 rounded hover:bg-brand-50 transition-colors flex-shrink-0">Restore</button>
-                        <button @click="confirmPermanentDelete(tc)" class="text-xs font-medium text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors flex-shrink-0">Delete</button>
-                      </li>
-                    </template>
-                  </ul>
-                </template>
-              </div>
-            </div>
-
             <button @click="showDeleteAccount=true" class="w-full flex items-center gap-3 border border-red-100 rounded-xl p-4 hover:bg-red-50 transition-colors text-left">
               <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -444,6 +428,119 @@
             </button>
           </div>
         </section>
+
+        </div><!-- end General tab -->
+
+        <!-- ═══ Password Tab ═══ -->
+        <div x-show="activeTab === 'password'" class="space-y-6">
+          <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50/50">
+              <h2 class="font-semibold text-gray-900">Change Password</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Update your account password</p>
+            </div>
+            <form @submit.prevent="handleChangePassword" class="p-6 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Current password</label>
+                <div class="relative">
+                  <input
+                    :type="pwForm.showCurrent ? 'text' : 'password'"
+                    x-model="pwForm.current"
+                    placeholder="Enter your current password"
+                    required
+                    class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all pr-10"
+                  />
+                  <button type="button" @click="pwForm.showCurrent = !pwForm.showCurrent" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <svg x-show="!pwForm.showCurrent" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg x-show="pwForm.showCurrent" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <hr class="border-gray-100" />
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">New password</label>
+                <input
+                  :type="pwForm.showNew ? 'text' : 'password'"
+                  x-model="pwForm.newPassword"
+                  placeholder="At least 8 characters"
+                  required
+                  class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all"
+                />
+                <p x-show="pwForm.newPassword && pwForm.newPassword.length < 8" class="text-xs text-red-500 mt-1">Password must be at least 8 characters.</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirm new password</label>
+                <input
+                  type="password"
+                  x-model="pwForm.confirmPassword"
+                  placeholder="Re-enter new password"
+                  required
+                  class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm transition-all"
+                />
+                <p x-show="pwForm.confirmPassword && pwForm.newPassword !== pwForm.confirmPassword" class="text-xs text-red-500 mt-1">Passwords don't match.</p>
+              </div>
+
+              <!-- Error -->
+              <div x-show="pwForm.error" x-transition class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span x-text="pwForm.error"></span>
+              </div>
+
+              <button type="submit"
+                      :disabled="!pwForm.current || pwForm.newPassword.length < 8 || pwForm.newPassword !== pwForm.confirmPassword"
+                      class="bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
+                Update password
+              </button>
+            </form>
+          </section>
+        </div><!-- end Password tab -->
+
+        <!-- ═══ Recycling Bin Tab ═══ -->
+        <div x-show="activeTab === 'recycling'" class="space-y-6">
+          <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50/50">
+              <h2 class="font-semibold text-gray-900">Recycling Bin</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Deleted contacts are kept for 7 days before being permanently removed</p>
+            </div>
+            <div class="p-6">
+              <template x-if="trashedContacts.length === 0">
+                <div class="text-center py-8">
+                  <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </div>
+                  <p class="text-sm text-gray-500">The recycling bin is empty.</p>
+                  <p class="text-xs text-gray-400 mt-1">When you delete a contact, it will appear here for 7 days before being permanently removed.</p>
+                </div>
+              </template>
+              <template x-if="trashedContacts.length > 0">
+                <div>
+                  <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-4 flex items-start gap-2">
+                    <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-xs text-amber-700"><span x-text="trashedContacts.length"></span> contact<span x-show="trashedContacts.length !== 1">s</span> in the bin. Contacts are automatically and permanently deleted after 7 days.</p>
+                  </div>
+                  <ul class="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
+                    <template x-for="tc in trashedContacts" :key="tc.id">
+                      <li class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
+                        <div class="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-semibold text-sm flex-shrink-0" x-text="(tc.first_name?.[0] || '').toUpperCase()"></div>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-800 truncate" x-text="tc.first_name + (tc.last_name ? ' ' + tc.last_name : '')"></div>
+                          <div class="text-xs text-gray-400" x-text="tc.relationship ? tc.relationship.charAt(0).toUpperCase() + tc.relationship.slice(1) : ''"></div>
+                        </div>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
+                              :class="tc.days_left <= 1 ? 'bg-red-100 text-red-700' : tc.days_left <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'"
+                              x-text="tc.days_left + 'd left'"></span>
+                        <button @click="restoreContact(tc.id)" class="text-xs font-medium text-brand-600 hover:text-brand-700 px-2 py-1 rounded hover:bg-brand-50 transition-colors flex-shrink-0">Restore</button>
+                        <button @click="confirmPermanentDelete(tc)" class="text-xs font-medium text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors flex-shrink-0">Delete</button>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+            </div>
+          </section>
+        </div><!-- end Recycling Bin tab -->
 
       </div>
     </main>
@@ -573,8 +670,10 @@
       return {
         user: null, profile: null,
         sidebarOpen: false,
+        activeTab: 'general',
         form: { display_name: '', timezone: 'America/New_York', preferred_send_hour: 8, reminder_days_before: [7, 3], default_gift_categories: ['gift_card'], monthly_digest_enabled: true, email_reminders_enabled: true, gift_suggestions_enabled: true, product_updates_enabled: true, partner_offers_enabled: true, email_pause_until: null, zipcode: '', country: '' },
-        showDeleteAccount: false, showICSHelp: false, showRecyclingBin: false, deleteConfirmText: '', toast: '',
+        pwForm: { current: '', newPassword: '', confirmPassword: '', error: '', showCurrent: false, showNew: false },
+        showDeleteAccount: false, showICSHelp: false, deleteConfirmText: '', toast: '',
         permanentDeleteTarget: null,
         giftOptions: [
           { value: 'flowers', icon: 'M12 3c-1.5 0-3 .5-4 2-1.5 2.5-1 5 .5 6.5C7 13 5.5 14 5.5 16c0 2 1.5 3.5 3.5 4 .5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2V22m0-2c.5.1 1 .2 1.5.2.5 0 1-.1 1.5-.2 2-.5 3.5-2 3.5-4 0-2-1.5-3-3-4.5 1.5-1.5 2-4 .5-6.5-1-1.5-2.5-2-4-2', label: 'Flowers' },
@@ -760,6 +859,17 @@
         showToast(msg) {
           this.toast = msg;
           setTimeout(() => { this.toast = ''; }, 2800);
+        },
+
+        handleChangePassword() {
+          this.pwForm.error = '';
+          if (!this.pwForm.current) { this.pwForm.error = 'Please enter your current password.'; return; }
+          if (this.pwForm.newPassword.length < 8) { this.pwForm.error = 'New password must be at least 8 characters.'; return; }
+          if (this.pwForm.newPassword !== this.pwForm.confirmPassword) { this.pwForm.error = 'New passwords don\'t match.'; return; }
+          const result = Store.auth.changePassword(this.user.id, this.pwForm.current, this.pwForm.newPassword);
+          if (result.error) { this.pwForm.error = result.error; return; }
+          this.pwForm = { current: '', newPassword: '', confirmPassword: '', error: '', showCurrent: false, showNew: false };
+          this.showToast('Password updated!');
         },
 
         signOut() { Store.auth.signOut(); window.location.href = 'index.html'; },
