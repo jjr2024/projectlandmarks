@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <!-- Background: rounded square, darker top band + lighter bottom -->
+  <rect width="80" height="80" rx="18" fill="#d05a32"/>
+  <clipPath id="bg">
+    <rect width="80" height="80" rx="18"/>
+  </clipPath>
+  <rect y="0" width="80" height="35" fill="#b84a28" clip-path="url(#bg)"/>
+
+  <!--
+    Gift box — white silhouette, perfectly centered at (40, 40).
+    All coordinates are integers to avoid subpixel rendering issues.
+    Ribbon gap = 3px everywhere.
+    Lid:  x 18–61, y 22–33  (43 wide, 11 tall)
+    Base: x 21–58, y 36–58  (37 wide, 22 tall)
+    Vertical split at x 38.5–41.5 (3px gap centered on 40)
+  -->
+
+  <!-- Lid left -->
+  <rect x="18" y="22" width="20" height="11" rx="3" fill="#fff"/>
+  <!-- Lid right -->
+  <rect x="42" y="22" width="20" height="11" rx="3" fill="#fff"/>
+
+  <!-- Base left -->
+  <rect x="21" y="36" width="17" height="22" rx="3" fill="#fff"/>
+  <!-- Base right -->
+  <rect x="42" y="36" width="17" height="22" rx="3" fill="#fff"/>
+</svg>

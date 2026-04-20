@@ -1,5 +1,5 @@
 /**
- * Landmarks – Local Data Store
+ * Daysight – Local Data Store
  * Simulates the Supabase/Postgres backend using localStorage.
  * When migrating to production, swap these functions for Supabase client calls.
  */
@@ -43,7 +43,7 @@ const Store = (() => {
       if (users.find(u => u.email === email)) {
         return { error: 'An account with this email already exists.' };
       }
-      const user = { id: uuid(), email, password, created_at: now() };
+      const user = { id: uuid(), email, password, email_verified: false, created_at: now() };
       users.push(user);
       set(KEYS.users, users);
 
@@ -178,6 +178,64 @@ const Store = (() => {
       // Update current user session
       set(KEYS.currentUser, users[idx]);
       return { success: true };
+    },
+
+    /**
+     * Check whether the current user's email is verified.
+     * @returns {boolean}
+     */
+    isEmailVerified() {
+      const user = auth.currentUser();
+      if (!user) return false;
+      return !!user.email_verified;
+    },
+
+    /**
+     * Simulate sending a verification email.
+     * In production: Supabase Auth sends a verification link via Resend.
+     * Here: a 6-digit code is stored with a 30-minute expiry and shown via alert.
+     * @returns {{ code: string } | { error: string }}
+     */
+    sendVerificationEmail() {
+      const user = auth.currentUser();
+      if (!user) return { error: 'Not signed in.' };
+      if (user.email_verified) return { error: 'Email already verified.' };
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const verification = {
+        user_id: user.id,
+        code,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      };
+      localStorage.setItem('lm_email_verification', JSON.stringify(verification));
+      return { code };
+    },
+
+    /**
+     * Verify the email using the code from the verification email.
+     * Sets `email_verified: true` on the user record and updates the session.
+     * @returns {{ success: boolean } | { error: string }}
+     */
+    verifyEmail(code) {
+      try {
+        const verification = JSON.parse(localStorage.getItem('lm_email_verification'));
+        if (!verification) return { error: 'No verification code found. Please request a new one.' };
+        const user = auth.currentUser();
+        if (!user || verification.user_id !== user.id) return { error: 'Verification code does not match this account.' };
+        if (new Date(verification.expires_at) < new Date()) {
+          localStorage.removeItem('lm_email_verification');
+          return { error: 'Code has expired. Please request a new one.' };
+        }
+        if (verification.code !== code) return { error: 'Invalid code. Please try again.' };
+        // Mark email as verified
+        localStorage.removeItem('lm_email_verification');
+        const users = get(KEYS.users);
+        const idx = users.findIndex(u => u.id === user.id);
+        if (idx === -1) return { error: 'User not found.' };
+        users[idx].email_verified = true;
+        set(KEYS.users, users);
+        set(KEYS.currentUser, users[idx]);
+        return { success: true };
+      } catch { return { error: 'Something went wrong. Please try again.' }; }
     },
   };
 
@@ -412,9 +470,14 @@ const Store = (() => {
       // Only seed if no users exist
       if (get(KEYS.users).length > 0) return;
 
-      const result = auth.signUp('demo@landmarks.app', 'demo1234', 'Alex Chen');
+      const result = auth.signUp('demo@daysight.app', 'demo1234', 'Alex Chen');
       if (result.error) return;
       const userId = result.user.id;
+
+      // Mark demo user as verified so the banner doesn't show for the demo account
+      const users = get(KEYS.users);
+      const demoIdx = users.findIndex(u => u.id === userId);
+      if (demoIdx !== -1) { users[demoIdx].email_verified = true; set(KEYS.users, users); }
 
       // Sign back out after seeding so user has to log in
       auth.signOut();
@@ -820,7 +883,7 @@ const Store = (() => {
   // ── Admin auth ──────────────────────────────────────────────────────────────
   // Separate from user auth. In production: role flag on the user row + RLS.
   // Here: a simple hardcoded credential check that returns a session token.
-  const ADMIN_EMAIL = 'admin@landmarks.app';
+  const ADMIN_EMAIL = 'admin@daysight.app';
   const ADMIN_PASS  = 'LM-admin-2026!';
   const ADMIN_KEY   = 'lm_admin_session';
 
@@ -866,11 +929,11 @@ const Store = (() => {
       const lines = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Landmarks//EN',
+        'PRODID:-//Daysight//EN',
         'CALSCALE:GREGORIAN',
         'METHOD:PUBLISH',
-        'X-WR-CALNAME:Landmarks Dates',
-        'X-WR-CALDESC:Birthdays and important dates from Landmarks',
+        'X-WR-CALNAME:Daysight Dates',
+        'X-WR-CALDESC:Birthdays and important dates from Daysight',
       ];
 
       for (const evt of userEvents) {
@@ -893,7 +956,7 @@ const Store = (() => {
           lines.push(`DTSTART;VALUE=DATE:${yyyy}${mm}${dd}`);
           lines.push(`DTEND;VALUE=DATE:${yyyy}${mm}${dd}`);
           lines.push(`SUMMARY:${summary}`);
-          lines.push(`UID:${evt.id}@landmarks.app`);
+          lines.push(`UID:${evt.id}@daysight.app`);
           lines.push('END:VEVENT');
         } else {
           // Recurring annual event
@@ -902,7 +965,7 @@ const Store = (() => {
           lines.push(`DTEND;VALUE=DATE:${new Date().getFullYear()}${mm}${dd}`);
           lines.push(`RRULE:FREQ=YEARLY`);
           lines.push(`SUMMARY:${summary}`);
-          lines.push(`UID:${evt.id}@landmarks.app`);
+          lines.push(`UID:${evt.id}@daysight.app`);
           lines.push('END:VEVENT');
         }
       }
@@ -989,7 +1052,7 @@ const Store = (() => {
           day: 3,
           subject: `${firstName}, add your first birthday in 60 seconds`,
           headline: 'Never miss a birthday again',
-          body: `Hi ${firstName},\n\nYou signed up for Landmarks a few days ago — great call. But right now your account is empty, which means we can't help you yet.\n\nAdding your first contact takes about 60 seconds: a name, a date, and optionally a note about what they like. That's it.\n\nOnce you do, we'll send you a reminder before their next birthday with a handful of curated gift ideas you can order in one click. No more last-minute gas station flowers.`,
+          body: `Hi ${firstName},\n\nYou signed up for Daysight a few days ago — great call. But right now your account is empty, which means we can't help you yet.\n\nAdding your first contact takes about 60 seconds: a name, a date, and optionally a note about what they like. That's it.\n\nOnce you do, we'll send you a reminder before their next birthday with a handful of curated gift ideas you can order in one click. No more last-minute gas station flowers.`,
           ctaText: 'Add your first contact →',
           ctaUrl: 'contacts.html',
         },
@@ -997,9 +1060,9 @@ const Store = (() => {
           key: 'sample_reminder',
           label: 'D+10 — Sample Reminder Preview',
           day: 10,
-          subject: `Here's what a Landmarks reminder actually looks like`,
+          subject: `Here's what a Daysight reminder actually looks like`,
           headline: 'This is what you\'ll get',
-          body: `Hi ${firstName},\n\nWe noticed you haven't added anyone to Landmarks yet. Fair enough — maybe you weren't sure what to expect.\n\nBelow is an example of the reminder email you'd receive a week before a friend's birthday. It includes a few curated gift ideas based on what you tell us they like, with one-click ordering. No scrolling through endless product pages.\n\nThe whole point is to make you the person who always remembers — without any effort on your part.`,
+          body: `Hi ${firstName},\n\nWe noticed you haven't added anyone to Daysight yet. Fair enough — maybe you weren't sure what to expect.\n\nBelow is an example of the reminder email you'd receive a week before a friend's birthday. It includes a few curated gift ideas based on what you tell us they like, with one-click ordering. No scrolling through endless product pages.\n\nThe whole point is to make you the person who always remembers — without any effort on your part.`,
           ctaText: 'Try it — add someone now →',
           ctaUrl: 'contacts.html',
           showSampleReminder: true,
@@ -1010,7 +1073,7 @@ const Store = (() => {
           day: 30,
           subject: `One last thing — let us add your first contact for you`,
           headline: 'Let us set it up for you',
-          body: `Hi ${firstName},\n\nWe get it — life is busy, and setting up yet another app isn't always at the top of the list.\n\nSo here's an easy way to try Landmarks out: just hit reply to this email and type a person's name, the event type (birthday, anniversary, etc.), and the date. Our team will add them to your account so you can see how it works.\n\nThis is just to help you get started — once you see your first reminder, you'll have a feel for whether Landmarks is useful for you. No pressure either way.`,
+          body: `Hi ${firstName},\n\nWe get it — life is busy, and setting up yet another app isn't always at the top of the list.\n\nSo here's an easy way to try Daysight out: just hit reply to this email and type a person's name, the event type (birthday, anniversary, etc.), and the date. Our team will add them to your account so you can see how it works.\n\nThis is just to help you get started — once you see your first reminder, you'll have a feel for whether Daysight is useful for you. No pressure either way.`,
           ctaText: 'Just hit reply — we\'ll take it from here',
           ctaUrl: null, // reply action, no link
           isReplyAction: true,
@@ -1021,7 +1084,7 @@ const Store = (() => {
 
   // ── Gift History (shown suggestions) ──────────────────────────────────────
   //
-  // Tracks what gift items Landmarks *showed* in reminder emails, not what
+  // Tracks what gift items Daysight *showed* in reminder emails, not what
   // the user clicked or bought. Displayed as: "Last year we suggested
   // flowers, cookies, and a necklace." — honest, non-invasive, privacy-safe.
   //

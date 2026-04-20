@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In – Landmarks</title>
+  <title>Sign In – Daysight</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -36,12 +36,8 @@
     <!-- Logo -->
     <div class="text-center mb-8">
       <a href="index.html" class="inline-flex items-center gap-2 mb-6">
-        <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-          </svg>
-        </div>
-        <span class="font-bold text-gray-900 text-xl">Landmarks</span>
+        <img src="logo-daysight.svg" width="40" height="40" alt="Daysight" class="rounded-xl shadow-lg">
+        <span class="font-bold text-gray-900 text-xl">Daysight</span>
       </a>
       <h1 class="text-2xl font-bold text-gray-900" x-text="mode === 'signup' ? 'Create your account' : 'Welcome back'"></h1>
       <p class="text-gray-500 mt-2 text-sm" x-text="mode === 'signup' ? 'Free forever · Takes 2 minutes' : 'Sign in to your account'"></p>
@@ -132,7 +128,7 @@
         <!-- Demo login shortcut -->
         <div x-show="mode === 'signin'" class="text-center">
           <button type="button" @click="demoLogin" class="text-xs text-brand-600 hover:underline">
-            Use demo account (demo@landmarks.app / demo1234)
+            Use demo account (demo@daysight.app / demo1234)
           </button>
         </div>
 
@@ -184,7 +180,7 @@
           this.mode = this.mode === 'signup' ? 'signin' : 'signup';
           this.error = '';
           this.form = { name: '', email: this.form.email, password: '' };
-          document.title = (this.mode === 'signup' ? 'Sign Up' : 'Sign In') + ' – Landmarks';
+          document.title = (this.mode === 'signup' ? 'Sign Up' : 'Sign In') + ' – Daysight';
         },
 
         async handleSubmit() {
@@ -221,7 +217,7 @@
         },
 
         demoLogin() {
-          this.form.email = 'demo@landmarks.app';
+          this.form.email = 'demo@daysight.app';
           this.form.password = 'demo1234';
           this.handleSubmit();
         },

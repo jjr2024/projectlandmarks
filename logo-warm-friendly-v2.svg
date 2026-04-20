@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 80" width="380" height="80">
+  <defs>
+    <linearGradient id="wCalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8734a"/>
+      <stop offset="100%" stop-color="#d05a32"/>
+    </linearGradient>
+    <linearGradient id="wRibbonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: calendar page with a small gift box nestled inside -->
+  <g transform="translate(6, 4)">
+    <!-- Calendar body — rounded, friendly -->
+    <rect x="2" y="16" width="58" height="52" rx="11" ry="11" fill="url(#wCalGrad)"/>
+
+    <!-- Calendar header band (darker) -->
+    <rect x="2" y="16" width="58" height="16" rx="11" ry="11" fill="#c04a24"/>
+    <rect x="2" y="26" width="58" height="6" fill="#c04a24"/>
+
+    <!-- Gift box — centered in calendar body -->
+    <!-- Box base -->
+    <rect x="17" y="47" width="28" height="16" rx="3" ry="3" fill="#fff"/>
+    <!-- Box lid -->
+    <rect x="15" y="42" width="32" height="8" rx="3" ry="3" fill="#fff"/>
+
+    <!-- Vertical ribbon -->
+    <rect x="28.5" y="42" width="5" height="21" rx="1" fill="url(#wRibbonGrad)"/>
+    <!-- Horizontal ribbon -->
+    <rect x="15" y="44" width="32" height="4" rx="1" fill="url(#wRibbonGrad)"/>
+
+    <!-- Bow — two small loops -->
+    <ellipse cx="27" cy="40" rx="5" ry="4" fill="url(#wRibbonGrad)" transform="rotate(-20 27 40)"/>
+    <ellipse cx="35" cy="40" rx="5" ry="4" fill="url(#wRibbonGrad)" transform="rotate(20 35 40)"/>
+    <!-- Bow center knot -->
+    <circle cx="31" cy="41" r="2.5" fill="#f59e0b"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="80" y="55" font-family="'Nunito', 'Quicksand', 'Segoe UI', system-ui, sans-serif" font-size="38" font-weight="700" fill="#3b2314" letter-spacing="-0.5">
+    Day<tspan fill="url(#wCalGrad)">sight</tspan>
+  </text>
+</svg>

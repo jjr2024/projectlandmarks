@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Landmarks</title>
+  <title>Welcome to Daysight</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -61,10 +61,8 @@
   <div class="fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-10">
     <div class="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-        </div>
-        <span class="font-bold text-gray-900">Landmarks</span>
+        <img src="logo-daysight.svg" width="28" height="28" alt="Daysight" class="rounded-lg">
+        <span class="font-bold text-gray-900">Daysight</span>
       </div>
       <div class="flex items-center gap-3">
         <span class="text-sm text-gray-400">Step <span x-text="step"></span> of <span x-text="totalSteps"></span></span>
@@ -76,8 +74,22 @@
     </div>
   </div>
 
+  <!-- Email verification banner -->
+  <div x-show="showVerifyBanner" x-transition class="fixed top-[57px] left-0 right-0 z-[9] bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0 max-w-xl mx-auto w-full">
+      <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      <p class="text-sm text-amber-800 flex-1">
+        <span class="font-semibold">Verify your email</span> to start receiving reminders.
+        <button @click="resendVerification" class="underline hover:text-amber-900 font-medium ml-1">Send verification email</button>
+      </p>
+      <button @click="showVerifyBanner = false" class="text-amber-400 hover:text-amber-600 flex-shrink-0" title="Dismiss">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
   <!-- Content -->
-  <div class="pt-24 pb-16 px-6">
+  <div :class="showVerifyBanner ? 'pt-[104px]' : 'pt-24'" class="pb-16 px-6">
     <div class="max-w-xl mx-auto">
 
       <!-- ───── Step 1: Welcome ───── -->
@@ -428,6 +440,7 @@
         totalSteps: 4,
         createdContactId: null,
         savedEvents: [],
+        showVerifyBanner: false,
 
         contact: {
           first_name: '', last_name: '',
@@ -474,8 +487,17 @@
           this.user = Store.auth.currentUser();
           if (!this.user) { window.location.href = 'auth.html'; return; }
           this.profile = Store.profile.get(this.user.id);
+          this.showVerifyBanner = !Store.auth.isEmailVerified();
           if (Store.contacts.list(this.user.id).length > 0) {
             window.location.href = 'dashboard.html';
+          }
+        },
+        resendVerification() {
+          const result = Store.auth.sendVerificationEmail();
+          if (result.code) {
+            alert('Verification code (prototype only): ' + result.code + '\nIn production, this would be emailed to you.');
+          } else if (result.error) {
+            alert(result.error);
           }
         },
 

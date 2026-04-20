@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Settings – Landmarks</title>
+  <title>Settings – Daysight</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -42,10 +42,8 @@
     <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out md:translate-x-0" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
       <div class="p-6 border-b border-gray-100">
         <a href="index.html" class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-          </div>
-          <span class="font-bold text-gray-900">Landmarks</span>
+          <img src="logo-daysight.svg" width="32" height="32" alt="Daysight" class="rounded-lg">
+          <span class="font-bold text-gray-900">Daysight</span>
         </a>
       </div>
       <nav class="p-4 flex-1 space-y-1">
@@ -193,7 +191,7 @@
               <svg class="w-5 h-5 text-brand-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               <div>
                 <div class="text-sm font-semibold text-brand-800 mb-1">How reminders work</div>
-                <div class="text-xs text-brand-700 leading-relaxed">Everyone gets reminders at the times you pick below. Contacts marked as <strong>High importance</strong> get an extra reminder 21 days out so you have more time to plan.</div>
+                <div class="text-xs text-brand-700 leading-relaxed">Everyone gets reminders at the times you pick below. Contacts marked as <strong>High importance</strong> get an extra reminder 21 days out so you have more time to plan a gift.</div>
               </div>
             </div>
 
@@ -244,7 +242,7 @@
         <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div class="px-6 py-4 border-b bg-gray-50/50">
             <h2 class="font-semibold text-gray-900">Email Preferences</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Choose which emails you receive from Landmarks</p>
+            <p class="text-xs text-gray-400 mt-0.5">Choose which emails you receive from Daysight</p>
           </div>
           <div class="p-6 space-y-0">
 
@@ -264,7 +262,7 @@
             <div class="flex items-start justify-between py-4 border-b border-gray-100">
               <div class="flex-1 pr-4">
                 <div class="text-sm font-medium text-gray-900">Event reminders</div>
-                <div class="text-xs text-gray-500 mt-0.5">Timely reminders before birthdays, anniversaries, and other dates — with curated gift ideas. This is the core of Landmarks.</div>
+                <div class="text-xs text-gray-500 mt-0.5">Timely reminders before birthdays, anniversaries, and other dates — with curated gift ideas. This is the core of Daysight.</div>
                 <!-- Pause option (nested under reminders) -->
                 <div class="mt-3" x-show="form.email_reminders_enabled && !isEmailPaused">
                   <button @click="pauseEmailsForOneMonth()"
@@ -321,7 +319,7 @@
             <div class="flex items-start justify-between py-4 border-b border-gray-100">
               <div class="flex-1 pr-4">
                 <div class="text-sm font-medium text-gray-900">Product updates &amp; tips</div>
-                <div class="text-xs text-gray-500 mt-0.5">Occasional emails about new Landmarks features and gifting tips. We send these sparingly — a few times a year at most.</div>
+                <div class="text-xs text-gray-500 mt-0.5">Occasional emails about new Daysight features and gifting tips. We send these sparingly — a few times a year at most.</div>
               </div>
               <button type="button"
                       @click="toggleEmailPref('product_updates_enabled')"
@@ -336,7 +334,7 @@
             <div class="flex items-start justify-between py-4">
               <div class="flex-1 pr-4">
                 <div class="text-sm font-medium text-gray-900">Partner offers</div>
-                <div class="text-xs text-gray-500 mt-0.5">Special deals and seasonal promotions from our gifting partners. These help keep Landmarks free and are always relevant to gifting.</div>
+                <div class="text-xs text-gray-500 mt-0.5">Special deals and seasonal promotions from our gifting partners. These help keep Daysight free and are always relevant to gifting.</div>
               </div>
               <button type="button"
                       @click="toggleEmailPref('partner_offers_enabled')"
@@ -354,7 +352,7 @@
         <section class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div class="px-6 py-4 border-b bg-gray-50/50">
             <h2 class="font-semibold text-gray-900">Calendar Feed</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Add your Landmarks dates to Google Calendar, Apple Calendar, or Outlook</p>
+            <p class="text-xs text-gray-400 mt-0.5">Add your Daysight dates to Google Calendar, Apple Calendar, or Outlook</p>
           </div>
           <div class="p-6">
             <p class="text-sm text-gray-600 mb-4">Download your dates as a calendar file, or copy the feed URL to subscribe. Subscribed calendars update automatically as you add or remove contacts.</p>
@@ -610,7 +608,7 @@
           <li>Click <strong>Add calendar</strong> (or <strong>File > Open & Export > Import</strong> on desktop)</li>
           <li>Choose <strong>Upload from file</strong></li>
           <li>Select the .ics file and choose your target calendar</li>
-          <li>Click <strong>Import</strong> — your Landmarks dates will appear</li>
+          <li>Click <strong>Import</strong> — your Daysight dates will appear</li>
         </ol>
       </div>
 
@@ -780,14 +778,14 @@
           const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = url; a.download = 'landmarks-dates.ics'; a.click();
+          a.href = url; a.download = 'daysight-dates.ics'; a.click();
           URL.revokeObjectURL(url);
           this.showToast('Calendar file downloaded!');
         },
 
         copyCalendarURL() {
-          // In production, this would be a live URL like webcal://landmarks.app/cal/{userId}.ics
-          const mockURL = 'webcal://landmarks.app/cal/' + this.user.id + '.ics';
+          // In production, this would be a live URL like webcal://daysight.app/cal/{userId}.ics
+          const mockURL = 'webcal://daysight.app/cal/' + this.user.id + '.ics';
           navigator.clipboard.writeText(mockURL).then(() => {
             this.showToast('Feed URL copied! (Production URL — paste into your calendar app)');
           }).catch(() => {
@@ -815,7 +813,7 @@
           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = url; a.download = 'landmarks-export.csv'; a.click();
+          a.href = url; a.download = 'daysight-export.csv'; a.click();
           URL.revokeObjectURL(url);
           this.showToast('Data exported!');
         },

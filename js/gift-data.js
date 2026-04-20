@@ -1,5 +1,5 @@
 /**
- * Landmarks – Gift Catalog Data
+ * Daysight – Gift Catalog Data
  * Shared by email-preview.html and admin.html.
  * In production this moves to a `gift_catalog` Postgres table with tags,
  * relationship/event affinities, and price tiers (see Blueprint Section 11.1).

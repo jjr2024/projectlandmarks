@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contacts – Landmarks</title>
+  <title>Contacts – Daysight</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -44,10 +44,8 @@
     <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out md:translate-x-0" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
       <div class="p-6 border-b border-gray-100">
         <a href="index.html" class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-          </div>
-          <span class="font-bold text-gray-900">Landmarks</span>
+          <img src="logo-daysight.svg" width="32" height="32" alt="Daysight" class="rounded-lg">
+          <span class="font-bold text-gray-900">Daysight</span>
         </a>
       </div>
       <nav class="p-4 flex-1 space-y-1">
@@ -93,6 +91,21 @@
 
     <!-- Main -->
     <main class="flex-1 overflow-y-auto">
+
+      <!-- Email verification banner -->
+      <div x-show="showVerifyBanner" x-transition class="bg-amber-50 border-b border-amber-200 px-8 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <p class="text-sm text-amber-800">
+            <span class="font-semibold">Verify your email</span> to start receiving reminders.
+            <button @click="resendVerification" class="underline hover:text-amber-900 font-medium ml-1">Send verification email</button>
+          </p>
+        </div>
+        <button @click="showVerifyBanner = false" class="text-amber-400 hover:text-amber-600 flex-shrink-0" title="Dismiss">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
       <div class="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
         <button @click="sidebarOpen = !sidebarOpen" class="md:hidden mr-3 text-gray-600 hover:text-gray-900">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -328,6 +341,7 @@
         search: '', filterRelationship: '',
         showModal: false, editingId: null, deleteTarget: null,
         sidebarOpen: false,
+        showVerifyBanner: false,
         form: { first_name: '', last_name: '', relationship: 'friend', gift_categories: [], gift_other: '', budget_tier: '', notes: '' },
 
         get initials() {
@@ -350,10 +364,19 @@
           this.user = Store.auth.currentUser();
           if (!this.user) { window.location.href = 'auth.html'; return; }
           this.profile = Store.profile.get(this.user.id);
+          this.showVerifyBanner = !Store.auth.isEmailVerified();
           this.loadData();
           // Auto-open add form if ?new=1
           const params = new URLSearchParams(window.location.search);
           if (params.get('new') === '1') setTimeout(() => this.openAdd(), 200);
+        },
+        resendVerification() {
+          const result = Store.auth.sendVerificationEmail();
+          if (result.code) {
+            alert('Verification code (prototype only): ' + result.code + '\nIn production, this would be emailed to you.');
+          } else if (result.error) {
+            alert(result.error);
+          }
         },
         loadData() {
           this.contacts = Store.contacts.list(this.user.id);

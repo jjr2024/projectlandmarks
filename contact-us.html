@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contact – Landmarks</title>
+  <title>Contact – Daysight</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -31,12 +31,8 @@
   <nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
       <a href="index.html" class="flex items-center gap-2">
-        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-          </svg>
-        </div>
-        <span class="font-bold text-gray-900 text-lg">Landmarks</span>
+        <img src="logo-daysight.svg" width="32" height="32" alt="Daysight" class="rounded-lg">
+        <span class="font-bold text-gray-900 text-lg">Daysight</span>
       </a>
       <a href="index.html" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">← Back to home</a>
     </div>
@@ -108,7 +104,7 @@
           </div>
 
           <!-- Prototype notice -->
-          <p class="text-xs text-gray-400 italic">This form is a prototype preview — messages are not delivered yet. To reach us now, email <a href="mailto:hello@landmarks.app" class="text-brand-600 hover:underline">hello@landmarks.app</a> directly.</p>
+          <p class="text-xs text-gray-400 italic">This form is a prototype preview — messages are not delivered yet. To reach us now, email <a href="mailto:hello@daysight.app" class="text-brand-600 hover:underline">hello@daysight.app</a> directly.</p>
 
           <button type="submit"
                   class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
@@ -123,7 +119,7 @@
         <div class="bg-white rounded-xl border border-gray-100 p-5 text-center shadow-sm">
           <div class="w-10 h-10 bg-brand-100 rounded-lg flex items-center justify-center mx-auto mb-2"><svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
           <div class="text-sm font-semibold text-gray-800 mb-1">Email us directly</div>
-          <a href="mailto:hello@landmarks.app" class="text-xs text-brand-600 hover:underline">hello@landmarks.app</a>
+          <a href="mailto:hello@daysight.app" class="text-xs text-brand-600 hover:underline">hello@daysight.app</a>
         </div>
         <div class="bg-white rounded-xl border border-gray-100 p-5 text-center shadow-sm">
           <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2"><svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
@@ -139,17 +135,15 @@
   <footer class="py-10 px-6 bg-gray-900">
     <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-        </div>
-        <span class="text-white font-semibold">Landmarks</span>
+        <img src="logo-daysight.svg" width="28" height="28" alt="Daysight" class="rounded-lg">
+        <span class="text-white font-semibold">Daysight</span>
       </div>
       <div class="flex gap-6 text-sm text-gray-400">
         <a href="privacy.html" class="hover:text-white transition-colors">Privacy Policy</a>
         <a href="terms.html" class="hover:text-white transition-colors">Terms of Service</a>
         <a href="contact-us.html" class="hover:text-white transition-colors text-white">Contact</a>
       </div>
-      <p class="text-xs text-gray-500">© 2026 Landmarks</p>
+      <p class="text-xs text-gray-500">© 2026 Daysight</p>
     </div>
   </footer>
 
@@ -160,7 +154,7 @@
         form: { name: '', email: '', subject: '', message: '' },
         send() {
           // Prototype: no backend wired yet. Shows success state for UX demo.
-          // Production: wire to hello@landmarks.app via Resend or Formspree.
+          // Production: wire to hello@daysight.app via Resend or Formspree.
           this.submitted = true;
           window.scrollTo({ top: 0, behavior: 'smooth' });
         },
