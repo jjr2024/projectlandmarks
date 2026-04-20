@@ -48,6 +48,8 @@ export default function OnboardingPage() {
   const [eventLabel, setEventLabel] = useState("");
   const [eventMonth, setEventMonth] = useState(0);
   const [eventDay, setEventDay] = useState(0);
+  const [highImportance, setHighImportance] = useState(false);
+  const [suppressGifts, setSuppressGifts] = useState(false);
 
   // Step 3: Gift prefs
   const [giftCategories, setGiftCategories] = useState<string[]>([]);
@@ -115,6 +117,8 @@ export default function OnboardingPage() {
         event_label: eventType === "custom" ? eventLabel.trim() : "",
         month: eventMonth,
         day: Math.min(eventDay, maxDays),
+        high_importance: highImportance,
+        suppress_gifts: suppressGifts,
       });
     }
 
@@ -342,6 +346,35 @@ export default function OnboardingPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* High importance + Suppress gifts row */}
+                  <div className="flex items-center justify-between mt-4">
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={highImportance}
+                        onChange={(e) => setHighImportance(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer"
+                      />
+                      <span className="text-xs font-medium text-gray-600">High importance</span>
+                      <span className="relative group">
+                        <svg className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 leading-relaxed z-50 shadow-lg">
+                          Adds an extra reminder 21 days before so you have more time to plan.
+                        </span>
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSuppressGifts(!suppressGifts)}
+                      className={`flex items-center gap-1.5 text-xs transition-colors rounded-full px-2.5 py-1 ${
+                        suppressGifts ? "bg-gray-200 text-gray-600" : "text-gray-400 hover:text-gray-500"
+                      }`}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                      Skip gifts
+                    </button>
                   </div>
                 </div>
               </div>
