@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
           const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
           // Determine which reminder windows apply
-          const windows = [REMINDER_WINDOWS.STANDARD, REMINDER_WINDOWS.URGENT];
+          const windows: number[] = [REMINDER_WINDOWS.STANDARD, REMINDER_WINDOWS.URGENT];
           if (event.high_importance) {
             windows.unshift(REMINDER_WINDOWS.HIGH_IMPORTANCE);
           }
