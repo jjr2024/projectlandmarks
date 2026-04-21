@@ -148,7 +148,7 @@ export default function ReminderEmail({
                       </tbody>
                     </table>
                     {/* Button on its own row — full width, mobile-friendly */}
-                    <Link href={gift.affiliate_url || "#"} style={{ display: "block", background: brandOrange, color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 16px", borderRadius: "8px", textAlign: "center" as const, marginTop: "10px" }}>
+                    <Link href={gift.affiliate_url || "#"} style={{ display: "inline-block", background: brandOrange, color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 20px", borderRadius: "8px", textAlign: "center" as const, marginTop: "10px" }}>
                       Buy Now →
                     </Link>
                   </Section>

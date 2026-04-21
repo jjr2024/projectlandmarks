@@ -13,7 +13,6 @@ export const EMAIL_CONFIG = {
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     "Feedback-ID": `${opts.reminderType || "reminder"}:${opts.partner || "daysight"}:daysight`,
     "X-Entity-Ref-ID": opts.reminderId || "",
-    Precedence: "bulk",
   }),
 } as const;
 
