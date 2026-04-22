@@ -4,7 +4,7 @@
 
 ## Project Status
 
-**Partially migrated to production.** The Next.js + Supabase + Resend + Vercel stack is live and auto-deploying from GitHub. Phases 1–7 of the production migration are complete (scaffold, Supabase integration, auth, core CRUD, email templates + cron routes, gift recommendation engine, admin panel). Phases 8–9 remain (marketing pages, testing/polish/go-live). A UI conformity sweep is deferred to post-Phase 9.
+**Partially migrated to production.** The Next.js + Supabase + Resend + Vercel stack is live and auto-deploying from GitHub. Phases 1–8 of the production migration are complete (scaffold, Supabase integration, auth, core CRUD, email templates + cron routes, gift recommendation engine, admin panel, marketing pages). Phase 9 remains (testing/polish/go-live). A UI conformity sweep is deferred to post-Phase 9.
 
 The original vanilla HTML/Alpine.js/localStorage prototype files still exist in the repo root for reference but are **no longer the primary codebase**. All new development targets the Next.js app in `src/`.
 
@@ -80,7 +80,10 @@ projectlandmarks/
 │   │   ├── (onboarding)/             Isolated layout (no sidebar)
 │   │   │   ├── onboarding/page.tsx
 │   │   │   └── layout.tsx
-│   │   ├── about/page.tsx
+│   │   ├── about/page.tsx            About page (origin story, privacy, revenue model)
+│   │   ├── privacy/page.tsx          Privacy Policy (11 sections, plain English)
+│   │   ├── terms/page.tsx            Terms of Service (15 sections)
+│   │   ├── contact/page.tsx          Contact form (client-side, posts to /api/contact)
 │   │   ├── auth/
 │   │   │   ├── page.tsx              Sign in / sign up
 │   │   │   ├── callback/route.ts     Supabase auth callback
@@ -94,12 +97,15 @@ projectlandmarks/
 │   │   │   └── webhooks/
 │   │   │       ├── resend/route.ts      Resend delivery/open/click webhooks → conversion_events
 │   │   │       └── affiliate/route.ts   Affiliate purchase postbacks → conversion_events
-│   │   ├── layout.tsx                Root layout
-│   │   ├── page.tsx                  Landing page
+│   │   │   └── contact/route.ts         Contact form → sends email via Resend
+│   │   ├── layout.tsx                Root layout (Inter via next/font, SEO metadata)
+│   │   ├── page.tsx                  Landing page (full marketing: hero, mockup, how-it-works, comparison, CTA, privacy promise)
 │   │   └── globals.css
 │   ├── components/
 │   │   ├── sidebar.tsx               Shared sidebar nav (user-facing pages)
 │   │   ├── admin-sidebar.tsx         Admin sidebar nav (dashboard, queue, gifts)
+│   │   ├── marketing-nav.tsx         Fixed top nav for public pages (logo + sign in/get started)
+│   │   ├── marketing-footer.tsx      Dark footer for public pages (links to about, privacy, terms, contact)
 │   │   └── email-verification-banner.tsx
 │   ├── emails/
 │   │   ├── reminder.tsx              React Email — gift reminder template
@@ -206,6 +212,10 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - Admin panel: analytics dashboard (KPIs, conversion funnel, partner/category/lead-time breakdowns), email queue with per-reminder custom message editor, gift catalog CRUD
 - Admin custom messages in reminder emails (stored in `email_overrides`, rendered as "A note from Daysight" block)
 - Webhook routes: Resend delivery events → `reminder_log` status + `conversion_events`; affiliate postbacks → `conversion_events` with commission
+- Full marketing landing page (hero with email mockup, how-it-works, comparison, CTA, privacy promise, revenue model)
+- About, Privacy Policy, Terms of Service, Contact pages
+- Contact form with API route (POST /api/contact → Resend)
+- Shared marketing nav and footer components
 
 ### Prototype (legacy HTML — feature-complete reference)
 - All of the above plus: gift category preferences UI, budget tiers, cookie consent, admin panel, email preview dev tool, .ics calendar feed, data export, account deletion with cascade, recycling bin with countdown badges, Settings tabs (General/Password/Recycling Bin)
@@ -218,7 +228,7 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - ~~No password recovery~~ ✅ Resolved. Supabase Auth reset flow via `/auth/forgot-password`.
 - No Google OAuth (button visually disabled with "coming soon" label in prototype)
 - Affiliate links are placeholder URLs — no real affiliate program connected yet
-- No contact-us backend (prototype has frontend-only form; no Next.js route yet — Phase 8)
+- ~~No contact-us backend~~ ✅ Resolved in Phase 8. Contact form at `/contact` with API route via Resend.
 - No contact import (CSV, Google Contacts, vCard)
 - ~~Gift selection is basic filter~~ ✅ Resolved in Phase 6. Weighted scoring engine with affinity matching, repeat avoidance, and seeded variety.
 - ~~No cron-side rate-limit handling~~ ✅ Resolved. All three cron routes detect Resend 429 and stop processing. Per-user send cap (3/day) prevents post-outage floods. See § Email Resilience.
@@ -233,7 +243,7 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 
 **Phase 7 — Admin panel:** ✅ Complete. Analytics dashboard, email queue with custom message editor, gift catalog CRUD, Resend + affiliate webhook routes. Data flows: Resend webhooks → `conversion_events` (opened/clicked) + `reminder_log` status updates; affiliate postbacks → `conversion_events` (purchased + commission). Admin custom messages stored in `email_overrides`, fetched by cron route and injected into reminder email template.
 
-**Phase 8 — Marketing pages:** Landing page, about, contact-us, privacy, terms. Port from prototype HTML.
+**Phase 8 — Marketing pages:** ✅ Complete. Full landing page (hero, email mockup, 3-step how-it-works, Google Calendar vs Daysight comparison, CTA banner, privacy promise, revenue model), About page, Privacy Policy (11 sections, CCPA+GDPR), Terms of Service (15 sections), Contact page with form (POST /api/contact via Resend). Shared marketing-nav and marketing-footer components. Root layout updated with `next/font/google` for Inter and SEO metadata. Prose styling via `prose-daysight` CSS class in globals.css.
 
 **Phase 9 — Testing, polish, go-live:** Automated tests, error boundaries, input sanitization, rate-limit handling, UI conformity sweep, remove `/api/test-email`, production readiness.
 
@@ -275,6 +285,7 @@ For prototype reference (legacy):
 | `/api/test-email` | GET | Manual | CRON_SECRET in prod | DEV ONLY — sends test reminder email |
 | `/api/webhooks/resend` | POST | Resend webhook | `RESEND_WEBHOOK_SECRET` or svix-id | Updates reminder_log status + inserts opened/clicked into conversion_events |
 | `/api/webhooks/affiliate` | POST | Affiliate partner | `Bearer AFFILIATE_WEBHOOK_SECRET` | Inserts purchased event with commission into conversion_events |
+| `/api/contact` | POST | Contact form | None (public) | Forwards contact form submission via Resend to hello@daysight.xyz |
 | `/auth/callback` | GET | Supabase redirect | — | Handles OAuth/magic-link callbacks, exchanges code for session |
 
 ## Supabase Schema (Core Tables)
