@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { validateServerEnv } from "@/lib/env";
 
 /**
  * Lazy Resend client — defers instantiation to first use.
@@ -9,7 +10,12 @@ let _instance: Resend | null = null;
 
 export function resend(): Resend {
   if (!_instance) {
-    _instance = new Resend(process.env.RESEND_API_KEY);
+    validateServerEnv();
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY is not set");
+    }
+    _instance = new Resend(apiKey);
   }
   return _instance;
 }

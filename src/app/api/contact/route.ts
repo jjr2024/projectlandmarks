@@ -14,7 +14,45 @@ import { resend } from "@/lib/resend";
  *   message: string
  * }
  */
+
+// In-memory rate limit: max 5 submissions per IP per 15 minutes.
+// Resets on redeploy (acceptable for a contact form; use Redis for stricter needs).
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+/** Strip control characters and newlines to prevent header injection. */
+function sanitize(input: string): string {
+  return input.replace(/[\r\n\x00-\x1f\x7f]/g, " ").trim();
+}
+
 export async function POST(request: NextRequest) {
+  // Rate limit by IP
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   let body: any;
   try {
     body = await request.json();
@@ -31,10 +69,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
-  // Rate-limit: basic protection (in production, add IP-based limiting)
-  const senderName = body.name?.trim() || "Anonymous";
+  // Sanitize inputs: strip control characters / newlines to prevent header injection
+  const senderName = sanitize(body.name?.trim() || "Anonymous");
   const senderEmail = body.email.trim();
   const message = body.message.trim();
+
+  // Cap message length to prevent abuse
+  if (message.length > 5000) {
+    return NextResponse.json({ error: "Message is too long (5000 character limit)" }, { status: 400 });
+  }
 
   try {
     await resend().emails.send({

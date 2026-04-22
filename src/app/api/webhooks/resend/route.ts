@@ -32,15 +32,18 @@ const CONVERSION_TYPE_MAP: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  // Verify webhook authenticity
-  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const svixId = request.headers.get("svix-id");
-    const authHeader = request.headers.get("authorization");
-    // Accept either svix signature presence or bearer token
-    if (!svixId && authHeader !== `Bearer ${webhookSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // Verify webhook authenticity — secret is required in production
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error("RESEND_WEBHOOK_SECRET is not configured");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
+  const svixId = request.headers.get("svix-id");
+  const authHeader = request.headers.get("authorization");
+  // Accept either svix signature presence or bearer token
+  if (!svixId && authHeader !== `Bearer ${webhookSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: any;

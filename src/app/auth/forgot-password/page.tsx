@@ -29,7 +29,12 @@ function ForgotPasswordForm() {
     });
 
     if (error) {
-      setError(error.message);
+      // Detect rate limiting (Supabase free tier: 3-4 auth emails/hour)
+      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+        setError("Too many requests. Please wait a few minutes and try again.");
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
       return;
     }

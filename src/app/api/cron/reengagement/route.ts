@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
           const subject = reengagementSubject(firstName, drip.variant);
           const { data: emailResult, error: emailError } = await resend().emails.send({
-            from: "Daysight <hello@daysight.xyz>",
+            from: EMAIL_CONFIG.from,
             to: userEmail,
             replyTo: EMAIL_CONFIG.replyTo,
             subject,
@@ -99,11 +99,22 @@ export async function GET(request: NextRequest) {
             break;
           }
 
-          dripsSent[drip.variant] = now.toISOString();
-          await supabase
-            .from("profiles")
-            .update({ drips_sent: dripsSent })
-            .eq("id", user.id);
+          // Atomic JSONB update to prevent race conditions with concurrent cron runs.
+          // Uses Postgres || operator to merge the new key into existing drips_sent.
+          await supabase.rpc("update_drips_sent", {
+            p_user_id: user.id,
+            p_variant: drip.variant,
+            p_sent_at: now.toISOString(),
+          }).then(({ error: rpcError }) => {
+            if (rpcError) {
+              // Fallback to regular update if RPC doesn't exist yet
+              dripsSent[drip.variant] = now.toISOString();
+              return supabase
+                .from("profiles")
+                .update({ drips_sent: dripsSent })
+                .eq("id", user.id);
+            }
+          });
 
           results.sent++;
           break; // One drip per user per run

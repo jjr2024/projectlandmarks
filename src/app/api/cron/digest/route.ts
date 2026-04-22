@@ -45,11 +45,11 @@ export async function GET(request: NextRequest) {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, monthly_digest, timezone")
+          .select("display_name, monthly_digest_enabled, timezone")
           .eq("id", user.id)
           .single();
 
-        if (profile?.monthly_digest === false) {
+        if (profile?.monthly_digest_enabled === false) {
           results.skipped++;
           continue;
         }

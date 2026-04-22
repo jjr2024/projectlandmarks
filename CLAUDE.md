@@ -58,7 +58,9 @@ Required in `.env.local` and Vercel dashboard:
 | `RESEND_API_KEY` | Resend API key for transactional email |
 | `CRON_SECRET` | Bearer token for Vercel Cron route auth |
 | `RESEND_WEBHOOK_SECRET` | Shared secret for verifying Resend webhook callbacks (optional — falls back to svix-id header) |
-| `AFFILIATE_WEBHOOK_SECRET` | Bearer token for authenticating affiliate purchase postbacks |
+| `AFFILIATE_WEBHOOK_SECRET` | Bearer token for authenticating affiliate purchase postbacks (required) |
+
+All server-side env vars are validated at runtime via `src/lib/env.ts`. Missing vars cause a clear error on first use rather than cryptic failures.
 
 ## File Map
 
@@ -93,7 +95,7 @@ projectlandmarks/
 │   │   │   ├── cron/reminders/route.ts   Daily reminder emails (Vercel Cron)
 │   │   │   ├── cron/digest/route.ts      Monthly digest (1st of month)
 │   │   │   ├── cron/reengagement/route.ts  Re-engagement drip (daily)
-│   │   │   ├── test-email/route.ts       DEV ONLY — must remove/lock before launch
+│   │   │   ├── cron/purge/route.ts        Soft-delete purge (daily 04:00 UTC)
 │   │   │   └── webhooks/
 │   │   │       ├── resend/route.ts      Resend delivery/open/click webhooks → conversion_events
 │   │   │       └── affiliate/route.ts   Affiliate purchase postbacks → conversion_events
@@ -126,7 +128,8 @@ projectlandmarks/
 │   ├── 002_add_drips_sent.sql        Adds profiles.drips_sent JSONB for re-engagement tracking
 │   ├── 003_email_resilience.sql      Adds 'pending'/'deferred' to reminder_log.status; index for per-user daily send cap
 │   ├── 004_seed_gift_catalog.sql     ~30 sample gifts across all categories/tiers with affinities + tags
-│   └── 005_email_overrides.sql       email_overrides table for admin custom messages per reminder slot
+│   ├── 005_email_overrides.sql       email_overrides table for admin custom messages per reminder slot
+│   └── 006_atomic_drips_sent.sql     RPC function for atomic drips_sent JSONB updates
 ├── vercel.json                       Cron schedules (all UTC)
 ├── package.json
 ├── tsconfig.json
@@ -143,7 +146,7 @@ projectlandmarks/
 
 **Data layer:** Supabase Postgres with RLS. Core tables: `profiles`, `contacts`, `events`, `reminder_log`, `shown_gifts`, `gift_catalog`. The admin client (`src/lib/supabase/admin.ts`) uses the service_role key to bypass RLS for cron jobs. Browser and server clients use the anon key with RLS enforced.
 
-**Soft-delete (contacts):** `deleted_at` timestamp as trash flag with 7-day expiry. All queries filter out trashed contacts automatically. Production needs a Vercel Cron job for `purgeExpired()` — not yet implemented.
+**Soft-delete (contacts):** `deleted_at` timestamp as trash flag with 7-day expiry. All queries filter out trashed contacts automatically. Purge cron (`/api/cron/purge`) runs daily at 04:00 UTC and hard-deletes expired contacts (cascade removes events, reminder_log, shown_gifts).
 
 **Route groups:** `(app)` wraps all authenticated pages with shared sidebar layout. `(onboarding)` has its own layout (no sidebar). This isolates the onboarding flow from the main app chrome.
 
@@ -232,10 +235,10 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - No contact import (CSV, Google Contacts, vCard)
 - ~~Gift selection is basic filter~~ ✅ Resolved in Phase 6. Weighted scoring engine with affinity matching, repeat avoidance, and seeded variety.
 - ~~No cron-side rate-limit handling~~ ✅ Resolved. All three cron routes detect Resend 429 and stop processing. Per-user send cap (3/day) prevents post-outage floods. See § Email Resilience.
-- **No user-facing rate-limit handling for auth.** Supabase free tier throttles auth emails (3–4/hour). Catch HTTP 429 from Supabase Auth on sign-up/password-reset pages and show a friendly message.
+- ~~No user-facing rate-limit handling for auth~~ ✅ Resolved. Auth pages (sign-in, sign-up, forgot-password) detect Supabase 429 responses and show friendly "Too many attempts" messages.
 - **No automated tests.** Need at minimum: unit tests for reminder date math/timezone handling, integration tests for auth + onboarding flow.
 - **UI conformity sweep needed.** Significant visual drift between prototype and Next.js pages: emoji placeholders vs SVG icons, simplified button treatments, missing inline validation, copy differences, missing secondary features (notes field, multiple events in onboarding, etc.). Deferred to post-Phase 9.
-- **`/api/test-email` route must be removed or locked down before production launch.** Protected by CRON_SECRET in prod, open in dev.
+- ~~`/api/test-email` route must be removed~~ ✅ Resolved. Route has been deleted.
 
 ## Remaining Migration Work
 
@@ -269,6 +272,7 @@ For prototype reference (legacy):
 
 - All dates stored as month (1-12) + day (1-31), not full Date objects
 - UUIDs via Supabase (Postgres `gen_random_uuid()`); prototype used `crypto.randomUUID()` with fallback
+- All outgoing emails use `noreply@daysight.xyz` as the sender (`EMAIL_CONFIG.from`), with `support@daysight.xyz` as `replyTo`
 - Tailwind brand color palette: orange-warm (primary `brand-600` = `#d05a32`, email hex `brandOrange`)
 - Urgency thresholds: 0-3 days = urgent (red), 4-7 = soon (orange), 8+ = upcoming (green)
 - **Auth security — no information leakage:** Sign-in errors must always show generic "Invalid email or password." regardless of whether email exists or password is wrong. Only sign-up form may show password requirements.
@@ -282,10 +286,10 @@ For prototype reference (legacy):
 | `/api/cron/reminders` | GET | Vercel Cron daily 12:00 UTC | `Bearer CRON_SECRET` | Sends reminder emails for events within range-based 21/7/3-day windows (see § Email Resilience) |
 | `/api/cron/digest` | GET | Vercel Cron 1st of month 14:00 UTC | `Bearer CRON_SECRET` | Monthly digest for users with upcoming events |
 | `/api/cron/reengagement` | GET | Vercel Cron daily 13:00 UTC | `Bearer CRON_SECRET` | D+3/D+10/D+30 drip for users with zero contacts |
-| `/api/test-email` | GET | Manual | CRON_SECRET in prod | DEV ONLY — sends test reminder email |
 | `/api/webhooks/resend` | POST | Resend webhook | `RESEND_WEBHOOK_SECRET` or svix-id | Updates reminder_log status + inserts opened/clicked into conversion_events |
 | `/api/webhooks/affiliate` | POST | Affiliate partner | `Bearer AFFILIATE_WEBHOOK_SECRET` | Inserts purchased event with commission into conversion_events |
-| `/api/contact` | POST | Contact form | None (public) | Forwards contact form submission via Resend to hello@daysight.xyz |
+| `/api/cron/purge` | GET | Vercel Cron daily 04:00 UTC | `Bearer CRON_SECRET` | Hard-deletes soft-deleted contacts older than 7 days |
+| `/api/contact` | POST | Contact form | IP rate limit (5/15min) | Forwards contact form submission via Resend to hello@daysight.xyz |
 | `/auth/callback` | GET | Supabase redirect | — | Handles OAuth/magic-link callbacks, exchanges code for session |
 
 ## Supabase Schema (Core Tables)

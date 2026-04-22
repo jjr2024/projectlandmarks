@@ -27,8 +27,13 @@ export default function AuthPage() {
 
     if (error) {
       setFailedAttempts((prev) => prev + 1);
-      // Never reveal whether the email exists or what's wrong with the password
-      setError("Invalid email or password.");
+      // Detect rate limiting (Supabase free tier: 3-4 auth emails/hour)
+      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+        setError("Too many attempts. Please wait a few minutes and try again.");
+      } else {
+        // Never reveal whether the email exists or what's wrong with the password
+        setError("Invalid email or password.");
+      }
       setLoading(false);
       return;
     }
@@ -57,7 +62,12 @@ export default function AuthPage() {
     });
 
     if (error) {
-      setError(error.message);
+      // Detect rate limiting (Supabase free tier: 3-4 auth emails/hour)
+      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+        setError("Too many attempts. Please wait a few minutes and try again.");
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
       return;
     }

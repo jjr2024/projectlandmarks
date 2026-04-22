@@ -4,7 +4,7 @@
  */
 
 export const EMAIL_CONFIG = {
-  from: "Daysight <reminders@daysight.xyz>",
+  from: "Daysight <noreply@daysight.xyz>",
   replyTo: "support@daysight.xyz",
 
   /** Compliance headers applied to every outgoing email. */

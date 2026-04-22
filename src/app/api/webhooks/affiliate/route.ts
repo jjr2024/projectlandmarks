@@ -20,12 +20,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * }
  */
 export async function POST(request: NextRequest) {
+  // Verify webhook authenticity — secret is required in production
   const secret = process.env.AFFILIATE_WEBHOOK_SECRET;
-  if (secret) {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    console.error("AFFILIATE_WEBHOOK_SECRET is not configured");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: any;
@@ -37,6 +41,17 @@ export async function POST(request: NextRequest) {
 
   if (!body.partner || body.commission == null) {
     return NextResponse.json({ error: "Missing partner or commission" }, { status: 400 });
+  }
+
+  // Validate commission is a non-negative number within a reasonable range
+  const commission = Number(body.commission);
+  if (isNaN(commission) || commission < 0 || commission > 10000) {
+    return NextResponse.json({ error: "Invalid commission value" }, { status: 400 });
+  }
+
+  // Validate partner is a reasonable string (alphanumeric, dashes, underscores)
+  if (typeof body.partner !== "string" || body.partner.length > 100) {
+    return NextResponse.json({ error: "Invalid partner value" }, { status: 400 });
   }
 
   const supabase = createAdminClient();
