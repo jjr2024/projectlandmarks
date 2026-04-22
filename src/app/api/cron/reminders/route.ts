@@ -17,6 +17,7 @@ import {
   type CronResults,
 } from "@/lib/reminders";
 import { selectGiftsScored } from "@/lib/gift-engine";
+import { compareTokens } from "@/lib/utils";
 
 /**
  * GET /api/cron/reminders
@@ -32,8 +33,14 @@ import { selectGiftsScored } from "@/lib/gift-engine";
  *  5. 429 handling — stops processing immediately on rate limit.
  */
 export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Timing-safe comparison
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!compareTokens(bearerToken, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -68,8 +75,8 @@ export async function GET(request: NextRequest) {
           .from("reminder_log")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
-          .in("status", ["sent", "delivered", "opened", "clicked"])
-          .gte("sent_at", twentyFourHoursAgo.toISOString());
+          .in("status", ["pending", "sent", "delivered", "opened", "clicked"])
+          .gte("created_at", twentyFourHoursAgo.toISOString());
 
         let userSendsThisRun = 0;
         const userAtCap = (recentSendCount || 0) + userSendsThisRun >= MAX_EMAILS_PER_USER_PER_DAY;
@@ -291,7 +298,8 @@ async function getLastYearLine(
     .eq("contact_id", contactId)
     .eq("event_month", month)
     .eq("event_day", day)
-    .eq("year", currentYear - 1)
+    .lt("year", currentYear)
+    .order("year", { ascending: false })
     .limit(5);
 
   if (!history || history.length === 0) return null;

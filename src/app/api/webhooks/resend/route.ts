@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { compareTokens } from "@/lib/utils";
 
 /**
  * POST /api/webhooks/resend
@@ -7,9 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Receives Resend webhook events (delivered, opened, clicked, bounced, complained).
  * Updates reminder_log.status and inserts into conversion_events for analytics.
  *
- * Auth: Resend signs webhooks — verify via RESEND_WEBHOOK_SECRET in production.
- * For now, checks a shared secret in the svix-id header or falls back to
- * WEBHOOK_SECRET env var as bearer token.
+ * Auth: Verified via RESEND_WEBHOOK_SECRET bearer token (required).
  *
  * Resend webhook payload shape:
  * {
@@ -39,10 +38,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
-  const svixId = request.headers.get("svix-id");
   const authHeader = request.headers.get("authorization");
-  // Accept either svix signature presence or bearer token
-  if (!svixId && authHeader !== `Bearer ${webhookSecret}`) {
+  // Only accept bearer token auth (timing-safe comparison)
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!compareTokens(bearerToken, webhookSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

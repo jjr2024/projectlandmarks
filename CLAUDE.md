@@ -4,7 +4,7 @@
 
 ## Project Status
 
-**Partially migrated to production.** The Next.js + Supabase + Resend + Vercel stack is live and auto-deploying from GitHub. Phases 1–8 of the production migration are complete (scaffold, Supabase integration, auth, core CRUD, email templates + cron routes, gift recommendation engine, admin panel, marketing pages). Phase 9 remains (testing/polish/go-live). A UI conformity sweep is deferred to post-Phase 9.
+**Production-ready.** The Next.js + Supabase + Resend + Vercel stack is live and auto-deploying from GitHub. Phases 1–9 of the production migration are complete (scaffold, Supabase integration, auth, core CRUD, email templates + cron routes, gift recommendation engine, admin panel, marketing pages, testing/polish/hardening). A UI conformity sweep is deferred to post-launch.
 
 The original vanilla HTML/Alpine.js/localStorage prototype files still exist in the repo root for reference but are **no longer the primary codebase**. All new development targets the Next.js app in `src/`.
 
@@ -57,7 +57,7 @@ Required in `.env.local` and Vercel dashboard:
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase secret API key (`sb_secret_...` format) — used by admin client to bypass RLS |
 | `RESEND_API_KEY` | Resend API key for transactional email |
 | `CRON_SECRET` | Bearer token for Vercel Cron route auth |
-| `RESEND_WEBHOOK_SECRET` | Shared secret for verifying Resend webhook callbacks (optional — falls back to svix-id header) |
+| `RESEND_WEBHOOK_SECRET` | Shared secret for verifying Resend webhook callbacks (required) |
 | `AFFILIATE_WEBHOOK_SECRET` | Bearer token for authenticating affiliate purchase postbacks (required) |
 
 All server-side env vars are validated at runtime via `src/lib/env.ts`. Missing vars cause a clear error on first use rather than cryptic failures.
@@ -72,12 +72,14 @@ projectlandmarks/
 │   │   │   ├── admin/page.tsx        Analytics dashboard (KPIs, funnel, breakdowns)
 │   │   │   ├── admin/queue/page.tsx  Email queue + custom message editor
 │   │   │   ├── admin/gifts/page.tsx  Gift catalog CRUD
+│   │   │   ├── error.tsx             Error boundary for admin pages
 │   │   │   └── layout.tsx
 │   │   ├── (app)/                    Protected route group (shared sidebar layout)
 │   │   │   ├── dashboard/page.tsx
 │   │   │   ├── contacts/page.tsx
 │   │   │   ├── contacts/[id]/page.tsx
 │   │   │   ├── settings/page.tsx
+│   │   │   ├── error.tsx             Error boundary for authenticated pages
 │   │   │   └── layout.tsx
 │   │   ├── (onboarding)/             Isolated layout (no sidebar)
 │   │   │   ├── onboarding/page.tsx
@@ -118,10 +120,13 @@ projectlandmarks/
 │   │   ├── supabase/client.ts        Browser client
 │   │   ├── supabase/server.ts        Server-side client (cookie-based sessions)
 │   │   ├── email-config.ts           From/replyTo, compliance headers, reminder windows
+│   │   ├── env.ts                    Server env var validation (memoized, called at startup)
 │   │   ├── gift-engine.ts            Weighted scoring engine: scoreGift() + selectGiftsScored()
 │   │   ├── reminders.ts              Shared reminder logic: date math, window matching, idempotency, send caps, rate-limit detection
-│   │   ├── resend.ts                 Resend client instance
+│   │   ├── resend.ts                 Resend client instance (with env validation)
 │   │   └── utils.ts                  Shared utilities
+│   ├── __tests__/
+│   │   └── reminders.test.ts         80 unit tests (date math, window matching, gift scoring, idempotency)
 │   └── middleware.ts                 Auth guard: protects /dashboard, /contacts, /settings, /onboarding; redirects unauthed → /auth
 ├── supabase/migrations/
 │   ├── 001_initial_schema.sql        Core tables: profiles, contacts, events, reminder_log, shown_gifts, gift_catalog
@@ -217,8 +222,19 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - Webhook routes: Resend delivery events → `reminder_log` status + `conversion_events`; affiliate postbacks → `conversion_events` with commission
 - Full marketing landing page (hero with email mockup, how-it-works, comparison, CTA, privacy promise, revenue model)
 - About, Privacy Policy, Terms of Service, Contact pages
-- Contact form with API route (POST /api/contact → Resend)
+- Contact form with API route (POST /api/contact → Resend), IP-based rate limiting (5/15min), input sanitization
 - Shared marketing nav and footer components
+- Error boundaries for authenticated (`(app)`) and admin (`(admin)`) route groups with retry + navigation
+- Unit test suite: 80 tests across 14 suites (date math, window matching, gift scoring, idempotency keys, rate-limit detection). Run: `npx tsx src/__tests__/reminders.test.ts`
+- Soft-delete purge cron (`/api/cron/purge`) — daily 04:00 UTC, hard-deletes contacts with `deleted_at` > 7 days
+- Server env var validation at startup (`src/lib/env.ts`)
+- Auth 429 handling on sign-in, sign-up, and forgot-password pages
+- Recycling bin: inline delete confirmation ("Are you sure? Yes, delete / Cancel") before permanent delete
+- Admin pages: try/catch error handling with user-visible error banners (queue, gifts)
+- Onboarding: save errors keep user on step 3 with error banner instead of silently advancing
+- Affiliate webhook: commission validation (non-negative, max 10000) and partner string validation (max 100 chars)
+- Gift catalog: URL validation on affiliate links before save
+- Atomic drips_sent updates via Postgres RPC function (migration 006) with graceful fallback
 
 ### Prototype (legacy HTML — feature-complete reference)
 - All of the above plus: gift category preferences UI, budget tiers, cookie consent, admin panel, email preview dev tool, .ics calendar feed, data export, account deletion with cascade, recycling bin with countdown badges, Settings tabs (General/Password/Recycling Bin)
@@ -236,7 +252,7 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - ~~Gift selection is basic filter~~ ✅ Resolved in Phase 6. Weighted scoring engine with affinity matching, repeat avoidance, and seeded variety.
 - ~~No cron-side rate-limit handling~~ ✅ Resolved. All three cron routes detect Resend 429 and stop processing. Per-user send cap (3/day) prevents post-outage floods. See § Email Resilience.
 - ~~No user-facing rate-limit handling for auth~~ ✅ Resolved. Auth pages (sign-in, sign-up, forgot-password) detect Supabase 429 responses and show friendly "Too many attempts" messages.
-- **No automated tests.** Need at minimum: unit tests for reminder date math/timezone handling, integration tests for auth + onboarding flow.
+- ~~No automated tests~~ ✅ Resolved in Phase 9. 80 unit tests covering date math, window matching, gift scoring, idempotency keys, and edge cases (Feb 29, Dec 31 rollover). Run: `npx tsx src/__tests__/reminders.test.ts`. Integration tests for auth + onboarding flow still needed.
 - **UI conformity sweep needed.** Significant visual drift between prototype and Next.js pages: emoji placeholders vs SVG icons, simplified button treatments, missing inline validation, copy differences, missing secondary features (notes field, multiple events in onboarding, etc.). Deferred to post-Phase 9.
 - ~~`/api/test-email` route must be removed~~ ✅ Resolved. Route has been deleted.
 
@@ -248,7 +264,7 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 
 **Phase 8 — Marketing pages:** ✅ Complete. Full landing page (hero, email mockup, 3-step how-it-works, Google Calendar vs Daysight comparison, CTA banner, privacy promise, revenue model), About page, Privacy Policy (11 sections, CCPA+GDPR), Terms of Service (15 sections), Contact page with form (POST /api/contact via Resend). Shared marketing-nav and marketing-footer components. Root layout updated with `next/font/google` for Inter and SEO metadata. Prose styling via `prose-daysight` CSS class in globals.css.
 
-**Phase 9 — Testing, polish, go-live:** Automated tests, error boundaries, input sanitization, rate-limit handling, UI conformity sweep, remove `/api/test-email`, production readiness.
+**Phase 9 — Testing, polish, go-live:** ✅ Complete. 80 unit tests (date math, window matching, gift scoring). Error boundaries for `(app)` and `(admin)` route groups. Input sanitization + rate limiting on contact form. Auth 429 handling. Webhook secret enforcement + input validation. Env var validation at startup. Soft-delete purge cron. Recycling bin delete confirmation. Admin/onboarding error feedback. Atomic drips_sent RPC. `/api/test-email` disabled (410 Gone). UI conformity sweep deferred to post-launch.
 
 **`next-app/` deleted:** Was a Phase 0 leftover causing build conflicts. Do not recreate.
 
@@ -325,7 +341,7 @@ Migrations in `supabase/migrations/`. **Never append to already-executed migrati
 - Emails will likely land in Gmail Promotions tab regardless (affiliate links = commercial). Mitigations: low link count, sender reputation building, users can drag to Primary.
 
 **Dev tools & security:**
-- `/api/test-email` route exists for dev. Must be removed or locked behind auth before production launch. Protected by CRON_SECRET in prod, open in dev.
+- `/api/test-email` route has been disabled (returns 410 Gone). Use the Resend dashboard or a local script to test emails.
 - Vercel deployment protection blocks unauthenticated API requests on preview deployments. Use `npx vercel curl` or test locally.
 - Cron schedules in `vercel.json` are UTC: reminders daily 12:00, digest 1st of month 14:00, re-engagement daily 13:00. Adjust based on user timezone distribution post-launch.
 

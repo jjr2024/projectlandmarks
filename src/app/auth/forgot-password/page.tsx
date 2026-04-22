@@ -49,8 +49,8 @@ function ForgotPasswordForm() {
         <div className="bg-green-50 border border-green-200 rounded-xl p-8">
           <h2 className="text-2xl font-bold text-green-800 mb-2">Check your email</h2>
           <p className="text-green-700">
-            If an account exists for <strong>{email}</strong>, we sent a password
-            reset link. It expires in 1 hour.
+            If an account exists for that email, we&apos;ve sent a password reset link.
+            It expires in 1 hour.
           </p>
         </div>
         <Link href="/auth" className="mt-4 inline-block text-brand-600 hover:underline text-sm">

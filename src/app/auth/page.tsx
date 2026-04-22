@@ -65,8 +65,15 @@ export default function AuthPage() {
       // Detect rate limiting (Supabase free tier: 3-4 auth emails/hour)
       if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
         setError("Too many attempts. Please wait a few minutes and try again.");
+      } else if (
+        error.message?.toLowerCase().includes("already registered") ||
+        error.message?.toLowerCase().includes("user already exists")
+      ) {
+        // Duplicate email — use generic message to avoid email enumeration
+        setError("Unable to create account. Please try signing in instead.");
       } else {
-        setError(error.message);
+        // Generic fallback for other errors
+        setError("Unable to create account. Please try again or contact support.");
       }
       setLoading(false);
       return;

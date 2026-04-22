@@ -98,6 +98,8 @@ export default function ContactDetailPage() {
   const [eventForm, setEventForm] = useState(EMPTY_EVENT_FORM);
   const [savingEvent, setSavingEvent] = useState(false);
   const [deleteEventTarget, setDeleteEventTarget] = useState<Event | null>(null);
+  const [eventError, setEventError] = useState("");
+  const [dayAdjusted, setDayAdjusted] = useState("");
 
   const supabase = createClient();
 
@@ -151,17 +153,29 @@ export default function ContactDetailPage() {
       suppress_gifts: evt.suppress_gifts,
     });
     setEditingEventId(evt.id);
+    setEventError("");
+    setDayAdjusted("");
     setEventModal("edit");
   };
 
   const closeEventModal = () => {
     setEventModal(null);
     setEditingEventId(null);
+    setEventError("");
+    setDayAdjusted("");
   };
 
   const handleSaveEvent = async () => {
     if (eventForm.event_type === "custom" && !eventForm.event_label.trim()) return;
     setSavingEvent(true);
+    setEventError("");
+
+    const clampedDay = Math.min(eventForm.day, maxDays);
+    if (clampedDay !== eventForm.day) {
+      const monthName = MONTHS.find((m) => m.value === eventForm.month)?.label || "Month";
+      setDayAdjusted(`Day adjusted to ${clampedDay} for ${monthName}`);
+      setTimeout(() => setDayAdjusted(""), 3000);
+    }
 
     const payload = {
       contact_id: contactId,
@@ -169,7 +183,7 @@ export default function ContactDetailPage() {
       event_type: eventForm.event_type,
       event_label: eventForm.event_type === "custom" ? eventForm.event_label.trim() : "",
       month: eventForm.month,
-      day: Math.min(eventForm.day, maxDays),
+      day: clampedDay,
       year_started: eventForm.year_started ? parseInt(eventForm.year_started) : null,
       one_time: eventForm.one_time,
       event_year: eventForm.one_time && eventForm.event_year ? parseInt(eventForm.event_year) : null,
@@ -177,20 +191,32 @@ export default function ContactDetailPage() {
       suppress_gifts: eventForm.suppress_gifts,
     };
 
+    let error;
     if (eventModal === "add") {
-      await supabase.from("events").insert(payload);
+      const res = await supabase.from("events").insert(payload);
+      error = res.error;
     } else if (editingEventId) {
-      await supabase.from("events").update(payload).eq("id", editingEventId);
+      const res = await supabase.from("events").update(payload).eq("id", editingEventId);
+      error = res.error;
+    }
+
+    setSavingEvent(false);
+    if (error) {
+      setEventError(error.message || "Failed to save event. Please try again.");
+      return;
     }
 
     closeEventModal();
-    setSavingEvent(false);
     await load();
   };
 
   const handleDeleteEvent = async () => {
     if (!deleteEventTarget) return;
-    await supabase.from("events").delete().eq("id", deleteEventTarget.id);
+    const { error } = await supabase.from("events").delete().eq("id", deleteEventTarget.id);
+    if (error) {
+      setEventError(error.message || "Failed to delete event. Please try again.");
+      return;
+    }
     setDeleteEventTarget(null);
     await load();
   };
@@ -358,11 +384,23 @@ export default function ContactDetailPage() {
 
       {/* Event add/edit modal */}
       {eventModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-xl font-bold mb-4">
               {eventModal === "add" ? "Add Event" : "Edit Event"}
             </h2>
+
+            {eventError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+                {eventError}
+              </div>
+            )}
+
+            {dayAdjusted && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-4 py-3 mb-4 text-sm">
+                {dayAdjusted}
+              </div>
+            )}
 
             {/* Event type */}
             <div className="mb-4">
@@ -532,7 +570,7 @@ export default function ContactDetailPage() {
 
       {/* Delete event confirmation */}
       {deleteEventTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Delete event?</h2>
             <p className="text-sm text-gray-500 mb-4">

@@ -4,6 +4,7 @@ import { resend } from "@/lib/resend";
 import { EMAIL_CONFIG } from "@/lib/email-config";
 import ReengagementEmail, { reengagementSubject } from "@/emails/reengagement";
 import { isRateLimitError, emptyCronResults } from "@/lib/reminders";
+import { compareTokens } from "@/lib/utils";
 
 /**
  * GET /api/cron/reengagement
@@ -21,8 +22,14 @@ const DRIP_SCHEDULE = [
 ];
 
 export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Timing-safe comparison
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!compareTokens(bearerToken, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -101,20 +108,20 @@ export async function GET(request: NextRequest) {
 
           // Atomic JSONB update to prevent race conditions with concurrent cron runs.
           // Uses Postgres || operator to merge the new key into existing drips_sent.
-          await supabase.rpc("update_drips_sent", {
-            p_user_id: user.id,
-            p_variant: drip.variant,
-            p_sent_at: now.toISOString(),
-          }).then(({ error: rpcError }) => {
+          try {
+            const { error: rpcError } = await supabase.rpc("update_drips_sent", {
+              p_user_id: user.id,
+              p_variant: drip.variant,
+              p_sent_at: now.toISOString(),
+            });
             if (rpcError) {
-              // Fallback to regular update if RPC doesn't exist yet
-              dripsSent[drip.variant] = now.toISOString();
-              return supabase
-                .from("profiles")
-                .update({ drips_sent: dripsSent })
-                .eq("id", user.id);
+              results.errors.push(`User ${user.id}, drip ${drip.variant}: RPC update_drips_sent failed — ${rpcError.message}`);
+              continue;
             }
-          });
+          } catch (rpcException: any) {
+            results.errors.push(`User ${user.id}, drip ${drip.variant}: RPC update_drips_sent exception — ${rpcException.message}`);
+            continue;
+          }
 
           results.sent++;
           break; // One drip per user per run

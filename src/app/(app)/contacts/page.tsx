@@ -60,6 +60,7 @@ export default function ContactsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
   const [userId, setUserId] = useState<string>("");
+  const [saveError, setSaveError] = useState("");
 
   const supabase = createClient();
 
@@ -133,6 +134,7 @@ export default function ContactsPage() {
   const handleSave = async () => {
     if (!form.first_name.trim()) return;
     setSaving(true);
+    setSaveError("");
 
     const payload = {
       first_name: form.first_name.trim(),
@@ -145,14 +147,22 @@ export default function ContactsPage() {
       notes: form.notes.trim(),
     };
 
+    let error;
     if (modalMode === "add") {
-      await supabase.from("contacts").insert({ ...payload, user_id: userId });
+      const res = await supabase.from("contacts").insert({ ...payload, user_id: userId });
+      error = res.error;
     } else if (modalMode === "edit" && editingId) {
-      await supabase.from("contacts").update(payload).eq("id", editingId);
+      const res = await supabase.from("contacts").update(payload).eq("id", editingId);
+      error = res.error;
+    }
+
+    setSaving(false);
+    if (error) {
+      setSaveError(error.message || "Failed to save contact. Please try again.");
+      return;
     }
 
     closeModal();
-    setSaving(false);
     await loadContacts();
   };
 
@@ -278,11 +288,17 @@ export default function ContactsPage() {
 
       {/* Add/Edit modal */}
       {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-xl font-bold mb-4">
               {modalMode === "add" ? "Add Contact" : "Edit Contact"}
             </h2>
+
+            {saveError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+                {saveError}
+              </div>
+            )}
 
             {/* First + Last name */}
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -424,7 +440,7 @@ export default function ContactsPage() {
 
       {/* Delete confirmation modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Move to bin?</h2>
             <p className="text-sm text-gray-500 mb-4">

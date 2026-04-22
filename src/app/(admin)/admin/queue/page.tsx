@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 interface QueueItem {
   eventId: string;
   userId: string;
-  userEmail: string;
   userName: string;
   contactName: string;
   contactId: string;
@@ -79,7 +78,7 @@ export default function EmailQueuePage() {
       queueItems.push({
         eventId: event.id,
         userId: event.user_id,
-        userEmail: profile?.display_name || event.user_id,
+        userName: profile?.display_name || event.user_id,
         userName: profile?.display_name || "Unknown",
         contactName: `${contact.first_name}${contact.last_name ? " " + contact.last_name : ""}`,
         contactId: contact.id,
@@ -147,41 +146,58 @@ export default function EmailQueuePage() {
     setWindowSlots(slots);
   }
 
+  const [error, setError] = useState("");
+
   async function saveMessage(item: QueueItem, slot: WindowSlot) {
     setSaving(true);
+    setError("");
 
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (slot.override?.id) {
-      // Update existing
-      await supabase
-        .from("email_overrides")
-        .update({ custom_message: messageText, updated_at: new Date().toISOString() })
-        .eq("id", slot.override.id);
-    } else {
-      // Insert new
-      await supabase
-        .from("email_overrides")
-        .insert({
-          user_id: item.userId,
-          event_id: item.eventId,
-          days_before: slot.daysBefore,
-          event_year: year,
-          custom_message: messageText,
-          created_by: user?.id || null,
-        });
+      if (slot.override?.id) {
+        const { error: updateError } = await supabase
+          .from("email_overrides")
+          .update({ custom_message: messageText, updated_at: new Date().toISOString() })
+          .eq("id", slot.override.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from("email_overrides")
+          .insert({
+            user_id: item.userId,
+            event_id: item.eventId,
+            days_before: slot.daysBefore,
+            event_year: year,
+            custom_message: messageText,
+            created_by: user?.id || null,
+          });
+        if (insertError) throw insertError;
+      }
+
+      setEditingSlot(null);
+      expandItem(item);
+    } catch (err: any) {
+      setError(`Failed to save message: ${err.message || "Unknown error"}`);
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    setEditingSlot(null);
-    // Refresh slots
-    expandItem(item);
   }
 
   async function deleteMessage(slot: WindowSlot, item: QueueItem) {
     if (!slot.override?.id) return;
-    await supabase.from("email_overrides").delete().eq("id", slot.override.id);
-    expandItem(item);
+    setError("");
+
+    try {
+      const { error: deleteError } = await supabase
+        .from("email_overrides")
+        .delete()
+        .eq("id", slot.override.id);
+      if (deleteError) throw deleteError;
+      expandItem(item);
+    } catch (err: any) {
+      setError(`Failed to delete message: ${err.message || "Unknown error"}`);
+    }
   }
 
   const urgencyColor = (days: number) => {
@@ -200,6 +216,12 @@ export default function EmailQueuePage() {
         <h1 className="text-2xl font-bold text-gray-900">Email Queue</h1>
         <p className="text-sm text-gray-500 mt-1">Upcoming reminders in the next 21 days. Click any row to add a custom message.</p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-20 text-gray-400">Loading queue...</div>

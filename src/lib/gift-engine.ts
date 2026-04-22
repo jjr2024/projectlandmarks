@@ -109,7 +109,7 @@ export function scoreGift(gift: GiftRow, ctx: ScoringContext): number {
   if (ctx.tagHints.length > 0 && gift.tags.length > 0) {
     const giftTagsLower = gift.tags.map((t) => t.toLowerCase());
     for (const hint of ctx.tagHints) {
-      if (giftTagsLower.some((t) => t.includes(hint) || hint.includes(t))) {
+      if (giftTagsLower.some((t) => t === hint)) {
         score += W.TAG_OVERLAP;
       }
     }
@@ -201,13 +201,23 @@ export async function selectGiftsScored(
 
   const { data: candidates } = await query.limit(50);
   if (!candidates || candidates.length === 0) {
-    // Ultimate fallback: any 3 active gifts
+    // Ultimate fallback: score any active gifts through the same pipeline
     const { data: fallback } = await supabase
       .from("gift_catalog")
       .select("*")
       .eq("is_active", true)
-      .limit(topN);
-    return fallback || [];
+      .limit(50);
+    
+    if (!fallback || fallback.length === 0) return [];
+
+    // Score the fallback gifts through the same pipeline instead of returning unranked
+    const fallbackScored: ScoredGift[] = fallback.map((gift: GiftRow) => ({
+      ...gift,
+      _score: scoreGift(gift, ctx),
+    }));
+
+    fallbackScored.sort((a, b) => b._score - a._score);
+    return fallbackScored.slice(0, topN);
   }
 
   // 3. Fetch shown_gifts history for repeat penalty (past 2 years)

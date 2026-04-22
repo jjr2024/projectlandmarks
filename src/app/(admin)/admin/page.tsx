@@ -47,13 +47,26 @@ export default function AdminDashboardPage() {
     const { count: sentCount } = await supabase
       .from("reminder_log")
       .select("id", { count: "exact", head: true })
-      .in("status", ["sent", "delivered", "opened", "clicked"])
+      .eq("status", "sent")
       .gte("sent_at", sinceStr);
 
     const { data: conversionRows } = await supabase
       .from("conversion_events")
       .select("event_type, partner, gift_category, reminder_lead, commission")
       .gte("timestamp", sinceStr);
+
+    // Fetch sent counts per partner/category/lead from reminder_log
+    const { data: sentByPartner } = await supabase
+      .from("conversion_events")
+      .select("partner")
+      .eq("event_type", "sent")
+      .gte("timestamp", sinceStr);
+
+    const sentPartnerMap = new Map<string, number>();
+    for (const row of sentByPartner || []) {
+      const pk = row.partner || "unknown";
+      sentPartnerMap.set(pk, (sentPartnerMap.get(pk) || 0) + 1);
+    }
 
     const f: FunnelData = { sent: sentCount || 0, delivered: 0, opened: 0, clicked: 0, purchased: 0, revenue: 0 };
     const partnerMap = new Map<string, BreakdownRow>();
@@ -70,7 +83,7 @@ export default function AdminDashboardPage() {
 
       // Partner breakdown
       const pk = row.partner || "unknown";
-      if (!partnerMap.has(pk)) partnerMap.set(pk, { key: pk, sent: 0, clicked: 0, purchased: 0, revenue: 0 });
+      if (!partnerMap.has(pk)) partnerMap.set(pk, { key: pk, sent: sentPartnerMap.get(pk) || 0, clicked: 0, purchased: 0, revenue: 0 });
       const pr = partnerMap.get(pk)!;
       if (row.event_type === "clicked") pr.clicked++;
       if (row.event_type === "purchased") { pr.purchased++; pr.revenue += parseFloat(row.commission || "0"); }

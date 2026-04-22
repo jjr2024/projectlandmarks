@@ -1,3 +1,24 @@
+import { timingSafeEqual } from "crypto";
+
+/**
+ * Timing-safe comparison of bearer tokens.
+ * Prevents timing attacks by comparing tokens in constant time.
+ * Returns false if tokens are different lengths or don't match.
+ */
+export function compareTokens(provided: string | null, expected: string): boolean {
+  if (!provided) return false;
+  if (provided.length !== expected.length) return false;
+
+  try {
+    return timingSafeEqual(
+      Buffer.from(provided, "utf-8"),
+      Buffer.from(expected, "utf-8")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Format month + day as "April 24" */
 export function formatDate(month: number, day: number): string {
   const d = new Date(2024, month - 1, day);

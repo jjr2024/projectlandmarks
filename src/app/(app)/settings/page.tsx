@@ -221,6 +221,7 @@ export default function SettingsPage() {
       return;
     }
 
+    // Update password with verified session
     const { error } = await supabase.auth.updateUser({ password: newPassword });
 
     setChangingPassword(false);
@@ -236,27 +237,40 @@ export default function SettingsPage() {
 
   // Recycling bin
   const handleRestore = async (id: string) => {
+    setConfirmDeleteId(null);
     await supabase.from("contacts").update({ deleted_at: null }).eq("id", id);
     await loadTrashedContacts();
   };
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   const handlePermanentDelete = async (id: string) => {
-    // Events cascade-delete via FK; shown_gifts cascade-delete via FK
-    await supabase.from("contacts").delete().eq("id", id);
-    await loadTrashedContacts();
+    setDeleteError("");
+    try {
+      const { error } = await supabase.from("contacts").delete().eq("id", id);
+      if (error) throw error;
+      setConfirmDeleteId(null);
+      await loadTrashedContacts();
+    } catch (err: any) {
+      setDeleteError(`Failed to delete: ${err.message || "Unknown error"}`);
+    }
   };
 
   // Account deletion
   const handleDeleteAccount = async () => {
-    // Delete all user data then sign out
-    // Note: In production this should be an API route using service_role
-    // because auth.admin.deleteUser() requires admin privileges.
-    // For now we delete data and sign out.
-    await supabase.from("events").delete().eq("user_id", userId);
-    await supabase.from("contacts").delete().eq("user_id", userId);
-    await supabase.from("profiles").delete().eq("id", userId);
-    await supabase.auth.signOut();
-    router.push("/");
+    setDeleteError("");
+    setDeletingAccount(true);
+    try {
+      const { error } = await supabase.from("profiles").delete().eq("id", userId);
+      if (error) throw error;
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch (err: any) {
+      setDeleteError(`Account deletion failed: ${err.message || "Unknown error"}. Please contact support.`);
+      setDeletingAccount(false);
+    }
   };
 
   // Data export
@@ -546,6 +560,12 @@ export default function SettingsPage() {
             Deleted contacts are kept for 7 days before permanent removal.
           </p>
 
+          {deleteError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+              {deleteError}
+            </div>
+          )}
+
           {loadingBin ? (
             <p className="text-gray-400 text-sm">Loading...</p>
           ) : trashedContacts.length === 0 ? (
@@ -576,12 +596,30 @@ export default function SettingsPage() {
                     >
                       Restore
                     </button>
-                    <button
-                      onClick={() => handlePermanentDelete(c.id)}
-                      className="text-red-500 hover:text-red-600 text-sm font-medium"
-                    >
-                      Delete forever
-                    </button>
+                    {confirmDeleteId === c.id ? (
+                      <>
+                        <span className="text-xs text-gray-500">Are you sure?</span>
+                        <button
+                          onClick={() => handlePermanentDelete(c.id)}
+                          className="text-red-600 hover:text-red-700 text-xs font-semibold"
+                        >
+                          Yes, delete
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-gray-500 hover:text-gray-700 text-xs font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(c.id)}
+                        className="text-red-500 hover:text-red-600 text-sm font-medium"
+                      >
+                        Delete forever
+                      </button>
+                    )}
                   </div>
 
                   {/* Countdown badge */}
@@ -605,7 +643,7 @@ export default function SettingsPage() {
 
       {/* Delete account modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h2 className="text-lg font-bold text-red-600 mb-2">Delete your account?</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -614,6 +652,11 @@ export default function SettingsPage() {
               <strong> {eventCount} event{eventCount !== 1 ? "s" : ""}</strong>.
               This cannot be undone.
             </p>
+            {deleteError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 mb-3 text-xs">
+                {deleteError}
+              </div>
+            )}
             <div className="mb-4">
               <label className="block text-sm text-gray-600 mb-1">
                 Type <strong>DELETE</strong> to confirm
@@ -637,10 +680,10 @@ export default function SettingsPage() {
               </button>
               <button
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmText !== "DELETE"}
+                disabled={deleteConfirmText !== "DELETE" || deletingAccount}
                 className="bg-red-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Delete my account
+                {deletingAccount ? "Deleting..." : "Delete my account"}
               </button>
             </div>
           </div>

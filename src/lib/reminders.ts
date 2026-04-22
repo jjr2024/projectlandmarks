@@ -19,12 +19,27 @@ export { REMINDER_WINDOWS };
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 
+/** Check if a year is a leap year. */
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
 /** Next occurrence of month/day on or after `from`. Shared by reminders + digest. */
 export function nextOccurrence(month: number, day: number, from: Date): Date {
   const thisYear = from.getFullYear();
-  let d = new Date(thisYear, month - 1, day);
+  // Handle Feb 29: if not a leap year, use Feb 28 instead
+  let adjustedDay = day;
+  if (month === 2 && day === 29 && !isLeapYear(thisYear)) {
+    adjustedDay = 28;
+  }
+  let d = new Date(thisYear, month - 1, adjustedDay);
   if (d < from) {
-    d = new Date(thisYear + 1, month - 1, day);
+    const nextYear = thisYear + 1;
+    adjustedDay = day;
+    if (month === 2 && day === 29 && !isLeapYear(nextYear)) {
+      adjustedDay = 28;
+    }
+    d = new Date(nextYear, month - 1, adjustedDay);
   }
   return d;
 }

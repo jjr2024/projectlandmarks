@@ -17,6 +17,10 @@ import { resend } from "@/lib/resend";
 
 // In-memory rate limit: max 5 submissions per IP per 15 minutes.
 // Resets on redeploy (acceptable for a contact form; use Redis for stricter needs).
+//
+// NOTE: In serverless deployments, each function instance maintains its own map.
+// Traffic to different instances bypasses this limiter. For production, use Redis
+// or a persistent rate-limiting service (e.g., Upstash) to coordinate across instances.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes

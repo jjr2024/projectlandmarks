@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { GIFT_CATEGORIES as CATEGORIES } from "@/lib/constants";
 
-const CATEGORIES = ["flowers", "wine", "treats", "gift_card", "experiences", "donation", "home", "accessories"];
+
 const PRICE_TIERS = ["low", "mid", "high"];
 const RELATIONSHIPS = ["family", "friend", "colleague", "other"];
 const EVENT_TYPES = ["birthday", "anniversary", "custom"];
@@ -36,6 +37,7 @@ export default function GiftCatalogPage() {
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [error, setError] = useState("");
 
   const supabase = createClient();
 
@@ -65,21 +67,49 @@ export default function GiftCatalogPage() {
   }
 
   async function saveGift() {
-    setSaving(true);
-    if (editingId) {
-      await supabase.from("gift_catalog").update(form).eq("id", editingId);
-    } else {
-      await supabase.from("gift_catalog").insert(form);
+    setError("");
+
+    // Validate affiliate URL
+    if (form.affiliate_url.trim()) {
+      try {
+        new URL(form.affiliate_url.trim());
+      } catch {
+        setError("Invalid affiliate URL. Please enter a valid URL (e.g. https://example.com).");
+        return;
+      }
     }
-    setSaving(false);
-    setEditingId(null);
-    setShowAdd(false);
-    loadGifts();
+
+    setSaving(true);
+    try {
+      if (editingId) {
+        const { error: updateError } = await supabase.from("gift_catalog").update(form).eq("id", editingId);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase.from("gift_catalog").insert(form);
+        if (insertError) throw insertError;
+      }
+      setEditingId(null);
+      setShowAdd(false);
+      loadGifts();
+    } catch (err: any) {
+      setError(`Failed to save gift: ${err.message || "Unknown error"}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleActive(gift: GiftItem) {
-    await supabase.from("gift_catalog").update({ is_active: !gift.is_active }).eq("id", gift.id);
-    loadGifts();
+    setError("");
+    try {
+      const { error: toggleError } = await supabase
+        .from("gift_catalog")
+        .update({ is_active: !gift.is_active })
+        .eq("id", gift.id);
+      if (toggleError) throw toggleError;
+      loadGifts();
+    } catch (err: any) {
+      setError(`Failed to update gift status: ${err.message || "Unknown error"}`);
+    }
   }
 
   const filtered = filterCategory === "all" ? gifts : gifts.filter((g) => g.category === filterCategory);
@@ -98,6 +128,12 @@ export default function GiftCatalogPage() {
           + Add Gift
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Filter */}
       <div className="flex gap-1 mb-4 flex-wrap">

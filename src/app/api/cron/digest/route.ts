@@ -10,6 +10,7 @@ import {
   isRateLimitError,
   emptyCronResults,
 } from "@/lib/reminders";
+import { compareTokens } from "@/lib/utils";
 
 /**
  * GET /api/cron/digest
@@ -21,8 +22,14 @@ import {
  * Resilience: 429 handling stops processing immediately.
  */
 export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Timing-safe comparison
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!compareTokens(bearerToken, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,12 +56,17 @@ export async function GET(request: NextRequest) {
           .eq("id", user.id)
           .single();
 
-        if (profile?.monthly_digest_enabled === false) {
+        if (!profile?.monthly_digest_enabled) {
           results.skipped++;
           continue;
         }
 
         const firstName = profile?.display_name?.split(" ")[0] || "there";
+
+        // Digest runs on 1st of month, looks 30 days ahead
+        // Fetch events for current month and next month (handle Dec->Jan rollover)
+        const currentMonth = now.getMonth() + 1; // 1-12
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
 
         const { data: events } = await supabase
           .from("events")
@@ -64,6 +76,7 @@ export async function GET(request: NextRequest) {
             contacts!inner ( id, first_name, last_name, deleted_at )
           `)
           .eq("user_id", user.id)
+          .in("month", [currentMonth, nextMonth])
           .is("contacts.deleted_at", null);
 
         if (!events || events.length === 0) {

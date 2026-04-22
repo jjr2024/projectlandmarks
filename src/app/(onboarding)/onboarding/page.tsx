@@ -91,39 +91,50 @@ export default function OnboardingPage() {
     );
   };
 
+  const [saveError, setSaveError] = useState("");
+
   const handleSaveAndFinish = async () => {
     setSaving(true);
+    setSaveError("");
 
-    // Create contact
-    const { data: newContact } = await supabase
-      .from("contacts")
-      .insert({
-        user_id: userId,
-        first_name: contact.first_name.trim(),
-        last_name: contact.last_name.trim(),
-        relationship: contact.relationship,
-        gift_categories: giftCategories,
-        gift_other: giftOther.trim(),
-      })
-      .select()
-      .single();
+    try {
+      // Create contact
+      const { data: newContact, error: contactError } = await supabase
+        .from("contacts")
+        .insert({
+          user_id: userId,
+          first_name: contact.first_name.trim(),
+          last_name: contact.last_name.trim(),
+          relationship: contact.relationship,
+          gift_categories: giftCategories,
+          gift_other: giftOther.trim(),
+        })
+        .select()
+        .single();
 
-    if (newContact) {
-      // Create event
-      await supabase.from("events").insert({
-        contact_id: newContact.id,
-        user_id: userId,
-        event_type: eventType,
-        event_label: eventType === "custom" ? eventLabel.trim() : "",
-        month: eventMonth,
-        day: Math.min(eventDay, maxDays),
-        high_importance: highImportance,
-        suppress_gifts: suppressGifts,
-      });
+      if (contactError) throw contactError;
+
+      if (newContact) {
+        // Create event
+        const { error: eventError } = await supabase.from("events").insert({
+          contact_id: newContact.id,
+          user_id: userId,
+          event_type: eventType,
+          event_label: eventType === "custom" ? eventLabel.trim() : "",
+          month: eventMonth,
+          day: Math.min(eventDay, maxDays),
+          high_importance: highImportance,
+          suppress_gifts: suppressGifts,
+        });
+        if (eventError) throw eventError;
+      }
+
+      setStep(4);
+    } catch (err: any) {
+      setSaveError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    setStep(4);
   };
 
   const progressWidth = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
@@ -208,7 +219,7 @@ export default function OnboardingPage() {
               </p>
 
               <button
-                onClick={() => setStep(2)}
+                onClick={() => { setStep(2); setSaveError(""); }}
                 className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-4 rounded-xl text-lg transition-colors"
               >
                 Let&apos;s get started &rarr;
@@ -221,7 +232,7 @@ export default function OnboardingPage() {
             <div>
               <div className="mb-6">
                 <p className="text-sm text-brand-600 font-semibold uppercase tracking-wide mb-2">
-                  Step 1
+                  Step 2
                 </p>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   Who do you want to remember?
@@ -381,13 +392,13 @@ export default function OnboardingPage() {
 
               <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => { setStep(1); setSaveError(""); }}
                   className="px-5 py-3 text-sm font-medium text-gray-600 hover:text-gray-800"
                 >
                   &larr; Back
                 </button>
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => { setStep(3); setSaveError(""); }}
                   disabled={!canProceedStep2}
                   className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -402,7 +413,7 @@ export default function OnboardingPage() {
             <div>
               <div className="mb-6">
                 <p className="text-sm text-brand-600 font-semibold uppercase tracking-wide mb-2">
-                  Step 2
+                  Step 3
                 </p>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   What does {contact.first_name || "this person"} like?
@@ -449,9 +460,15 @@ export default function OnboardingPage() {
                 />
               </div>
 
+              {saveError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+                  {saveError}
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => { setStep(2); setSaveError(""); }}
                   className="px-5 py-3 text-sm font-medium text-gray-600 hover:text-gray-800"
                 >
                   &larr; Back

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { compareTokens } from "@/lib/utils";
 
 /**
  * POST /api/webhooks/affiliate
@@ -28,7 +29,9 @@ export async function POST(request: NextRequest) {
   }
 
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${secret}`) {
+  // Timing-safe comparison
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!compareTokens(bearerToken, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

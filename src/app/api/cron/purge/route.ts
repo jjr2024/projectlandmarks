@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { compareTokens } from "@/lib/utils";
 
 /**
  * GET /api/cron/purge
@@ -11,8 +12,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * This enforces the 7-day soft-delete expiry policy documented in CLAUDE.md.
  */
 export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Timing-safe comparison
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!compareTokens(bearerToken, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,9 +27,9 @@ export async function GET(request: NextRequest) {
   const now = new Date();
 
   try {
-    // Calculate the cutoff: 7 days ago
-    const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const cutoffISO = cutoff.toISOString();
+    // Calculate the cutoff: 7 days ago (explicit UTC)
+    const cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const cutoffISO = cutoffDate.toISOString();
 
     // Hard-delete contacts where deleted_at is older than 7 days
     const { data: deleted, error } = await supabase

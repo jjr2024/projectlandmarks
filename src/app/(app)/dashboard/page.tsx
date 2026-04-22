@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState(false);
   const supabase = createClient();
   const router = useRouter();
 
@@ -85,8 +86,20 @@ export default function DashboardPage() {
       setContacts(contactsRes.data || []);
       setEvents(eventsRes.data || []);
       setLoading(false);
+      setLoadingError(false);
     }
+
     load();
+
+    // Set a timeout for loading
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoadingError(true);
+        setLoading(false);
+      }
+    }, 10000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   // Compute upcoming reminders
@@ -131,6 +144,28 @@ export default function DashboardPage() {
     );
   }
 
+  if (loadingError) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-red-600 font-medium mb-4">
+            Failed to load dashboard. The request timed out.
+          </p>
+          <button
+            onClick={() => {
+              setLoadingError(false);
+              setLoading(true);
+              window.location.reload();
+            }}
+            className="bg-brand-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Header */}
@@ -151,7 +186,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500 mb-1">Urgent (≤ 3 days)</p>
-          <p className={`text-3xl font-bold ${urgentCount > 0 ? "text-red-600" : "text-gray-900"}`}>
+          <p className="text-3xl font-bold text-red-600">
             {urgentCount}
           </p>
         </div>

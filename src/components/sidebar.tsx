@@ -14,7 +14,6 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/contacts", label: "Contacts", icon: "👥" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
-  { href: "/about", label: "About", icon: "ℹ️" },
 ];
 
 export default function Sidebar({ displayName, email }: SidebarProps) {
@@ -44,6 +43,7 @@ export default function Sidebar({ displayName, email }: SidebarProps) {
         onClick={() => setSidebarOpen(true)}
         className="md:hidden fixed top-4 left-4 z-40 bg-white border border-gray-200 rounded-lg p-2 shadow-sm"
         aria-label="Open menu"
+        aria-expanded={sidebarOpen}
       >
         <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -55,6 +55,7 @@ export default function Sidebar({ displayName, email }: SidebarProps) {
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/30"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden={!sidebarOpen}
         />
       )}
 
@@ -71,7 +72,7 @@ export default function Sidebar({ displayName, email }: SidebarProps) {
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav role="navigation" className="flex-1 px-3 py-4 space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (

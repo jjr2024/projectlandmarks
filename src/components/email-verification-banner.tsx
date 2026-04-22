@@ -1,16 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function EmailVerificationBanner() {
-  const [dismissed, setDismissed] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   const supabase = createClient();
 
-  if (dismissed) return null;
+  // Reset sent state after 30 seconds
+  useEffect(() => {
+    if (!sent) return;
+
+    setCountdown(30);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setSent(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sent]);
 
   const handleResend = async () => {
     setSending(true);
@@ -31,8 +48,8 @@ export default function EmailVerificationBanner() {
   };
 
   return (
-    <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between gap-4 mb-6 rounded-lg">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center gap-4 mb-6 rounded-lg">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <svg
           className="w-5 h-5 text-amber-500 shrink-0"
           fill="none"
@@ -49,7 +66,9 @@ export default function EmailVerificationBanner() {
         <p className="text-sm text-amber-800">
           <span className="font-semibold">Verify your email</span> to start receiving reminders.
           {sent ? (
-            <span className="ml-1 text-amber-600">Verification email sent!</span>
+            <span className="ml-1 text-amber-600">
+              Verification email sent! You can resend in {countdown} seconds.
+            </span>
           ) : (
             <button
               onClick={handleResend}
@@ -61,15 +80,6 @@ export default function EmailVerificationBanner() {
           )}
         </p>
       </div>
-      <button
-        onClick={() => setDismissed(true)}
-        className="text-amber-400 hover:text-amber-600 shrink-0"
-        aria-label="Dismiss"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
     </div>
   );
 }
