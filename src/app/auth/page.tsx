@@ -14,6 +14,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentEmails, setConsentEmails] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
@@ -41,6 +43,7 @@ export default function AuthPage() {
     router.push("/dashboard");
   };
 
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -56,7 +59,12 @@ export default function AuthPage() {
       email,
       password,
       options: {
-        data: { display_name: displayName || email.split("@")[0] },
+        data: {
+          display_name: displayName || email.split("@")[0],
+          consent_terms: consentTerms,
+          consent_emails: consentEmails,
+          consent_at: new Date().toISOString(),
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -96,6 +104,8 @@ export default function AuthPage() {
     setMode(mode === "signin" ? "signup" : "signin");
     setError("");
     setSignupSuccess(false);
+    setConsentTerms(false);
+    setConsentEmails(false);
     // Preserve email across mode toggle (matches prototype behavior)
   };
 
@@ -155,6 +165,7 @@ export default function AuthPage() {
               </Link>
             </div>
           )}
+
 
           <form onSubmit={mode === "signin" ? handleSignIn : handleSignUp}>
             {mode === "signup" && (
@@ -217,9 +228,45 @@ export default function AuthPage() {
               )}
             </div>
 
+            {mode === "signup" && (
+              <div className="mb-6 space-y-3">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentTerms}
+                    onChange={(e) => setConsentTerms(e.target.checked)}
+                    className="mt-1 w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-gray-600">
+                    I agree to the{" "}
+                    <Link href="/privacy" target="_blank" className="text-brand-600 hover:underline font-medium">
+                      Privacy Policy
+                    </Link>
+                    {" "}and{" "}
+                    <Link href="/terms" target="_blank" className="text-brand-600 hover:underline font-medium">
+                      Terms of Service
+                    </Link>
+                    {" "}of daysight.xyz
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentEmails}
+                    onChange={(e) => setConsentEmails(e.target.checked)}
+                    className="mt-1 w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-gray-600">
+                    I agree to receive reminder emails from daysight.xyz that include affiliate links from Amazon.com
+                  </span>
+                </label>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={loading || !email || !password || (mode === "signup" && (!consentTerms || !consentEmails))}
               className="w-full bg-brand-600 text-white py-2.5 rounded-lg font-semibold hover:bg-brand-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading

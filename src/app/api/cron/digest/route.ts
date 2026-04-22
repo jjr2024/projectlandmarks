@@ -52,9 +52,15 @@ export async function GET(request: NextRequest) {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, monthly_digest_enabled, timezone")
+          .select("display_name, monthly_digest_enabled, timezone, consent_terms, consent_emails")
           .eq("id", user.id)
           .single();
+
+        // Skip users who haven't consented — required for Amazon affiliate compliance
+        if (!profile?.consent_terms || !profile?.consent_emails) {
+          results.skipped++;
+          continue;
+        }
 
         if (!profile?.monthly_digest_enabled) {
           results.skipped++;

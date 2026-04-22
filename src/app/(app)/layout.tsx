@@ -18,12 +18,17 @@ export default async function AppLayout({
     redirect("/auth");
   }
 
-  // Fetch profile for sidebar display
+  // Fetch profile for sidebar display and consent check
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, consent_terms, consent_emails")
     .eq("id", user.id)
     .single();
+
+  // Gate on consent — redirect to /consent if not both consented
+  if (!profile?.consent_terms || !profile?.consent_emails) {
+    redirect("/consent");
+  }
 
   const displayName = profile?.display_name || user.email?.split("@")[0] || "User";
   const email = user.email || "";

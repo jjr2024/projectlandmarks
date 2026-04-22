@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { GiftCategoryIcon } from "@/components/gift-icons";
 
 const RELATIONSHIPS = [
   { value: "family", label: "Family" },
@@ -12,12 +13,14 @@ const RELATIONSHIPS = [
 ];
 
 const GIFT_OPTIONS = [
-  { value: "flowers", label: "Flowers", emoji: "\uD83C\uDF37" },
-  { value: "wine", label: "Wine", emoji: "\uD83C\uDF77" },
-  { value: "treats", label: "Treats", emoji: "\uD83C\uDF6B" },
-  { value: "gift_card", label: "Gift Card", emoji: "\uD83C\uDF81" },
-  { value: "experiences", label: "Experience", emoji: "\uD83C\uDFAD" },
-  { value: "donation", label: "Donation", emoji: "\u2764\uFE0F" },
+  { value: "flowers", label: "Flowers", description: "Bouquets & arrangements" },
+  { value: "wine", label: "Wine", description: "Bottles & subscriptions" },
+  { value: "treats", label: "Treats", description: "Chocolates & sweets" },
+  { value: "gift_card", label: "Gift Card", description: "Always a safe bet" },
+  { value: "experiences", label: "Experience", description: "Concerts, dining & more" },
+  { value: "donation", label: "Donation", description: "Charitable giving" },
+  { value: "home", label: "Home", description: "Decor & lifestyle" },
+  { value: "accessories", label: "Accessories", description: "Fashion & gadgets" },
 ];
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({
@@ -32,24 +35,41 @@ const DAYS_IN_MONTH: Record<number, number> = {
 
 const TOTAL_STEPS = 4;
 
+interface EventData {
+  event_type: string;
+  event_label: string;
+  month: number;
+  day: number;
+  year_started?: number;
+  one_time?: boolean;
+  event_year?: number;
+  high_importance: boolean;
+  suppress_gifts: boolean;
+}
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [firstName, setFirstName] = useState("");
   const [userId, setUserId] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Step 2: Contact + event
+  // Step 2: Contact + events
   const [contact, setContact] = useState({
     first_name: "",
     last_name: "",
     relationship: "friend",
   });
-  const [eventType, setEventType] = useState("birthday");
-  const [eventLabel, setEventLabel] = useState("");
-  const [eventMonth, setEventMonth] = useState(0);
-  const [eventDay, setEventDay] = useState(0);
-  const [highImportance, setHighImportance] = useState(false);
-  const [suppressGifts, setSuppressGifts] = useState(false);
+  const [events, setEvents] = useState<EventData[]>([
+    {
+      event_type: "birthday",
+      event_label: "",
+      month: 0,
+      day: 0,
+      high_importance: false,
+      suppress_gifts: false,
+    },
+  ]);
+  const [expandedEventIndex, setExpandedEventIndex] = useState(0);
 
   // Step 3: Gift prefs
   const [giftCategories, setGiftCategories] = useState<string[]>([]);
@@ -77,13 +97,18 @@ export default function OnboardingPage() {
     load();
   }, []);
 
-  const maxDays = DAYS_IN_MONTH[eventMonth] || 31;
+  const currentEvent = events[expandedEventIndex] || events[0];
+  const maxDays = DAYS_IN_MONTH[currentEvent.month] || 31;
 
   const canProceedStep2 =
     contact.first_name.trim() &&
-    eventMonth > 0 &&
-    eventDay > 0 &&
-    (eventType !== "custom" || eventLabel.trim());
+    events.length > 0 &&
+    events.every(
+      (e) =>
+        e.month > 0 &&
+        e.day > 0 &&
+        (e.event_type !== "custom" || e.event_label.trim())
+    );
 
   const toggleGift = (val: string) => {
     setGiftCategories((prev) =>
@@ -115,17 +140,21 @@ export default function OnboardingPage() {
       if (contactError) throw contactError;
 
       if (newContact) {
-        // Create event
-        const { error: eventError } = await supabase.from("events").insert({
+        // Create all events
+        const eventsToInsert = events.map((e) => ({
           contact_id: newContact.id,
           user_id: userId,
-          event_type: eventType,
-          event_label: eventType === "custom" ? eventLabel.trim() : "",
-          month: eventMonth,
-          day: Math.min(eventDay, maxDays),
-          high_importance: highImportance,
-          suppress_gifts: suppressGifts,
-        });
+          event_type: e.event_type,
+          event_label: e.event_type === "custom" ? e.event_label.trim() : "",
+          month: e.month,
+          day: Math.min(e.day, DAYS_IN_MONTH[e.month] || 31),
+          high_importance: e.high_importance,
+          suppress_gifts: e.suppress_gifts,
+        }));
+
+        const { error: eventError } = await supabase
+          .from("events")
+          .insert(eventsToInsert);
         if (eventError) throw eventError;
       }
 
@@ -135,6 +164,35 @@ export default function OnboardingPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAddEvent = () => {
+    setEvents([
+      ...events,
+      {
+        event_type: "birthday",
+        event_label: "",
+        month: 0,
+        day: 0,
+        high_importance: false,
+        suppress_gifts: false,
+      },
+    ]);
+    setExpandedEventIndex(events.length);
+  };
+
+  const handleRemoveEvent = (index: number) => {
+    const newEvents = events.filter((_, i) => i !== index);
+    setEvents(newEvents);
+    if (expandedEventIndex >= newEvents.length) {
+      setExpandedEventIndex(Math.max(0, newEvents.length - 1));
+    }
+  };
+
+  const updateEvent = (index: number, updates: Partial<EventData>) => {
+    const newEvents = [...events];
+    newEvents[index] = { ...newEvents[index], ...updates };
+    setEvents(newEvents);
   };
 
   const progressWidth = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
@@ -293,100 +351,236 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Event type */}
+                {/* Events */}
                 <div className="border-t border-gray-100 pt-5">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
-                    What date matters?
+                    What dates matter?
                   </label>
-                  <div className="flex gap-2 mb-4">
-                    {["birthday", "anniversary", "custom"].map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setEventType(t)}
-                        className={`border-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                          eventType === t
-                            ? "border-brand-600 bg-brand-50 text-brand-700"
-                            : "border-gray-200 text-gray-500 hover:border-brand-300"
-                        }`}
-                      >
-                        {t === "custom" ? "Other" : t.charAt(0).toUpperCase() + t.slice(1)}
-                      </button>
-                    ))}
-                  </div>
 
-                  {eventType === "custom" && (
-                    <div className="mb-4">
-                      <input
-                        type="text"
-                        value={eventLabel}
-                        onChange={(e) => setEventLabel(e.target.value)}
-                        placeholder="Event name (e.g. Graduation)"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                      />
-                    </div>
-                  )}
-
-                  {/* Month + Day */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <select
-                      value={eventMonth}
-                      onChange={(e) => {
-                        const m = parseInt(e.target.value);
-                        setEventMonth(m);
-                        setEventDay((prev) => Math.min(prev, DAYS_IN_MONTH[m] || 31));
-                      }}
-                      className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                    >
-                      <option value={0}>Month</option>
-                      {MONTHS.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={eventDay}
-                      onChange={(e) => setEventDay(parseInt(e.target.value))}
-                      className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                    >
-                      <option value={0}>Day</option>
-                      {Array.from({ length: maxDays }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {i + 1}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* High importance + Suppress gifts row */}
-                  <div className="flex items-center justify-between mt-4">
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={highImportance}
-                        onChange={(e) => setHighImportance(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer"
-                      />
-                      <span className="text-xs font-medium text-gray-600">High importance</span>
-                      <span className="relative group">
-                        <svg className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 leading-relaxed z-50 shadow-lg">
-                          Adds an extra reminder 21 days before so you have more time to plan.
-                        </span>
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setSuppressGifts(!suppressGifts)}
-                      className={`flex items-center gap-1.5 text-xs transition-colors rounded-full px-2.5 py-1 ${
-                        suppressGifts ? "bg-gray-200 text-gray-600" : "text-gray-400 hover:text-gray-500"
+                  {events.map((event, idx) => (
+                    <div
+                      key={idx}
+                      className={`mb-4 border rounded-lg overflow-hidden transition-all ${
+                        expandedEventIndex === idx
+                          ? "border-brand-300 bg-brand-50"
+                          : "border-gray-200 hover:border-brand-300"
                       }`}
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                      Skip gifts
-                    </button>
-                  </div>
+                      {/* Header (collapsible) */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedEventIndex(idx)}
+                        className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="text-xs font-semibold text-gray-400">
+                            Date {idx + 1}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            {event.month > 0 && event.day > 0
+                              ? `${MONTHS.find((m) => m.value === event.month)?.label || ""} ${event.day}${
+                                  event.event_type === "custom" ? ` · ${event.event_label}` : ""
+                                }`
+                              : "Not set"}
+                          </span>
+                        </div>
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            expandedEventIndex === idx ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                          />
+                        </svg>
+                      </button>
+
+                      {/* Expanded content */}
+                      {expandedEventIndex === idx && (
+                        <div className="border-t border-gray-200 px-4 py-4 space-y-3 bg-white">
+                          {/* Event type */}
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                              Type
+                            </label>
+                            <div className="flex gap-2">
+                              {["birthday", "anniversary", "custom"].map((t) => (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  onClick={() =>
+                                    updateEvent(idx, {
+                                      event_type: t,
+                                      event_label: t === "custom" ? event.event_label : "",
+                                    })
+                                  }
+                                  className={`border-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                    event.event_type === t
+                                      ? "border-brand-600 bg-brand-50 text-brand-700"
+                                      : "border-gray-200 text-gray-500 hover:border-brand-300"
+                                  }`}
+                                >
+                                  {t === "custom" ? "Other" : t.charAt(0).toUpperCase() + t.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Custom event label */}
+                          {event.event_type === "custom" && (
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                                Event name
+                              </label>
+                              <input
+                                type="text"
+                                value={event.event_label}
+                                onChange={(e) => updateEvent(idx, { event_label: e.target.value })}
+                                placeholder="e.g. Graduation"
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                              />
+                            </div>
+                          )}
+
+                          {/* Month + Day */}
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                              Date
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <select
+                                value={event.month}
+                                onChange={(e) => {
+                                  const m = parseInt(e.target.value);
+                                  updateEvent(idx, {
+                                    month: m,
+                                    day: Math.min(event.day, DAYS_IN_MONTH[m] || 31),
+                                  });
+                                }}
+                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                              >
+                                <option value={0}>Month</option>
+                                {MONTHS.map((m) => (
+                                  <option key={m.value} value={m.value}>
+                                    {m.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={event.day}
+                                onChange={(e) => updateEvent(idx, { day: parseInt(e.target.value) })}
+                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                              >
+                                <option value={0}>Day</option>
+                                {Array.from(
+                                  { length: DAYS_IN_MONTH[event.month] || 31 },
+                                  (_, i) => (
+                                    <option key={i + 1} value={i + 1}>
+                                      {i + 1}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* High importance + Suppress gifts row */}
+                          <div className="flex items-center justify-between pt-2">
+                            <label className="flex items-center gap-2.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={event.high_importance}
+                                onChange={(e) =>
+                                  updateEvent(idx, { high_importance: e.target.checked })
+                                }
+                                className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer"
+                              />
+                              <span className="text-xs font-medium text-gray-600">
+                                High importance
+                              </span>
+                              <span className="relative group">
+                                <svg
+                                  className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                <span className="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 leading-relaxed z-50 shadow-lg">
+                                  Adds an extra reminder 21 days before so you have more time to
+                                  plan.
+                                </span>
+                              </span>
+                            </label>
+                            {events.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEvent(idx)}
+                                className="text-xs text-red-500 hover:text-red-600 font-medium"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Suppress gifts */}
+                          <button
+                            type="button"
+                            onClick={() => updateEvent(idx, { suppress_gifts: !event.suppress_gifts })}
+                            className={`w-full flex items-center gap-1.5 text-xs transition-colors rounded-lg px-3 py-2 ${
+                              event.suppress_gifts
+                                ? "bg-gray-200 text-gray-600"
+                                : "text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                            }`}
+                          >
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                              />
+                            </svg>
+                            Skip gifts for this date
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Add another date button */}
+                  <button
+                    type="button"
+                    onClick={handleAddEvent}
+                    className="w-full border-2 border-dashed border-gray-300 hover:border-brand-400 rounded-lg py-3 px-4 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-500 hover:text-brand-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Add another date
+                  </button>
                 </div>
               </div>
 
@@ -423,29 +617,55 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 {GIFT_OPTIONS.map((g) => (
                   <button
                     key={g.value}
                     type="button"
                     onClick={() => toggleGift(g.value)}
-                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors text-left ${
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors text-center ${
                       giftCategories.includes(g.value)
                         ? "border-brand-600 bg-brand-50"
                         : "border-gray-200 hover:border-brand-300"
                     }`}
                   >
-                    <span className="text-xl">{g.emoji}</span>
-                    <span
-                      className={`text-sm font-medium ${
-                        giftCategories.includes(g.value) ? "text-brand-700" : "text-gray-700"
+                    <div
+                      className={`transition-colors ${
+                        giftCategories.includes(g.value) ? "text-brand-600" : "text-gray-400"
                       }`}
                     >
-                      {g.label}
-                    </span>
+                      <GiftCategoryIcon
+                        category={g.value}
+                        className="w-6 h-6"
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                    <div>
+                      <p
+                        className={`text-sm font-medium ${
+                          giftCategories.includes(g.value) ? "text-brand-700" : "text-gray-700"
+                        }`}
+                      >
+                        {g.label}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{g.description}</p>
+                    </div>
                   </button>
                 ))}
               </div>
+
+              {/* Shortcut button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setGiftCategories(["gift_card"]);
+                  handleSaveAndFinish();
+                }}
+                disabled={saving}
+                className="w-full border-2 border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-700 font-medium py-3 rounded-xl text-sm transition-colors mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Not sure? Default to gift cards
+              </button>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">

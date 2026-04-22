@@ -61,9 +61,15 @@ export async function GET(request: NextRequest) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, timezone, preferred_send_hour")
+          .select("display_name, timezone, preferred_send_hour, consent_terms, consent_emails")
           .eq("id", user.id)
           .single();
+
+        // Skip users who haven't consented — required for Amazon affiliate compliance
+        if (!profile?.consent_terms || !profile?.consent_emails) {
+          results.skipped++;
+          continue;
+        }
 
         const firstName = profile?.display_name?.split(" ")[0] || "there";
         const userEmail = user.email;

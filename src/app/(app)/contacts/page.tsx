@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { getInitials, relationshipLabel, giftLabel } from "@/lib/utils";
+import { GiftCategoryIcon } from "@/components/gift-icons";
 
 interface Contact {
   id: string;
@@ -352,12 +353,17 @@ export default function ContactsPage() {
                     key={g.value}
                     type="button"
                     onClick={() => toggleGiftCategory(g.value)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
                       form.gift_categories.includes(g.value)
                         ? "bg-brand-600 text-white border-brand-600"
                         : "bg-white text-gray-600 border-gray-300 hover:border-brand-400"
                     }`}
                   >
+                    <GiftCategoryIcon
+                      category={g.value}
+                      className="w-4 h-4"
+                      strokeWidth={2}
+                    />
                     {g.label}
                   </button>
                 ))}

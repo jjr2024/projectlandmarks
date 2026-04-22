@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { getInitials } from "@/lib/utils";
+import { getInitials, formatDate } from "@/lib/utils";
+import { GiftCategoryIcon } from "@/components/gift-icons";
 
 interface Profile {
   id: string;
@@ -17,6 +18,23 @@ interface Profile {
   gift_suggestions_enabled: boolean;
   product_updates_enabled: boolean;
   partner_offers_enabled: boolean;
+}
+
+interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface Event {
+  id: string;
+  contact_id: string;
+  event_type: string;
+  event_label: string;
+  month: number;
+  day: number;
+  one_time: boolean;
+  event_year: number | null;
 }
 
 interface TrashedContact {
@@ -83,8 +101,102 @@ export default function SettingsPage() {
   const [contactCount, setContactCount] = useState(0);
   const [eventCount, setEventCount] = useState(0);
 
+  // Calendar feed
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [showCalendarHelp, setShowCalendarHelp] = useState(false);
+
   const supabase = createClient();
   const router = useRouter();
+
+  // Calendar feed: generate .ics file
+  const generateAndDownloadICS = async () => {
+    if (!userId) return;
+
+    try {
+      const [contactsRes, eventsRes] = await Promise.all([
+        supabase.from("contacts").select("*").eq("user_id", userId).is("deleted_at", null),
+        supabase.from("events").select("*").eq("user_id", userId),
+      ]);
+
+      const contacts = (contactsRes.data || []) as Contact[];
+      const events = (eventsRes.data || []) as Event[];
+
+      // Build a map of contact_id -> contact for quick lookup
+      const contactMap = new Map(contacts.map((c) => [c.id, c]));
+
+      // Generate iCalendar
+      const icsLines: string[] = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Daysight//Calendar Feed//EN",
+        "CALSCALE:GREGORIAN",
+        "X-WR-CALNAME:Daysight Reminders",
+      ];
+
+      for (const evt of events) {
+        const contact = contactMap.get(evt.contact_id);
+        if (!contact) continue;
+
+        // Build summary: "Contact Name's Event Type"
+        let summary = `${contact.first_name}`;
+        if (contact.last_name) summary += ` ${contact.last_name}`;
+
+        if (evt.event_type === "birthday") {
+          summary += "'s Birthday";
+        } else if (evt.event_type === "anniversary") {
+          summary += "'s Anniversary";
+        } else if (evt.event_type === "custom" && evt.event_label) {
+          summary += `'s ${evt.event_label}`;
+        } else {
+          summary += "'s Event";
+        }
+
+        // Format date as YYYYMMDD (all-day event uses DATE format, not DATETIME)
+        const dateStr = String(evt.month).padStart(2, "0") + String(evt.day).padStart(2, "0");
+        const startDate = `2024${dateStr}`; // Use a valid year for formatting (iCal doesn't care)
+
+        // Unique identifier
+        const uid = `event-${evt.id}@daysight.xyz`;
+
+        icsLines.push(
+          "BEGIN:VEVENT",
+          `DTSTART;VALUE=DATE:${startDate}`,
+          `SUMMARY:${escapeICSText(summary)}`,
+          "RRULE:FREQ=YEARLY",
+          `UID:${uid}`,
+          "END:VEVENT"
+        );
+      }
+
+      icsLines.push("END:VCALENDAR");
+
+      const icsContent = icsLines.join("\r\n");
+      const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `daysight-calendar-${new Date().toISOString().split("T")[0]}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to generate calendar:", err);
+    }
+  };
+
+  // Helper to escape special characters in iCalendar text
+  const escapeICSText = (text: string): string => {
+    return text.replace(/[\\,;]/g, (char) => `\\${char}`);
+  };
+
+  // Copy subscription URL to clipboard
+  const copySubscriptionURL = () => {
+    const url = `https://daysight.xyz/api/calendar/${userId}.ics`;
+    navigator.clipboard.writeText(url);
+    setCopiedToClipboard(true);
+    setTimeout(() => setCopiedToClipboard(false), 2000);
+  };
 
   const loadProfile = useCallback(async () => {
     const {
@@ -431,6 +543,54 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          {/* Calendar feed */}
+          <section className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Calendar Feed</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Add your events to Google Calendar, Outlook, Apple Calendar, or any app that supports iCalendar (.ics) files.
+            </p>
+
+            {/* Download .ics button */}
+            <div className="mb-5">
+              <p className="text-sm font-medium text-gray-700 mb-2">Download as .ics file</p>
+              <button
+                onClick={generateAndDownloadICS}
+                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Download .ics
+              </button>
+            </div>
+
+            {/* Subscription URL */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Subscribe to calendar feed</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={`https://daysight.xyz/api/calendar/${userId}.ics`}
+                  readOnly
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600 focus:outline-none"
+                />
+                <button
+                  onClick={copySubscriptionURL}
+                  className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+                >
+                  {copiedToClipboard ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Paste this URL in your calendar app&apos;s &ldquo;Subscribe to calendar&rdquo; option.{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowCalendarHelp(true)}
+                  className="text-brand-600 hover:text-brand-700 font-medium"
+                >
+                  How do I use this?
+                </button>
+              </p>
+            </div>
+          </section>
+
           {/* Default gift categories */}
           <section className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Default Gift Preferences</h2>
@@ -443,12 +603,17 @@ export default function SettingsPage() {
                   key={g.value}
                   type="button"
                   onClick={() => toggleDefaultGift(g.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
                     profile.default_gift_categories.includes(g.value)
                       ? "bg-brand-600 text-white border-brand-600"
                       : "bg-white text-gray-600 border-gray-300 hover:border-brand-400"
                   }`}
                 >
+                  <GiftCategoryIcon
+                    category={g.value}
+                    className="w-4 h-4"
+                    strokeWidth={2}
+                  />
                   {g.label}
                 </button>
               ))}
@@ -686,6 +851,65 @@ export default function SettingsPage() {
                 {deletingAccount ? "Deleting..." : "Delete my account"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar help modal */}
+      {showCalendarHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Calendar feed help">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">How to use the calendar feed</h2>
+              <button
+                onClick={() => setShowCalendarHelp(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-700">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Google Calendar</h3>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Go to Settings → Add other calendars (+ icon)</li>
+                  <li>Choose &ldquo;Subscribe to calendar&rdquo;</li>
+                  <li>Paste the subscription URL</li>
+                  <li>Click Subscribe</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Outlook / Microsoft 365</h3>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Go to Settings → Calendars → Add calendar</li>
+                  <li>Choose &ldquo;Subscribe from web&rdquo;</li>
+                  <li>Paste the subscription URL</li>
+                  <li>Click Subscribe</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Apple Calendar</h3>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Go to File → New Calendar Subscription</li>
+                  <li>Paste the subscription URL</li>
+                  <li>Click Subscribe</li>
+                </ol>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                Your subscription URL is unique to your account. Don&apos;t share it with others.
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowCalendarHelp(false)}
+              className="mt-5 w-full bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

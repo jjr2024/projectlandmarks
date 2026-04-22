@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { GIFT_CATEGORIES as CATEGORIES } from "@/lib/constants";
+import { GIFT_CATEGORIES } from "@/lib/constants";
+
+const CATEGORIES = [...GIFT_CATEGORIES] as string[];
 
 
 const PRICE_TIERS = ["low", "mid", "high"];

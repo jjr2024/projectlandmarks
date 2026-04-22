@@ -199,27 +199,6 @@ export async function selectGiftsScored(
     query = query.in("category", categories);
   }
 
-  const { data: candidates } = await query.limit(50);
-  if (!candidates || candidates.length === 0) {
-    // Ultimate fallback: score any active gifts through the same pipeline
-    const { data: fallback } = await supabase
-      .from("gift_catalog")
-      .select("*")
-      .eq("is_active", true)
-      .limit(50);
-    
-    if (!fallback || fallback.length === 0) return [];
-
-    // Score the fallback gifts through the same pipeline instead of returning unranked
-    const fallbackScored: ScoredGift[] = fallback.map((gift: GiftRow) => ({
-      ...gift,
-      _score: scoreGift(gift, ctx),
-    }));
-
-    fallbackScored.sort((a, b) => b._score - a._score);
-    return fallbackScored.slice(0, topN);
-  }
-
   // 3. Fetch shown_gifts history for repeat penalty (past 2 years)
   const { data: shownHistory } = await supabase
     .from("shown_gifts")
@@ -250,6 +229,27 @@ export async function selectGiftsScored(
     repeatCounts,
     shuffleSeed: buildShuffleSeed(contact.id, currentYear),
   };
+
+  const { data: candidates } = await query.limit(50);
+  if (!candidates || candidates.length === 0) {
+    // Ultimate fallback: score any active gifts through the same pipeline
+    const { data: fallback } = await supabase
+      .from("gift_catalog")
+      .select("*")
+      .eq("is_active", true)
+      .limit(50);
+
+    if (!fallback || fallback.length === 0) return [];
+
+    // Score the fallback gifts through the same pipeline instead of returning unranked
+    const fallbackScored: ScoredGift[] = fallback.map((gift: GiftRow) => ({
+      ...gift,
+      _score: scoreGift(gift, ctx),
+    }));
+
+    fallbackScored.sort((a, b) => b._score - a._score);
+    return fallbackScored.slice(0, topN);
+  }
 
   // 5. Score all candidates
   const scored: ScoredGift[] = candidates.map((gift: GiftRow) => ({

@@ -15,6 +15,7 @@ import {
   daysUntilLabel,
   urgencyClass,
 } from "@/lib/utils";
+import { GiftCategoryIcon } from "@/components/gift-icons";
 
 interface Contact {
   id: string;

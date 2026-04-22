@@ -78,7 +78,6 @@ export default function EmailQueuePage() {
       queueItems.push({
         eventId: event.id,
         userId: event.user_id,
-        userName: profile?.display_name || event.user_id,
         userName: profile?.display_name || "Unknown",
         contactName: `${contact.first_name}${contact.last_name ? " " + contact.last_name : ""}`,
         contactId: contact.id,

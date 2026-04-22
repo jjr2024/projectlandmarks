@@ -68,9 +68,15 @@ export async function GET(request: NextRequest) {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, drips_sent")
+          .select("display_name, drips_sent, consent_terms, consent_emails")
           .eq("id", user.id)
           .single();
+
+        // Skip users who haven't consented — required for Amazon affiliate compliance
+        if (!profile?.consent_terms || !profile?.consent_emails) {
+          results.skipped++;
+          continue;
+        }
 
         const firstName = profile?.display_name?.split(" ")[0] || "there";
         const dripsSent: Record<string, string> = profile?.drips_sent || {};
