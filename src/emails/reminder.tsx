@@ -26,6 +26,7 @@ interface ReminderEmailProps {
   gifts: GiftItem[];
   suppressGifts: boolean;
   lastYearLine?: string | null;
+  customMessage?: string | null;
   contactId: string;
   userId: string;
 }
@@ -47,6 +48,7 @@ export default function ReminderEmail({
   gifts = [],
   suppressGifts = false,
   lastYearLine = null,
+  customMessage = null,
   contactId = "",
   userId = "",
 }: ReminderEmailProps) {
@@ -85,6 +87,14 @@ export default function ReminderEmail({
           <Section style={{ backgroundColor: "white", padding: "24px 32px", borderRadius: "0 0 12px 12px" }}>
             <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 12px 0" }}>Hi {firstName},</Text>
             <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 16px 0", lineHeight: "1.5" }}>{intro}</Text>
+
+            {/* Admin custom message — personal note from the Daysight team */}
+            {customMessage && (
+              <Section style={{ background: "#fffbf5", border: `1px solid #f5e6d3`, borderRadius: "10px", padding: "14px 18px", marginBottom: "16px" }}>
+                <Text style={{ color: "#92400e", fontSize: "11px", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.04em", margin: "0 0 6px 0" }}>A note from Daysight</Text>
+                <Text style={{ color: "#374151", fontSize: "14px", lineHeight: "1.6", margin: 0, whiteSpace: "pre-line" as const }}>{customMessage}</Text>
+              </Section>
+            )}
 
             {/* Last year's suggestions */}
             {lastYearLine && !suppressGifts && (

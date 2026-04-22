@@ -3,14 +3,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
 import { EMAIL_CONFIG } from "@/lib/email-config";
 import DigestEmail, { digestSubject } from "@/emails/digest";
+import {
+  nextOccurrence,
+  formatEventDate,
+  daysBetween,
+  isRateLimitError,
+  emptyCronResults,
+} from "@/lib/reminders";
 
 /**
  * GET /api/cron/digest
  *
- * Runs on the 1st of each month via Vercel Cron. For each verified user who
- * has monthly_digest enabled, checks if they have events in the next 30 days.
- * If yes, sends a digest email listing upcoming events. If no events, skips
- * (no empty digests).
+ * 1st of each month via Vercel Cron. Sends a digest of upcoming events (next 30
+ * days) to each verified user who has digest enabled. Skips users with no
+ * upcoming events (no empty digests).
+ *
+ * Resilience: 429 handling stops processing immediately.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -20,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
   const now = new Date();
-  const results = { sent: 0, skipped: 0, errors: [] as string[] };
+  const results = emptyCronResults();
 
   try {
     const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
@@ -29,18 +37,18 @@ export async function GET(request: NextRequest) {
     const verifiedUsers = users.users.filter((u) => !!u.email_confirmed_at);
 
     for (const user of verifiedUsers) {
+      if (results.rateLimited) break;
+
       try {
         const userEmail = user.email;
         if (!userEmail) continue;
 
-        // Check if user has digest enabled
         const { data: profile } = await supabase
           .from("profiles")
           .select("display_name, monthly_digest, timezone")
           .eq("id", user.id)
           .single();
 
-        // Default to enabled if not explicitly set
         if (profile?.monthly_digest === false) {
           results.skipped++;
           continue;
@@ -48,7 +56,6 @@ export async function GET(request: NextRequest) {
 
         const firstName = profile?.display_name?.split(" ")[0] || "there";
 
-        // Get all active events for this user
         const { data: events } = await supabase
           .from("events")
           .select(`
@@ -64,18 +71,16 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Filter to events in the next 30 days
         const upcomingEvents = events
           .map((event) => {
             const contact = event.contacts as any;
             const eventDate = nextOccurrence(event.month, event.day, now);
-            const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const daysUntil = daysBetween(now, eventDate);
             return { event, contact, daysUntil, eventDate };
           })
           .filter((e) => e.daysUntil >= 0 && e.daysUntil <= 30)
           .sort((a, b) => a.daysUntil - b.daysUntil);
 
-        // No upcoming events = no digest
         if (upcomingEvents.length === 0) {
           results.skipped++;
           continue;
@@ -84,7 +89,7 @@ export async function GET(request: NextRequest) {
         const monthName = now.toLocaleDateString("en-US", { month: "long" });
         const subject = digestSubject(monthName);
 
-        const { error: emailError } = await resend.emails.send({
+        const { error: emailError } = await resend().emails.send({
           from: EMAIL_CONFIG.from,
           to: userEmail,
           replyTo: EMAIL_CONFIG.replyTo,
@@ -109,6 +114,11 @@ export async function GET(request: NextRequest) {
         });
 
         if (emailError) {
+          if (isRateLimitError(emailError)) {
+            results.rateLimited = true;
+            results.deferred++;
+            break;
+          }
           results.errors.push(`User ${user.id}: ${emailError.message}`);
           continue;
         }
@@ -123,18 +133,4 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-function nextOccurrence(month: number, day: number, from: Date): Date {
-  const thisYear = from.getFullYear();
-  let d = new Date(thisYear, month - 1, day);
-  if (d < from) {
-    d = new Date(thisYear + 1, month - 1, day);
-  }
-  return d;
-}
-
-function formatEventDate(month: number, day: number): string {
-  const date = new Date(2024, month - 1, day);
-  return date.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 }

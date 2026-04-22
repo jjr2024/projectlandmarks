@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resend().emails.send({
       from: EMAIL_CONFIG.from,
       to,
       replyTo: EMAIL_CONFIG.replyTo,

@@ -1,20 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
-import { EMAIL_CONFIG, REMINDER_WINDOWS } from "@/lib/email-config";
+import { EMAIL_CONFIG } from "@/lib/email-config";
 import ReminderEmail, { reminderSubject } from "@/emails/reminder";
+import {
+  nextOccurrence,
+  formatEventDate,
+  daysBetween,
+  buildEventDateStr,
+  matchReminderWindow,
+  buildIdempotencyKey,
+  buildLastYearLine,
+  isRateLimitError,
+  emptyCronResults,
+  MAX_EMAILS_PER_USER_PER_DAY,
+  type CronResults,
+} from "@/lib/reminders";
+import { selectGiftsScored } from "@/lib/gift-engine";
 
 /**
  * GET /api/cron/reminders
  *
- * Runs daily via Vercel Cron. For each verified user, finds events that fall
- * within a reminder window (21/7/3 days before), selects gifts from the catalog,
- * sends the reminder email via Resend, and logs to reminder_log + shown_gifts.
+ * Daily via Vercel Cron. For each verified user, finds events within reminder
+ * windows, sends emails via Resend, logs to reminder_log + shown_gifts.
  *
- * Security: requires CRON_SECRET header to prevent unauthorized invocation.
+ * RESILIENCE (see CLAUDE.md § Email Resilience):
+ *  1. Pre-send logging — 'pending' row before Resend call; updated to 'sent'/'failed' after.
+ *  2. Idempotency key — deterministic key prevents Resend from sending dupes.
+ *  3. Range-based windows — missed cron days caught within ±2 day range.
+ *  4. Per-user send cap — max 3 emails/user/24h; excess deferred to next run.
+ *  5. 429 handling — stops processing immediately on rate limit.
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,22 +39,19 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
   const now = new Date();
-  const results: { sent: number; skipped: number; errors: string[] } = {
-    sent: 0,
-    skipped: 0,
-    errors: [],
-  };
+  const results: CronResults = emptyCronResults();
 
   try {
-    // Get all verified users with their profiles
     const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
     if (usersError) throw usersError;
 
     const verifiedUsers = users.users.filter((u) => !!u.email_confirmed_at);
 
     for (const user of verifiedUsers) {
+      // Stop all processing if we've been rate-limited
+      if (results.rateLimited) break;
+
       try {
-        // Get user profile for display name, timezone, send hour, digest prefs
         const { data: profile } = await supabase
           .from("profiles")
           .select("display_name, timezone, preferred_send_hour")
@@ -48,7 +62,23 @@ export async function GET(request: NextRequest) {
         const userEmail = user.email;
         if (!userEmail) continue;
 
-        // Get all active events for this user (with non-deleted contacts)
+        // ── Per-user send cap ──────────────────────────────────────────
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const { count: recentSendCount } = await supabase
+          .from("reminder_log")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .in("status", ["sent", "delivered", "opened", "clicked"])
+          .gte("sent_at", twentyFourHoursAgo.toISOString());
+
+        let userSendsThisRun = 0;
+        const userAtCap = (recentSendCount || 0) + userSendsThisRun >= MAX_EMAILS_PER_USER_PER_DAY;
+        if (userAtCap) {
+          results.deferred++;
+          continue;
+        }
+
+        // ── Fetch user's events (with non-deleted contacts) ────────────
         const { data: events } = await supabase
           .from("events")
           .select(`
@@ -61,31 +91,33 @@ export async function GET(request: NextRequest) {
 
         if (!events || events.length === 0) continue;
 
-        // Check each event against reminder windows
         for (const event of events) {
-          const contact = event.contacts as any;
-          const eventDate = nextOccurrence(event.month, event.day, now);
-          const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (results.rateLimited) break;
 
-          // Determine which reminder windows apply
-          const windows: number[] = [REMINDER_WINDOWS.STANDARD, REMINDER_WINDOWS.URGENT];
-          if (event.high_importance) {
-            windows.unshift(REMINDER_WINDOWS.HIGH_IMPORTANCE);
+          // Check per-user cap mid-loop (may have sent some already this iteration)
+          if ((recentSendCount || 0) + userSendsThisRun >= MAX_EMAILS_PER_USER_PER_DAY) {
+            results.deferred++;
+            continue;
           }
 
-          // Check if today matches any reminder window
-          if (!windows.includes(daysUntil)) continue;
+          const contact = event.contacts as any;
+          const eventDate = nextOccurrence(event.month, event.day, now);
+          const daysUntil = daysBetween(now, eventDate);
 
-          // Build event_date string for dedup
-          const eventDateStr = `${now.getFullYear()}-${String(event.month).padStart(2, "0")}-${String(event.day).padStart(2, "0")}`;
+          // ── Range-based window matching ────────────────────────────────
+          const window = matchReminderWindow(daysUntil, event.high_importance);
+          if (!window) continue;
 
-          // Dedup: check if we already sent this reminder
+          const eventDateStr = buildEventDateStr(now.getFullYear(), event.month, event.day);
+
+          // ── Dedup: check reminder_log for existing entry ───────────────
+          // Matches on canonical days_before (21/7/3), not actual daysUntil.
           const { data: existing } = await supabase
             .from("reminder_log")
             .select("id")
             .eq("user_id", user.id)
             .eq("event_id", event.id)
-            .eq("days_before", daysUntil)
+            .eq("days_before", window.canonicalDaysBefore)
             .eq("event_date", eventDateStr)
             .maybeSingle();
 
@@ -94,19 +126,55 @@ export async function GET(request: NextRequest) {
             continue;
           }
 
-          // Select gifts from catalog
-          const gifts = await selectGifts(supabase, contact, event, daysUntil);
+          // ── Select gifts (scored engine — Phase 6) ────────────────────
+          const gifts = await selectGiftsScored(supabase, contact, event, daysUntil, now.getFullYear());
 
           const contactFirstName = contact.first_name || "Someone";
-          const contactName = `${contact.first_name}${contact.last_name ? " " + contact.last_name : ""}`;
           const eventDateFormatted = formatEventDate(event.month, event.day);
-
-          // Get last year's shown gifts for the "last year we suggested" line
           const lastYearLine = await getLastYearLine(supabase, contact.id, event.month, event.day, now.getFullYear());
 
-          // Send via Resend
-          const subject = reminderSubject(contactFirstName, event.event_type, daysUntil);
-          const { data: emailResult, error: emailError } = await resend.emails.send({
+          // ── Check for admin custom message override ────────────────────
+          const { data: override } = await supabase
+            .from("email_overrides")
+            .select("custom_message")
+            .eq("user_id", user.id)
+            .eq("event_id", event.id)
+            .eq("days_before", window.canonicalDaysBefore)
+            .eq("event_year", now.getFullYear())
+            .maybeSingle();
+
+          const customMessage = override?.custom_message || null;
+
+          // ── 1. Pre-send: write 'pending' row ───────────────────────────
+          const { data: pendingRow, error: pendingError } = await supabase
+            .from("reminder_log")
+            .insert({
+              user_id: user.id,
+              event_id: event.id,
+              contact_id: contact.id,
+              days_before: window.canonicalDaysBefore,
+              event_date: eventDateStr,
+              status: "pending",
+              gift_ids: gifts.map((g: any) => g.id),
+            })
+            .select("id")
+            .single();
+
+          if (pendingError) {
+            // Unique constraint violation = already logged (race condition or retry). Skip.
+            if (pendingError.code === "23505") {
+              results.skipped++;
+              continue;
+            }
+            results.errors.push(`User ${user.id}, event ${event.id}: pending insert failed — ${pendingError.message}`);
+            continue;
+          }
+
+          // ── 2. Send via Resend with idempotency key ────────────────────
+          const idempotencyKey = buildIdempotencyKey(user.id, event.id, window.canonicalDaysBefore, eventDateStr);
+          const subject = reminderSubject(contactFirstName, event.event_type, window.canonicalDaysBefore);
+
+          const { data: emailResult, error: emailError } = await resend().emails.send({
             from: EMAIL_CONFIG.from,
             to: userEmail,
             replyTo: EMAIL_CONFIG.replyTo,
@@ -116,7 +184,7 @@ export async function GET(request: NextRequest) {
               contactFirstName,
               eventType: event.event_type as "birthday" | "anniversary" | "custom",
               eventLabel: event.event_label,
-              daysBefore: daysUntil,
+              daysBefore: window.canonicalDaysBefore,
               eventDateFormatted,
               gifts: gifts.map((g: any) => ({
                 name: g.name,
@@ -127,35 +195,54 @@ export async function GET(request: NextRequest) {
               })),
               suppressGifts: event.suppress_gifts,
               lastYearLine,
+              customMessage,
               contactId: contact.id,
               userId: user.id,
             }),
-            headers: EMAIL_CONFIG.headers({
-              userId: user.id,
-              reminderType: event.event_type,
-              partner: gifts[0]?.partner || "daysight",
-              reminderId: event.id,
-            }),
+            headers: {
+              ...EMAIL_CONFIG.headers({
+                userId: user.id,
+                reminderType: event.event_type,
+                partner: gifts[0]?.partner || "daysight",
+                reminderId: event.id,
+              }),
+              "Idempotency-Key": idempotencyKey,
+            },
           });
 
+          // ── 3. Update pending row based on outcome ─────────────────────
           if (emailError) {
+            // Check for rate limit — stop all processing
+            if (isRateLimitError(emailError)) {
+              await supabase
+                .from("reminder_log")
+                .update({ status: "deferred" })
+                .eq("id", pendingRow.id);
+              results.rateLimited = true;
+              results.deferred++;
+              break;
+            }
+
+            // Other send failure — mark as failed
+            await supabase
+              .from("reminder_log")
+              .update({ status: "failed" })
+              .eq("id", pendingRow.id);
             results.errors.push(`User ${user.id}, event ${event.id}: ${emailError.message}`);
             continue;
           }
 
-          // Log to reminder_log
-          await supabase.from("reminder_log").insert({
-            user_id: user.id,
-            event_id: event.id,
-            contact_id: contact.id,
-            days_before: daysUntil,
-            event_date: eventDateStr,
-            resend_id: emailResult?.id || null,
-            status: "sent",
-            gift_ids: gifts.map((g: any) => g.id),
-          });
+          // Success — update to 'sent' with Resend ID
+          await supabase
+            .from("reminder_log")
+            .update({
+              status: "sent",
+              resend_id: emailResult?.id || null,
+              sent_at: new Date().toISOString(),
+            })
+            .eq("id", pendingRow.id);
 
-          // Log to shown_gifts
+          // Log shown gifts
           for (const gift of gifts) {
             await supabase.from("shown_gifts").insert({
               user_id: user.id,
@@ -172,6 +259,7 @@ export async function GET(request: NextRequest) {
           }
 
           results.sent++;
+          userSendsThisRun++;
         }
       } catch (userError: any) {
         results.errors.push(`User ${user.id}: ${userError.message}`);
@@ -188,71 +276,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Calculate the next occurrence of a month/day from a given date.
- */
-function nextOccurrence(month: number, day: number, from: Date): Date {
-  const thisYear = from.getFullYear();
-  let d = new Date(thisYear, month - 1, day);
-  // If the date already passed this year, use next year
-  if (d < from) {
-    d = new Date(thisYear + 1, month - 1, day);
-  }
-  return d;
-}
+// ── Last-year-line (DB query + sentence builder) ────────────────────────────
 
-/**
- * Format month/day into a human-readable string like "May 15".
- */
-function formatEventDate(month: number, day: number): string {
-  const date = new Date(2024, month - 1, day);
-  return date.toLocaleDateString("en-US", { month: "long", day: "numeric" });
-}
-
-/**
- * Select up to 3 gift items from the catalog, matched to contact preferences.
- */
-async function selectGifts(supabase: any, contact: any, event: any, daysUntil: number) {
-  const isLastMinute = daysUntil <= REMINDER_WINDOWS.LAST_MINUTE;
-  const categories = contact.gift_categories?.length > 0
-    ? contact.gift_categories
-    : ["flowers", "gift_card"];
-
-  let query = supabase
-    .from("gift_catalog")
-    .select("*")
-    .eq("is_active", true)
-    .in("category", categories);
-
-  if (isLastMinute) {
-    query = query.eq("is_last_minute", true);
-  }
-
-  if (contact.budget_tier) {
-    query = query.eq("price_tier", contact.budget_tier);
-  }
-
-  const { data: gifts } = await query.limit(6);
-
-  // If we got results, return up to 3; otherwise fall back to any active gifts
-  if (gifts && gifts.length > 0) {
-    return gifts.slice(0, 3);
-  }
-
-  // Fallback: get any 3 active gifts
-  const { data: fallback } = await supabase
-    .from("gift_catalog")
-    .select("*")
-    .eq("is_active", true)
-    .eq("is_last_minute", isLastMinute)
-    .limit(3);
-
-  return fallback || [];
-}
-
-/**
- * Build the "Last year we suggested..." line from shown_gifts history.
- */
 async function getLastYearLine(
   supabase: any,
   contactId: string,
@@ -270,9 +295,5 @@ async function getLastYearLine(
     .limit(5);
 
   if (!history || history.length === 0) return null;
-
-  const names = history.map((h: any) => h.gift_name);
-  if (names.length === 1) return `Last year we suggested ${names[0]}.`;
-  if (names.length === 2) return `Last year we suggested ${names[0]} and ${names[1]}.`;
-  return `Last year we suggested ${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}.`;
+  return buildLastYearLine(history.map((h: any) => h.gift_name));
 }
