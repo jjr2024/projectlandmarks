@@ -149,7 +149,7 @@ export default function Home() {
               <div className="space-y-5">
                 <BenefitRow title="Gift ideas matched to each person" description="Not generic &quot;top 10 gifts&quot; lists. Suggestions are based on the preferences you set for that specific person." />
                 <BenefitRow title="One click to buy" description="Every suggestion links straight to the product page, so you can go from &quot;oh right, that's coming up&quot; to &quot;ordered&quot; in about ten seconds." />
-                <BenefitRow title="100% free" description="We earn a small commission if you buy through one of our links. You never pay anything to use Daysight." />
+                <BenefitRow title="100% free" description="We earn a small commission if you buy through one of our links. As an Amazon Associate we earn from qualifying purchases. You never pay anything to use Daysight." />
                 <BenefitRow title="Your data stays yours" description="We encrypt everything, we don't sell or share any of it, and we only keep what we actually need to send your reminders." />
               </div>
             </div>

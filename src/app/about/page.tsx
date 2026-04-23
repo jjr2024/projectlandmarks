@@ -74,13 +74,13 @@ export default function AboutPage() {
               <p>
                 Daysight is free, and we plan to keep it that way. When we suggest a gift in your
                 reminder email, that link is an affiliate link. If you buy through it, we earn a
-                small commission at no extra cost to you. That&apos;s the whole business model — no
-                subscriptions, no ads, no data sales.
+                small commission at no extra cost to you. As an Amazon Associate we earn from
+                qualifying purchases. That&apos;s the whole business model — no subscriptions, no
+                ads, no data sales.
               </p>
               <p>
                 You&apos;re never obligated to use our links. If you already know what to get,
-                the reminder still does its job. As an Amazon Associate we earn from qualifying
-                purchases.
+                the reminder still does its job.
               </p>
             </div>
           </div>
