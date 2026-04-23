@@ -399,50 +399,56 @@ export default function ContactDetailPage() {
                   : eventTypeLabel(evt.event_type);
 
               return (
-                <li key={evt.id} className="px-5 py-4 flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-gray-900">{label}</p>
-                      {evt.suppress_gifts && (
-                        <span className="text-xs text-gray-400">(no gifts)</span>
-                      )}
-                      {evt.high_importance && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-                          Important
-                        </span>
-                      )}
+                <li key={evt.id}>
+                  <button
+                    type="button"
+                    onClick={() => openEditEvent(evt)}
+                    className="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900">{label}</p>
+                        {evt.suppress_gifts && (
+                          <span className="text-xs text-gray-400">(no gifts)</span>
+                        )}
+                        {evt.high_importance && (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                            Important
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(evt.month, evt.day)}
+                        {evt.year_started ? ` (since ${evt.year_started})` : ""}
+                        {evt.one_time ? " · One-time" : ""}
+                      </p>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(evt.month, evt.day)}
-                      {evt.year_started ? ` (since ${evt.year_started})` : ""}
-                      {evt.one_time ? " · One-time" : ""}
-                    </p>
-                  </div>
 
-                  {days !== null && (
-                    <span
-                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                        URGENCY_STYLES[urgencyClass(days)]
-                      }`}
-                    >
-                      {daysUntilLabel(days)}
-                    </span>
-                  )}
+                    {days !== null && (
+                      <span
+                        className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          URGENCY_STYLES[urgencyClass(days)]
+                        }`}
+                      >
+                        {daysUntilLabel(days)}
+                      </span>
+                    )}
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => openEditEvent(evt)}
-                      className="text-gray-400 hover:text-gray-600 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setDeleteEventTarget(evt)}
-                      className="text-gray-400 hover:text-red-500 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <span
+                        onClick={() => openEditEvent(evt)}
+                        className="text-gray-400 hover:text-gray-600 text-sm"
+                      >
+                        Edit
+                      </span>
+                      <span
+                        onClick={() => setDeleteEventTarget(evt)}
+                        className="text-gray-400 hover:text-red-500 text-sm cursor-pointer"
+                      >
+                        Delete
+                      </span>
+                    </div>
+                  </button>
                 </li>
               );
             })}
@@ -622,19 +628,32 @@ export default function ContactDetailPage() {
               </label>
             </div>
 
-            {/* Suppress gifts */}
+            {/* Suppress gifts — subtle toggle matching onboarding style */}
             <div className="mb-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={eventForm.suppress_gifts}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, suppress_gifts: e.target.checked })
-                  }
-                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                />
-                <span className="text-sm text-gray-700">Skip gift suggestions for this event</span>
-              </label>
+              <button
+                type="button"
+                onClick={() => setEventForm({ ...eventForm, suppress_gifts: !eventForm.suppress_gifts })}
+                className={`w-full flex items-center gap-1.5 text-xs transition-colors rounded-lg px-3 py-2 ${
+                  eventForm.suppress_gifts
+                    ? "bg-gray-200 text-gray-600"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                }`}
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                  />
+                </svg>
+                Skip gifts for this date
+              </button>
             </div>
 
             {/* Actions */}
@@ -740,7 +759,7 @@ export default function ContactDetailPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gift budget</label>
               <select
                 value={contactForm.budget_tier}
                 onChange={(e) => setContactForm({ ...contactForm, budget_tier: e.target.value })}

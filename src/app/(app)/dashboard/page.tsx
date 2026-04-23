@@ -116,7 +116,7 @@ export default function DashboardPage() {
       if (!contact) return null;
 
       const days = daysUntilEvent(evt.month, evt.day, evt.one_time, evt.event_year);
-      if (days === null || days > 60) return null;
+      if (days === null || days > 90) return null;
 
       const thisYear = new Date().getFullYear();
       const yr = evt.one_time ? evt.event_year || thisYear : thisYear;
@@ -262,8 +262,11 @@ export default function DashboardPage() {
             {upcoming.filter((u) => u.daysUntil <= filterDays).map((item) => {
               const urg = urgencyClass(item.daysUntil);
               return (
-                <li key={item.event.id} className="px-5 py-4">
-                  <div className="flex items-center gap-4">
+                <li key={item.event.id}>
+                  <Link
+                    href={`/contacts/${item.contact.id}`}
+                    className="px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors block"
+                  >
                     {/* Avatar */}
                     <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-semibold shrink-0">
                       {getInitials(item.contact.first_name, item.contact.last_name)}
@@ -271,12 +274,9 @@ export default function DashboardPage() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/contacts/${item.contact.id}`}
-                        className="font-medium text-gray-900 hover:text-brand-600 transition-colors"
-                      >
+                      <span className="font-medium text-gray-900">
                         {item.contact.first_name} {item.contact.last_name}
-                      </Link>
+                      </span>
                       <p className="text-sm text-gray-500">
                         {eventTypeLabel(item.event.event_type)}
                         {item.event.event_type === "custom" && item.event.event_label
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                     >
                       {daysUntilLabel(item.daysUntil)}
                     </span>
-                  </div>
+                  </Link>
                 </li>
               );
             })}

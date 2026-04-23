@@ -385,7 +385,7 @@ export default function ContactsPage() {
 
             {/* Budget tier */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Budget tier</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gift budget</label>
               <select
                 value={form.budget_tier}
                 onChange={(e) => setForm({ ...form, budget_tier: e.target.value })}
