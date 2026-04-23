@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MarketingNav from "@/components/marketing-nav";
 import MarketingFooter from "@/components/marketing-footer";
+import { DaysightLogo } from "@/components/logo";
 
 /**
  * Landing page — full marketing page ported from prototype index.html.
@@ -67,11 +68,7 @@ export default function Home() {
             </div>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                  </svg>
-                </div>
+                <DaysightLogo size={32} />
                 <div>
                   <div className="text-xs text-gray-500">From: Daysight</div>
                   <div className="font-semibold text-gray-900 text-sm">
@@ -173,11 +170,7 @@ export default function Home() {
               <div className="bg-white rounded-2xl p-6 border border-green-200 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-10 -mt-10 opacity-50" />
                 <div className="flex items-center gap-3 mb-3 relative">
-                  <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                  </div>
+                  <DaysightLogo size={32} />
                   <div className="font-semibold text-gray-700">Daysight says:</div>
                 </div>
                 <p className="text-gray-700 text-sm relative">

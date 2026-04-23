@@ -180,9 +180,17 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Your upcoming dates at a glance.</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 mt-1">Your upcoming dates at a glance.</p>
+        </div>
+        <Link
+          href="/contacts?add=1"
+          className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors whitespace-nowrap"
+        >
+          + Add contact
+        </Link>
       </div>
 
       {/* Stat cards */}
@@ -249,7 +257,7 @@ export default function DashboardPage() {
 
         {upcoming.filter((u) => u.daysUntil <= filterDays).length === 0 ? (
           <div className="px-5 py-12 text-center">
-            <p className="text-gray-400 mb-4">No upcoming events in the next 60 days.</p>
+            <p className="text-gray-400 mb-4">No upcoming events in the next {filterDays} days.</p>
             <Link
               href="/contacts"
               className="inline-block bg-brand-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors"

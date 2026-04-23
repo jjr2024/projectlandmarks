@@ -15,9 +15,7 @@ interface Profile {
   default_gift_categories: string[];
   monthly_digest_enabled: boolean;
   email_reminders_enabled: boolean;
-  gift_suggestions_enabled: boolean;
   product_updates_enabled: boolean;
-  partner_offers_enabled: boolean;
 }
 
 interface Contact {
@@ -65,6 +63,46 @@ const GIFT_OPTIONS = [
 
 const SEND_HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM – 9 PM
 
+const TIMEZONES = [
+  { value: "America/New_York", label: "Eastern Time (US)" },
+  { value: "America/Chicago", label: "Central Time (US)" },
+  { value: "America/Denver", label: "Mountain Time (US)" },
+  { value: "America/Los_Angeles", label: "Pacific Time (US)" },
+  { value: "America/Anchorage", label: "Alaska Time (US)" },
+  { value: "Pacific/Honolulu", label: "Hawaii Time (US)" },
+  { value: "America/Phoenix", label: "Arizona (no DST)" },
+  { value: "America/Toronto", label: "Eastern Time (Canada)" },
+  { value: "America/Vancouver", label: "Pacific Time (Canada)" },
+  { value: "Europe/London", label: "London (GMT/BST)" },
+  { value: "Europe/Paris", label: "Central European Time" },
+  { value: "Europe/Berlin", label: "Berlin" },
+  { value: "Europe/Amsterdam", label: "Amsterdam" },
+  { value: "Europe/Rome", label: "Rome" },
+  { value: "Europe/Madrid", label: "Madrid" },
+  { value: "Europe/Zurich", label: "Zurich" },
+  { value: "Europe/Stockholm", label: "Stockholm" },
+  { value: "Europe/Helsinki", label: "Helsinki" },
+  { value: "Europe/Athens", label: "Athens" },
+  { value: "Europe/Moscow", label: "Moscow" },
+  { value: "Asia/Dubai", label: "Dubai" },
+  { value: "Asia/Kolkata", label: "India (IST)" },
+  { value: "Asia/Singapore", label: "Singapore" },
+  { value: "Asia/Hong_Kong", label: "Hong Kong" },
+  { value: "Asia/Shanghai", label: "China (CST)" },
+  { value: "Asia/Tokyo", label: "Japan (JST)" },
+  { value: "Asia/Seoul", label: "Korea (KST)" },
+  { value: "Australia/Sydney", label: "Sydney (AEST)" },
+  { value: "Australia/Melbourne", label: "Melbourne" },
+  { value: "Australia/Perth", label: "Perth (AWST)" },
+  { value: "Pacific/Auckland", label: "New Zealand" },
+  { value: "America/Sao_Paulo", label: "São Paulo" },
+  { value: "America/Argentina/Buenos_Aires", label: "Buenos Aires" },
+  { value: "America/Mexico_City", label: "Mexico City" },
+  { value: "Africa/Johannesburg", label: "South Africa" },
+  { value: "Africa/Lagos", label: "Lagos" },
+  { value: "Africa/Cairo", label: "Cairo" },
+];
+
 function formatHour(h: number): string {
   if (h === 0) return "12:00 AM";
   if (h < 12) return `${h}:00 AM`;
@@ -96,6 +134,9 @@ export default function SettingsPage() {
   const [loadingBin, setLoadingBin] = useState(false);
 
   // Account deletion
+  const [showDeleteReasonModal, setShowDeleteReasonModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteReasonOther, setDeleteReasonOther] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [contactCount, setContactCount] = useState(0);
@@ -276,9 +317,7 @@ export default function SettingsPage() {
         default_gift_categories: profile.default_gift_categories,
         monthly_digest_enabled: profile.monthly_digest_enabled,
         email_reminders_enabled: profile.email_reminders_enabled,
-        gift_suggestions_enabled: profile.gift_suggestions_enabled,
         product_updates_enabled: profile.product_updates_enabled,
-        partner_offers_enabled: profile.partner_offers_enabled,
       })
       .eq("id", userId);
 
@@ -460,15 +499,21 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-                <input
-                  type="text"
+                <select
                   value={profile.timezone}
                   onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  IANA timezone (e.g. America/New_York)
-                </p>
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                  {/* Show current value if not in the preset list */}
+                  {!TIMEZONES.some((tz) => tz.value === profile.timezone) && profile.timezone && (
+                    <option value={profile.timezone}>{profile.timezone}</option>
+                  )}
+                </select>
               </div>
             </div>
           </section>
@@ -524,11 +569,9 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Preferences</h2>
             <div className="space-y-3">
               {[
-                { key: "email_reminders_enabled" as const, label: "Birthday & event reminders" },
+                { key: "email_reminders_enabled" as const, label: "Event reminders" },
                 { key: "monthly_digest_enabled" as const, label: "Monthly digest" },
-                { key: "gift_suggestions_enabled" as const, label: "Gift suggestions in reminders" },
                 { key: "product_updates_enabled" as const, label: "Product updates" },
-                { key: "partner_offers_enabled" as const, label: "Partner offers" },
               ].map((pref) => (
                 <label key={pref.key} className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -635,7 +678,11 @@ export default function SettingsPage() {
                 Export my data
               </button>
               <button
-                onClick={() => setShowDeleteModal(true)}
+                onClick={() => {
+                  setDeleteReason("");
+                  setDeleteReasonOther("");
+                  setShowDeleteReasonModal(true);
+                }}
                 className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
               >
                 Delete my account
@@ -807,6 +854,65 @@ export default function SettingsPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete reason modal (optional step before confirmation) */}
+      {showDeleteReasonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Delete reason">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">We&apos;re sorry to see you go</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Mind sharing why? This helps us improve Daysight.
+            </p>
+
+            <div className="space-y-2 mb-4">
+              {[
+                "It's too much effort to use",
+                "Gift suggestions aren't helpful",
+                "I'm switching to a different option",
+                "Other",
+              ].map((reason) => (
+                <label key={reason} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="deleteReason"
+                    checked={deleteReason === reason}
+                    onChange={() => setDeleteReason(reason)}
+                    className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-gray-700">{reason}</span>
+                </label>
+              ))}
+              {deleteReason === "Other" && (
+                <textarea
+                  value={deleteReasonOther}
+                  onChange={(e) => setDeleteReasonOther(e.target.value)}
+                  placeholder="Tell us more..."
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 mt-1"
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteReasonModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteReasonModal(false);
+                  setShowDeleteModal(true);
+                }}
+                className="bg-red-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

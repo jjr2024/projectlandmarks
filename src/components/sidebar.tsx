@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { DaysightLogo } from "@/components/logo";
 
 interface SidebarProps {
   displayName: string;
@@ -107,8 +108,9 @@ export default function Sidebar({ displayName, email }: SidebarProps) {
       >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-gray-100">
-          <Link href="/dashboard" className="text-xl font-bold text-brand-600">
-            Daysight
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <DaysightLogo size={28} />
+            <span className="text-xl font-bold text-brand-600">Daysight</span>
           </Link>
         </div>
 

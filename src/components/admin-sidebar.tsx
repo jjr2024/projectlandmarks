@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { DaysightLogo } from "@/components/logo";
 
 interface AdminSidebarProps {
   displayName: string;
@@ -108,8 +109,9 @@ export default function AdminSidebar({ displayName, email }: AdminSidebarProps) 
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
         <div className="px-6 py-5 border-b border-gray-100">
-          <Link href="/admin" className="text-xl font-bold text-brand-600">
-            Daysight
+          <Link href="/admin" className="flex items-center gap-2">
+            <DaysightLogo size={28} />
+            <span className="text-xl font-bold text-brand-600">Daysight</span>
           </Link>
           <span className="ml-2 text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-semibold">Admin</span>
         </div>

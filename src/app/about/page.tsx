@@ -46,19 +46,12 @@ export default function AboutPage() {
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
                 The data you put into Daysight is personal: birthdays, relationships, the
-                people who matter most to you. We take that seriously. We will never sell,
-                share, or monetize your personal data.
+                people who matter most to you. We will never sell, share, or monetize it.
+                We don&apos;t track you across the web and we don&apos;t contact the people you add.
               </p>
               <p>
-                We don&apos;t track you across the web. We don&apos;t contact the people
-                you add. Your contact list exists for one reason: to help you show up for
-                the people in your life.
-              </p>
-              <p>
-                You&apos;re always in control. You can export all of your data at any
-                time, and you can delete your account, along with every piece of data we
-                hold, whenever you choose. No retention periods, no hidden backups, and no
-                hoops to jump through. When we say delete, we mean it.
+                You can export your data or delete your account at any time.
+                No retention periods, no hidden backups, no hoops. When we say delete, we mean it.
               </p>
             </div>
           </div>
@@ -79,23 +72,15 @@ export default function AboutPage() {
             </div>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                Daysight is free to use, and we intend to keep it that way. When we
-                include a gift suggestion in your reminder email, the link is an affiliate
-                link. If you choose to purchase through it, we earn a small commission from
-                the retailer — at no extra cost to you.
+                Daysight is free, and we plan to keep it that way. When we suggest a gift in your
+                reminder email, that link is an affiliate link. If you buy through it, we earn a
+                small commission at no extra cost to you. That&apos;s the whole business model — no
+                subscriptions, no ads, no data sales.
               </p>
               <p>
-                That&apos;s our entire business model. No subscriptions, no ads, and no
-                data sales. Gift suggestions are the value we add: they save you time and
-                mental energy. Affiliate commissions are how we fund the service. Both
-                sides of that equation need to work, and we think that alignment is what
-                makes Daysight sustainable.
-              </p>
-              <p>
-                You&apos;re never obligated to buy through our links. If you already know
-                what to get, or prefer to shop somewhere else, the reminder still does its
-                job. We succeed when we make sure you remember and prepare for the big
-                days.
+                You&apos;re never obligated to use our links. If you already know what to get,
+                the reminder still does its job. As an Amazon Associate we earn from qualifying
+                purchases.
               </p>
             </div>
           </div>
