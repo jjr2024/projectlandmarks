@@ -1,0 +1,17 @@
+# Daysight — https://daysight.xyz
+User-agent: *
+Allow: /
+
+# Private routes — don't index authenticated or API pages
+Disallow: /dashboard
+Disallow: /contacts
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /consent
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/callback
+Disallow: /auth/reset-password
+Disallow: /auth/forgot-password
+
+Sitemap: https://daysight.xyz/sitemap.xml

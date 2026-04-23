@@ -150,7 +150,7 @@ export default function Home() {
                 <BenefitRow title="Gift ideas matched to each person" description="Not generic &quot;top 10 gifts&quot; lists. Suggestions are based on the preferences you set for that specific person." />
                 <BenefitRow title="One click to buy" description="Every suggestion links straight to the product page, so you can go from &quot;oh right, that's coming up&quot; to &quot;ordered&quot; in about ten seconds." />
                 <BenefitRow title="100% free" description="We earn a small commission if you buy through one of our links. As an Amazon Associate we earn from qualifying purchases. You never pay anything to use Daysight." />
-                <BenefitRow title="Your data stays yours" description="We encrypt everything, we don't sell or share any of it, and we only keep what we actually need to send your reminders." />
+                <BenefitRow title="Your data stays yours" description="All connections are encrypted over HTTPS, and your data is encrypted at rest. We don't sell or share any of it, and we only store what we need to send your reminders." />
               </div>
             </div>
             <div className="space-y-4">
@@ -244,8 +244,8 @@ export default function Home() {
               }
             />
             <PrivacyCard
-              title="Everything is encrypted"
-              description="Your personal data is encrypted both when it's stored and when it's moving between your browser and our servers."
+              title="Encrypted in transit and at rest"
+              description="All data is transmitted over HTTPS and stored on encrypted infrastructure. We never access your data for anything other than sending your reminders."
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
               }
