@@ -559,6 +559,10 @@ export default function SettingsPage() {
               >
                 Download .ics
               </button>
+              <p className="text-xs text-gray-400 mt-2">
+                This downloads a one-time snapshot of your current events. It won&apos;t update automatically as you add or change contacts.
+                For a live feed that stays in sync, use the subscription URL below instead.
+              </p>
             </div>
 
             {/* Subscription URL */}

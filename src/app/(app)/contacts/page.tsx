@@ -238,7 +238,11 @@ export default function ContactsPage() {
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {filtered.map((c) => (
-            <div key={c.id} className="px-5 py-4 flex items-center gap-4">
+            <Link
+              key={c.id}
+              href={`/contacts/${c.id}`}
+              className="px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer block"
+            >
               {/* Avatar */}
               <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-semibold shrink-0">
                 {getInitials(c.first_name, c.last_name)}
@@ -247,12 +251,9 @@ export default function ContactsPage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <Link
-                    href={`/contacts/${c.id}`}
-                    className="font-medium text-gray-900 hover:text-brand-600 transition-colors"
-                  >
+                  <span className="font-medium text-gray-900">
                     {c.first_name} {c.last_name}
-                  </Link>
+                  </span>
                   {c.high_importance && (
                     <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
                       Important
@@ -268,21 +269,21 @@ export default function ContactsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
                 <button
-                  onClick={() => openEdit(c)}
+                  onClick={(e) => { e.preventDefault(); openEdit(c); }}
                   className="text-gray-400 hover:text-gray-600 text-sm"
                 >
                   Edit
                 </button>
                 <button
-                  onClick={() => setDeleteTarget(c)}
+                  onClick={(e) => { e.preventDefault(); setDeleteTarget(c); }}
                   className="text-gray-400 hover:text-red-500 text-sm"
                 >
                   Delete
                 </button>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -391,9 +392,9 @@ export default function ContactsPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">Any budget</option>
-                <option value="low">Under $30</option>
-                <option value="mid">$30–75</option>
-                <option value="high">$75+</option>
+                <option value="low">Under $50</option>
+                <option value="mid">$50–$100</option>
+                <option value="high">Over $100</option>
               </select>
             </div>
 

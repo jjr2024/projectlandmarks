@@ -72,9 +72,9 @@ export function eventTypeLabel(type: string): string {
 export function budgetLabel(tier: string | null): string | null {
   if (!tier) return null;
   const map: Record<string, string> = {
-    low: "Under $30",
-    mid: "$30–75",
-    high: "$75+",
+    low: "Under $50",
+    mid: "$50–$100",
+    high: "Over $100",
   };
   return map[tier] || null;
 }

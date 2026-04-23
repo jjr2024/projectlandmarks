@@ -212,7 +212,7 @@ export default function GiftCatalogPage() {
                   <td className="px-4 py-3 text-gray-600 capitalize">{gift.category.replace("_", " ")}</td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
-                      {gift.price_tier === "low" ? "<$30" : gift.price_tier === "mid" ? "$30-75" : "$75+"}
+                      {gift.price_tier === "low" ? "Under $50" : gift.price_tier === "mid" ? "$50–$100" : "Over $100"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">{gift.tags.join(", ") || "—"}</td>

@@ -76,6 +76,22 @@ const EMPTY_EVENT_FORM = {
   suppress_gifts: false,
 };
 
+const RELATIONSHIPS = [
+  { value: "family", label: "Family" },
+  { value: "friend", label: "Friend" },
+  { value: "colleague", label: "Colleague" },
+  { value: "other", label: "Other" },
+];
+
+const GIFT_OPTIONS = [
+  { value: "flowers", label: "Flowers" },
+  { value: "wine", label: "Wine" },
+  { value: "treats", label: "Treats" },
+  { value: "gift_card", label: "Gift Card" },
+  { value: "experiences", label: "Experience" },
+  { value: "donation", label: "Donation" },
+];
+
 const URGENCY_STYLES = {
   urgent: "bg-red-100 text-red-800",
   soon: "bg-orange-100 text-orange-800",
@@ -92,6 +108,21 @@ export default function ContactDetailPage() {
   const [shownGifts, setShownGifts] = useState<ShownGift[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
+
+  // Contact edit modal state
+  const [contactModal, setContactModal] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    first_name: "",
+    last_name: "",
+    relationship: "friend",
+    gift_categories: [] as string[],
+    gift_other: "",
+    high_importance: false,
+    budget_tier: "" as string,
+    notes: "",
+  });
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactError, setContactError] = useState("");
 
   // Event modal state
   const [eventModal, setEventModal] = useState<"add" | "edit" | null>(null);
@@ -222,6 +253,60 @@ export default function ContactDetailPage() {
     await load();
   };
 
+  const openEditContact = () => {
+    if (!contact) return;
+    setContactForm({
+      first_name: contact.first_name,
+      last_name: contact.last_name,
+      relationship: contact.relationship,
+      gift_categories: contact.gift_categories || [],
+      gift_other: contact.gift_other || "",
+      high_importance: contact.high_importance,
+      budget_tier: contact.budget_tier || "",
+      notes: contact.notes || "",
+    });
+    setContactError("");
+    setContactModal(true);
+  };
+
+  const toggleGiftCategory = (cat: string) => {
+    setContactForm((prev) => ({
+      ...prev,
+      gift_categories: prev.gift_categories.includes(cat)
+        ? prev.gift_categories.filter((c) => c !== cat)
+        : [...prev.gift_categories, cat],
+    }));
+  };
+
+  const handleSaveContact = async () => {
+    if (!contactForm.first_name.trim()) return;
+    setSavingContact(true);
+    setContactError("");
+
+    const { error } = await supabase
+      .from("contacts")
+      .update({
+        first_name: contactForm.first_name.trim(),
+        last_name: contactForm.last_name.trim(),
+        relationship: contactForm.relationship,
+        gift_categories: contactForm.gift_categories,
+        gift_other: contactForm.gift_other.trim(),
+        high_importance: contactForm.high_importance,
+        budget_tier: contactForm.budget_tier || null,
+        notes: contactForm.notes.trim(),
+      })
+      .eq("id", contactId);
+
+    setSavingContact(false);
+    if (error) {
+      setContactError(error.message || "Failed to save. Please try again.");
+      return;
+    }
+
+    setContactModal(false);
+    await load();
+  };
+
   if (loading || !contact) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -255,6 +340,12 @@ export default function ContactDetailPage() {
                   Important
                 </span>
               )}
+              <button
+                onClick={openEditContact}
+                className="ml-auto text-sm text-brand-600 hover:text-brand-700 font-medium"
+              >
+                Edit details
+              </button>
             </div>
             <p className="text-gray-500">{relationshipLabel(contact.relationship)}</p>
 
@@ -563,6 +654,141 @@ export default function ContactDetailPage() {
                 className="bg-brand-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {savingEvent ? "Saving..." : eventModal === "add" ? "Add Event" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact edit modal */}
+      {contactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Edit contact">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+            <h2 className="text-xl font-bold mb-4">Edit Contact</h2>
+
+            {contactError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+                {contactError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">First name *</label>
+                <input
+                  type="text"
+                  required
+                  value={contactForm.first_name}
+                  onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+                <input
+                  type="text"
+                  value={contactForm.last_name}
+                  onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+              <select
+                value={contactForm.relationship}
+                onChange={(e) => setContactForm({ ...contactForm, relationship: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                {RELATIONSHIPS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Gift preferences</label>
+              <div className="flex flex-wrap gap-2">
+                {GIFT_OPTIONS.map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => toggleGiftCategory(g.value)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
+                      contactForm.gift_categories.includes(g.value)
+                        ? "bg-brand-600 text-white border-brand-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-brand-400"
+                    }`}
+                  >
+                    <GiftCategoryIcon category={g.value} className="w-4 h-4" strokeWidth={2} />
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Other interests</label>
+              <input
+                type="text"
+                value={contactForm.gift_other}
+                onChange={(e) => setContactForm({ ...contactForm, gift_other: e.target.value })}
+                placeholder="e.g. Board games, puzzles"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
+              <select
+                value={contactForm.budget_tier}
+                onChange={(e) => setContactForm({ ...contactForm, budget_tier: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Any budget</option>
+                <option value="low">Under $50</option>
+                <option value="mid">$50–$100</option>
+                <option value="high">Over $100</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={contactForm.high_importance}
+                  onChange={(e) => setContactForm({ ...contactForm, high_importance: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm text-gray-700">High importance (extra early reminders)</span>
+              </label>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea
+                value={contactForm.notes}
+                onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
+                rows={2}
+                placeholder="Anything helpful for gift picking..."
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setContactModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveContact}
+                disabled={savingContact || !contactForm.first_name.trim()}
+                className="bg-brand-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {savingContact ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

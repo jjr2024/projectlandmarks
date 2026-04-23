@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,8 +12,6 @@ import {
   getInitials,
   daysUntilEvent,
 } from "@/lib/utils";
-import { selectGiftsScored } from "@/lib/gift-engine";
-
 interface Contact {
   id: string;
   first_name: string;
@@ -43,70 +41,66 @@ interface UpcomingReminder {
   nextDate: string;
 }
 
-interface GiftItem {
-  id: string;
-  name: string;
-  partner: string;
-  price_tier: string;
-  affiliate_url: string;
-}
-
 export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState(false);
   const [filterDays, setFilterDays] = useState<30 | 90>(30);
-  const [previewReminder, setPreviewReminder] = useState<UpcomingReminder | null>(null);
-  const [previewGifts, setPreviewGifts] = useState<GiftItem[]>([]);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const supabase = createClient();
   const router = useRouter();
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
 
-      // Redirect new users (account created in last hour, zero contacts) to onboarding
-      const createdAt = user.created_at ? new Date(user.created_at) : null;
-      const isNewUser =
-        createdAt && Date.now() - createdAt.getTime() < 60 * 60 * 1000;
+        // Redirect new users (account created in last hour, zero contacts) to onboarding
+        const createdAt = user.created_at ? new Date(user.created_at) : null;
+        const isNewUser =
+          createdAt && Date.now() - createdAt.getTime() < 60 * 60 * 1000;
 
-      if (isNewUser) {
-        const { count } = await supabase
-          .from("contacts")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
+        if (isNewUser) {
+          const { count } = await supabase
+            .from("contacts")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
 
-        if (count === 0) {
-          router.push("/onboarding");
-          return;
+          if (count === 0) {
+            router.push("/onboarding");
+            return;
+          }
         }
+
+        const [contactsRes, eventsRes] = await Promise.all([
+          supabase
+            .from("contacts")
+            .select("*")
+            .eq("user_id", user.id)
+            .is("deleted_at", null),
+          supabase.from("events").select("*").eq("user_id", user.id),
+        ]);
+
+        loadedRef.current = true;
+        setContacts(contactsRes.data || []);
+        setEvents(eventsRes.data || []);
+        setLoading(false);
+        setLoadingError(false);
+      } catch {
+        setLoadingError(true);
+        setLoading(false);
       }
-
-      const [contactsRes, eventsRes] = await Promise.all([
-        supabase
-          .from("contacts")
-          .select("*")
-          .eq("user_id", user.id)
-          .is("deleted_at", null),
-        supabase.from("events").select("*").eq("user_id", user.id),
-      ]);
-
-      setContacts(contactsRes.data || []);
-      setEvents(eventsRes.data || []);
-      setLoading(false);
-      setLoadingError(false);
     }
 
     load();
 
-    // Set a timeout for loading
+    // Fallback timeout — only triggers if load() hasn't completed
     const timeout = setTimeout(() => {
-      if (loading) {
+      if (!loadedRef.current) {
         setLoadingError(true);
         setLoading(false);
       }
@@ -151,34 +145,6 @@ export default function DashboardPage() {
     urgent: "bg-red-100 text-red-800 border-red-200",
     soon: "bg-orange-100 text-orange-800 border-orange-200",
     upcoming: "bg-green-100 text-green-800 border-green-200",
-  };
-
-  // Handle preview modal
-  const openPreview = async (reminder: UpcomingReminder) => {
-    setPreviewReminder(reminder);
-    setPreviewLoading(true);
-
-    try {
-      const gifts = await selectGiftsScored(
-        supabase,
-        reminder.contact,
-        reminder.event,
-        reminder.daysUntil,
-        new Date().getFullYear(),
-        3
-      );
-      setPreviewGifts(gifts);
-    } catch (err) {
-      console.error("Failed to load gifts for preview:", err);
-      setPreviewGifts([]);
-    }
-
-    setPreviewLoading(false);
-  };
-
-  const closePreview = () => {
-    setPreviewReminder(null);
-    setPreviewGifts([]);
   };
 
   if (loading) {
@@ -321,20 +287,12 @@ export default function DashboardPage() {
                       </p>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openPreview(item)}
-                        className="text-sm text-brand-600 hover:text-brand-700 font-medium"
-                      >
-                        Preview
-                      </button>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${URGENCY_STYLES[urg]}`}
-                      >
-                        {daysUntilLabel(item.daysUntil)}
-                      </span>
-                    </div>
+                    {/* Urgency badge */}
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${URGENCY_STYLES[urg]}`}
+                    >
+                      {daysUntilLabel(item.daysUntil)}
+                    </span>
                   </div>
                 </li>
               );
@@ -343,143 +301,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Email preview modal */}
-      {previewReminder && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Email preview"
-        >
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
-            {/* Close button */}
-            <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-              <h2 className="text-lg font-semibold text-gray-900">Email Preview</h2>
-              <button
-                onClick={closePreview}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Email preview content */}
-            <div className="p-6">
-              {/* Event info */}
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-semibold">
-                    {getInitials(
-                      previewReminder.contact.first_name,
-                      previewReminder.contact.last_name
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {previewReminder.contact.first_name}{" "}
-                      {previewReminder.contact.last_name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {eventTypeLabel(previewReminder.event.event_type)}
-                      {previewReminder.event.event_type === "custom" &&
-                        previewReminder.event.event_label
-                        ? ` — ${previewReminder.event.event_label}`
-                        : ""}{" "}
-                      on {formatDate(previewReminder.event.month, previewReminder.event.day)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Simulated email */}
-              <div className="bg-gradient-to-r from-[#d05a32] to-[#ad4628] rounded-t-xl p-6 text-white mb-0">
-                <div className="inline-flex items-center gap-2 mb-3 text-sm font-semibold">
-                  <span className="inline-flex items-center justify-center w-6 h-6 bg-white/20 rounded-md">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                  </span>
-                  <span>Daysight</span>
-                </div>
-                <h3 className="text-lg font-bold leading-tight">
-                  {previewReminder.daysUntil === 1
-                    ? `${previewReminder.contact.first_name}'s ${eventTypeLabel(previewReminder.event.event_type).toLowerCase()} is tomorrow`
-                    : `${previewReminder.contact.first_name}'s ${eventTypeLabel(previewReminder.event.event_type).toLowerCase()} is in ${previewReminder.daysUntil} days`}
-                </h3>
-              </div>
-
-              <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl p-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Hi there,
-                </p>
-                <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                  {previewReminder.daysUntil === 1
-                    ? `Last chance — ${previewReminder.contact.first_name}'s ${eventTypeLabel(previewReminder.event.event_type).toLowerCase()} is tomorrow, ${formatDate(
-                        previewReminder.event.month,
-                        previewReminder.event.day
-                      )}. We've put together your best same-day options below.`
-                    : `${previewReminder.contact.first_name}'s ${eventTypeLabel(previewReminder.event.event_type).toLowerCase()} is coming up on ${formatDate(
-                        previewReminder.event.month,
-                        previewReminder.event.day
-                      )} — ${previewReminder.daysUntil} days from now. Here are a few gift ideas they'd love, ready to order in one click.`}
-                </p>
-
-                {/* Gifts section */}
-                {!previewReminder.event.suppress_gifts && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                      Gift suggestions
-                    </h4>
-                    {previewLoading ? (
-                      <p className="text-sm text-gray-400">Loading gifts...</p>
-                    ) : previewGifts.length > 0 ? (
-                      <div className="space-y-2">
-                        {previewGifts.map((gift) => (
-                          <div
-                            key={gift.id}
-                            className="border border-gray-200 rounded-lg p-3"
-                          >
-                            <p className="font-medium text-gray-900 text-sm">
-                              {gift.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {gift.partner} • {gift.price_tier}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-400">
-                        No gifts available in selected categories.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {previewReminder.event.suppress_gifts && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-                    <p className="text-sm text-blue-900">
-                      This is a sensitive event. Email will not include gift suggestions.
-                    </p>
-                  </div>
-                )}
-
-                <p className="text-xs text-gray-500 text-center">
-                  Sent by Daysight • Never miss an important date
-                </p>
-              </div>
-            </div>
-
-            {/* Close button */}
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={closePreview}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
