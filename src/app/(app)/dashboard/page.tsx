@@ -82,7 +82,7 @@ export default function DashboardPage() {
             .select("*")
             .eq("user_id", user.id)
             .is("deleted_at", null),
-          supabase.from("events").select("*").eq("user_id", user.id),
+          supabase.from("events").select("*").eq("user_id", user.id).is("deleted_at", null),
         ]);
 
         loadedRef.current = true;

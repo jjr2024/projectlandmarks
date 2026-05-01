@@ -18,7 +18,7 @@ export default function ConsentPage() {
   const handleDecline = async () => {
     setDeclining(true);
     await supabase.auth.signOut();
-    router.push("/");
+    window.location.href = "/";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -76,7 +76,8 @@ export async function GET(
     const { data: events, error: eventsError } = await supabase
       .from("events")
       .select("id, contact_id, event_type, event_label, month, day, one_time, event_year")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .is("deleted_at", null);
 
     if (eventsError) {
       console.error("Failed to fetch events:", eventsError);

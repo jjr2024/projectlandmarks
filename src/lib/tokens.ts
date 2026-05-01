@@ -4,7 +4,7 @@
  * Used for unsubscribe links and calendar feed URLs so that:
  * 1. Tokens are not raw UUIDs (prevents enumeration)
  * 2. Only the server can generate valid tokens (HMAC-signed)
- * 3. No additional env var needed — derives keys from CRON_SECRET
+ * 3. Keys derived from CRON_SECRET; URLs use APP_URL for portability
  *
  * Token format: base64url(HMAC-SHA256(purpose:userId))
  * URL format:   ?uid={userId}&token={hmac}
@@ -59,17 +59,23 @@ export function verifyToken(
 
 /**
  * Build a full signed URL for a given purpose.
+ * Uses APP_URL env var so it works across dev/staging/production.
  */
 export function buildSignedUrl(
   userId: string,
   purpose: "unsubscribe" | "calendar"
 ): string {
+  const baseUrl = process.env.APP_URL;
+  if (!baseUrl) throw new Error("APP_URL environment variable is not configured");
+  // Strip trailing slash for clean URL construction
+  const origin = baseUrl.replace(/\/+$/, "");
+
   const token = generateToken(userId, purpose);
   if (purpose === "unsubscribe") {
-    return `https://daysight.xyz/unsubscribe?uid=${userId}&token=${token}`;
+    return `${origin}/unsubscribe?uid=${userId}&token=${token}`;
   }
   if (purpose === "calendar") {
-    return `https://daysight.xyz/api/calendar/${userId}?token=${token}`;
+    return `${origin}/api/calendar/${userId}?token=${token}`;
   }
   throw new Error(`Unknown purpose: ${purpose}`);
 }

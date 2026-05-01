@@ -5,9 +5,9 @@ import { compareTokens } from "@/lib/utils";
 /**
  * GET /api/cron/purge
  *
- * Daily via Vercel Cron. Hard-deletes contacts whose `deleted_at` timestamp
- * is older than 7 days. Cascade deletes remove associated events, reminder_log,
- * and shown_gifts rows (enforced by FK ON DELETE CASCADE in schema).
+ * Daily via Vercel Cron. Hard-deletes contacts and events whose `deleted_at`
+ * timestamp is older than 7 days. Cascade deletes remove associated child rows
+ * (events, reminder_log, shown_gifts, email_overrides) via FK ON DELETE CASCADE.
  *
  * This enforces the 7-day soft-delete expiry policy documented in CLAUDE.md.
  */
@@ -32,20 +32,31 @@ export async function GET(request: NextRequest) {
     const cutoffISO = cutoffDate.toISOString();
 
     // Hard-delete contacts where deleted_at is older than 7 days
-    const { data: deleted, error } = await supabase
+    // (cascades to events, reminder_log, shown_gifts via FK)
+    const { data: deletedContacts, error: contactsError } = await supabase
       .from("contacts")
       .delete()
       .not("deleted_at", "is", null)
       .lt("deleted_at", cutoffISO)
       .select("id");
 
-    if (error) throw error;
+    if (contactsError) throw contactsError;
 
-    const count = deleted?.length || 0;
+    // Hard-delete events where deleted_at is older than 7 days
+    // (cascades to reminder_log, email_overrides via FK)
+    const { data: deletedEvents, error: eventsError } = await supabase
+      .from("events")
+      .delete()
+      .not("deleted_at", "is", null)
+      .lt("deleted_at", cutoffISO)
+      .select("id");
+
+    if (eventsError) throw eventsError;
 
     return NextResponse.json({
       ok: true,
-      purged: count,
+      purgedContacts: deletedContacts?.length || 0,
+      purgedEvents: deletedEvents?.length || 0,
       cutoff: cutoffISO,
       timestamp: now.toISOString(),
     });

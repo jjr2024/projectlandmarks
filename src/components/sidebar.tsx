@@ -77,7 +77,10 @@ export default function Sidebar({ displayName, email }: SidebarProps) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/auth");
+    // Use hard navigation (not router.push) so middleware fully clears
+    // the session and redirects cleanly. Client-side nav leaves the
+    // (app) layout in a half-rendered loading state.
+    window.location.href = "/auth";
   };
 
   const initials = displayName

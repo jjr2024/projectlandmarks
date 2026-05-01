@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
           `)
           .eq("user_id", user.id)
           .in("month", [currentMonth, nextMonth])
+          .is("deleted_at", null)
           .is("contacts.deleted_at", null);
 
         if (!events || events.length === 0) {

@@ -78,7 +78,7 @@ export default function AdminSidebar({ displayName, email }: AdminSidebarProps) 
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/auth");
+    window.location.href = "/auth";
   };
 
   const initials = displayName

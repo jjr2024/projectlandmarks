@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
             contacts!inner ( id, first_name, last_name, gift_categories, gift_other, budget_tier, deleted_at )
           `)
           .eq("user_id", user.id)
+          .is("deleted_at", null)
           .is("contacts.deleted_at", null);
 
         if (!events || events.length === 0) continue;

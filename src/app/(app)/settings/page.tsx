@@ -157,7 +157,7 @@ export default function SettingsPage() {
     try {
       const [contactsRes, eventsRes] = await Promise.all([
         supabase.from("contacts").select("*").eq("user_id", userId).is("deleted_at", null),
-        supabase.from("events").select("*").eq("user_id", userId),
+        supabase.from("events").select("*").eq("user_id", userId).is("deleted_at", null),
       ]);
 
       const contacts = (contactsRes.data || []) as Contact[];
@@ -300,7 +300,7 @@ export default function SettingsPage() {
     if (!userId) return;
     const [contacts, events] = await Promise.all([
       supabase.from("contacts").select("id", { count: "exact", head: true }).eq("user_id", userId),
-      supabase.from("events").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("events").select("id", { count: "exact", head: true }).eq("user_id", userId).is("deleted_at", null),
     ]);
     setContactCount(contacts.count || 0);
     setEventCount(events.count || 0);
@@ -436,7 +436,7 @@ export default function SettingsPage() {
       });
       if (error) throw error;
       await supabase.auth.signOut();
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       setDeleteError(`Account deletion failed: ${err.message || "Unknown error"}. Please contact support.`);
       setDeletingAccount(false);
@@ -447,7 +447,7 @@ export default function SettingsPage() {
   const handleExport = async () => {
     const [contacts, events] = await Promise.all([
       supabase.from("contacts").select("*").eq("user_id", userId).is("deleted_at", null),
-      supabase.from("events").select("*").eq("user_id", userId),
+      supabase.from("events").select("*").eq("user_id", userId).is("deleted_at", null),
     ]);
 
     const data = {

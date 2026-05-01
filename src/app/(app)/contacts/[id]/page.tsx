@@ -145,7 +145,7 @@ export default function ContactDetailPage() {
 
     const [contactRes, eventsRes, giftsRes] = await Promise.all([
       supabase.from("contacts").select("*").eq("id", contactId).is("deleted_at", null).single(),
-      supabase.from("events").select("*").eq("contact_id", contactId).order("month", { ascending: true }),
+      supabase.from("events").select("*").eq("contact_id", contactId).is("deleted_at", null).order("month", { ascending: true }),
       supabase.from("shown_gifts").select("*").eq("contact_id", contactId).order("year", { ascending: false }),
     ]);
 
@@ -246,7 +246,12 @@ export default function ContactDetailPage() {
 
   const handleDeleteEvent = async () => {
     if (!deleteEventTarget) return;
-    const { error } = await supabase.from("events").delete().eq("id", deleteEventTarget.id);
+    // Soft-delete: set deleted_at timestamp (matches contacts pattern).
+    // Event will be purged after 7 days by the purge cron.
+    const { error } = await supabase
+      .from("events")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", deleteEventTarget.id);
     if (error) {
       setEventError(error.message || "Failed to delete event. Please try again.");
       return;
@@ -820,11 +825,12 @@ export default function ContactDetailPage() {
       {deleteEventTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Delete event?</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Move event to bin?</h2>
             <p className="text-sm text-gray-500 mb-4">
-              This will permanently remove this{" "}
+              This will move this{" "}
               {eventTypeLabel(deleteEventTarget.event_type).toLowerCase()} on{" "}
-              {formatDate(deleteEventTarget.month, deleteEventTarget.day)}.
+              {formatDate(deleteEventTarget.month, deleteEventTarget.day)}{" "}
+              to the recycling bin. It will be permanently deleted after 7 days.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -835,9 +841,9 @@ export default function ContactDetailPage() {
               </button>
               <button
                 onClick={handleDeleteEvent}
-                className="bg-red-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
+                className="bg-amber-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-amber-600 transition-colors"
               >
-                Delete
+                Move to bin
               </button>
             </div>
           </div>

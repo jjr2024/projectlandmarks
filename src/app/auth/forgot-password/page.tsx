@@ -25,7 +25,11 @@ function ForgotPasswordForm() {
     setLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      // Route through /auth/callback so the code is exchanged for a
+      // session BEFORE the user lands on the reset-password page.
+      // Without this, reset-password has no session and updateUser() fails
+      // with "Auth session missing".
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
     });
 
     if (error) {

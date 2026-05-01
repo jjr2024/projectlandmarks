@@ -52,6 +52,7 @@ export default function EmailQueuePage() {
         id, event_type, event_label, month, day, high_importance, user_id,
         contacts!inner ( id, first_name, last_name, relationship, gift_categories, budget_tier, deleted_at )
       `)
+      .is("deleted_at", null)
       .is("contacts.deleted_at", null);
 
     if (!events) { setLoading(false); return; }
