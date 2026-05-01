@@ -18,7 +18,17 @@ interface ReengagementEmailProps {
 const brandOrange = "#d05a32";
 const brandOrangeDark = "#ad4628";
 
-const VARIANTS = {
+interface Variant {
+  day: number;
+  subject: (name: string) => string;
+  headline: string;
+  body: (name: string) => string;
+  ctaText: string;
+  ctaUrl: string;
+  showSampleReminder?: boolean;
+}
+
+const VARIANTS: Record<string, Variant> = {
   import_nudge: {
     day: 3,
     subject: (name: string) => `${name}, add your first birthday in 60 seconds`,
@@ -84,7 +94,7 @@ export default function ReengagementEmail({
             ))}
 
             {/* Sample reminder inline (D+10 only) */}
-            {"showSampleReminder" in v && v.showSampleReminder && (
+            {v.showSampleReminder && (
               <Section style={{ border: "2px solid #e5e7eb", borderRadius: "16px", padding: "24px", margin: "20px 0 24px", background: "#fafafa" }}>
                 <Text style={{ textAlign: "center" as const, color: "#9ca3af", fontSize: "11px", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 14px 0" }}>Sample Reminder</Text>
                 <Section style={{ background: `linear-gradient(135deg, ${brandOrange}, ${brandOrangeDark})`, borderRadius: "12px", padding: "18px 24px", textAlign: "center" as const, marginBottom: "16px" }}>
@@ -140,17 +150,6 @@ export default function ReengagementEmail({
               </Section>
             )}
 
-            {/* Reply CTA (D+30) */}
-            {"isReplyAction" in v && v.isReplyAction && (
-              <Section style={{ textAlign: "center" as const, margin: "24px 0" }}>
-                <Section style={{ background: "#f9fafb", border: "2px dashed #d1d5db", borderRadius: "12px", padding: "20px 24px" }}>
-                  <Text style={{ color: "#374151", fontSize: "14px", fontWeight: 600, margin: "0 0 6px 0" }}>{v.ctaText}</Text>
-                  <Text style={{ color: "#6b7280", fontSize: "13px", lineHeight: "1.5", margin: 0 }}>
-                    For example: <em>&quot;Mom, birthday, June 14&quot;</em> or <em>&quot;Jake, anniversary, October 3, likes hiking gear&quot;</em>
-                  </Text>
-                </Section>
-              </Section>
-            )}
 
             {/* Footer */}
             <Hr style={{ borderColor: "#f3f4f6", margin: "8px 0 20px 0" }} />
