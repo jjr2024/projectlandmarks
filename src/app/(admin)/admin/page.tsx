@@ -55,18 +55,43 @@ export default function AdminDashboardPage() {
       .select("event_type, partner, gift_category, reminder_lead, commission")
       .gte("timestamp", sinceStr);
 
-    // Fetch sent counts per partner/category/lead from reminder_log
-    const { data: sentByPartner } = await supabase
-      .from("conversion_events")
-      .select("partner")
-      .eq("event_type", "sent")
-      .gte("timestamp", sinceStr);
+    // Fetch sent counts per partner from reminder_log (joined with gift_catalog for partner name).
+    // reminder_log has gift_ids array — we use the first gift to attribute partner/category.
+    const { data: sentLogs } = await supabase
+      .from("reminder_log")
+      .select("gift_ids")
+      .in("status", ["sent", "delivered", "opened", "clicked"])
+      .gte("sent_at", sinceStr);
 
-    const sentPartnerMap = new Map<string, number>();
-    for (const row of sentByPartner || []) {
-      const pk = row.partner || "unknown";
-      sentPartnerMap.set(pk, (sentPartnerMap.get(pk) || 0) + 1);
+    // Build a map of gift_id -> { partner, category } from the gift catalog
+    const { data: allGifts } = await supabase
+      .from("gift_catalog")
+      .select("id, partner, category");
+
+    const giftMap = new Map<string, { partner: string; category: string }>();
+    for (const g of allGifts || []) {
+      giftMap.set(g.id, { partner: g.partner, category: g.category });
     }
+
+    // Count sent per partner and category from reminder_log gift_ids
+    const sentPartnerMap = new Map<string, number>();
+    const sentCategoryMap = new Map<string, number>();
+    for (const log of sentLogs || []) {
+      if (log.gift_ids?.length > 0) {
+        const gift = giftMap.get(log.gift_ids[0]);
+        const pk = gift?.partner || "unknown";
+        const ck = gift?.category || "unknown";
+        sentPartnerMap.set(pk, (sentPartnerMap.get(pk) || 0) + 1);
+        sentCategoryMap.set(ck, (sentCategoryMap.get(ck) || 0) + 1);
+      }
+    }
+
+    // Safe parseFloat that never returns NaN
+    const safeParseFloat = (v: any): number => {
+      if (v == null) return 0;
+      const n = parseFloat(String(v));
+      return isNaN(n) ? 0 : n;
+    };
 
     const f: FunnelData = { sent: sentCount || 0, delivered: 0, opened: 0, clicked: 0, purchased: 0, revenue: 0 };
     const partnerMap = new Map<string, BreakdownRow>();
@@ -78,7 +103,7 @@ export default function AdminDashboardPage() {
       if (row.event_type === "clicked") f.clicked++;
       if (row.event_type === "purchased") {
         f.purchased++;
-        f.revenue += parseFloat(row.commission || "0");
+        f.revenue += safeParseFloat(row.commission);
       }
 
       // Partner breakdown
@@ -86,21 +111,21 @@ export default function AdminDashboardPage() {
       if (!partnerMap.has(pk)) partnerMap.set(pk, { key: pk, sent: sentPartnerMap.get(pk) || 0, clicked: 0, purchased: 0, revenue: 0 });
       const pr = partnerMap.get(pk)!;
       if (row.event_type === "clicked") pr.clicked++;
-      if (row.event_type === "purchased") { pr.purchased++; pr.revenue += parseFloat(row.commission || "0"); }
+      if (row.event_type === "purchased") { pr.purchased++; pr.revenue += safeParseFloat(row.commission); }
 
       // Category breakdown
       const ck = row.gift_category || "unknown";
-      if (!categoryMap.has(ck)) categoryMap.set(ck, { key: ck, sent: 0, clicked: 0, purchased: 0, revenue: 0 });
+      if (!categoryMap.has(ck)) categoryMap.set(ck, { key: ck, sent: sentCategoryMap.get(ck) || 0, clicked: 0, purchased: 0, revenue: 0 });
       const cr = categoryMap.get(ck)!;
       if (row.event_type === "clicked") cr.clicked++;
-      if (row.event_type === "purchased") { cr.purchased++; cr.revenue += parseFloat(row.commission || "0"); }
+      if (row.event_type === "purchased") { cr.purchased++; cr.revenue += safeParseFloat(row.commission); }
 
       // Lead time breakdown
       const lk = row.reminder_lead ? `${row.reminder_lead}-day` : "unknown";
       if (!leadMap.has(lk)) leadMap.set(lk, { key: lk, sent: 0, clicked: 0, purchased: 0, revenue: 0 });
       const lr = leadMap.get(lk)!;
       if (row.event_type === "clicked") lr.clicked++;
-      if (row.event_type === "purchased") { lr.purchased++; lr.revenue += parseFloat(row.commission || "0"); }
+      if (row.event_type === "purchased") { lr.purchased++; lr.revenue += safeParseFloat(row.commission); }
     }
 
     // User count

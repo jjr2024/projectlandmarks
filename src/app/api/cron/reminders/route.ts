@@ -18,6 +18,7 @@ import {
 } from "@/lib/reminders";
 import { selectGiftsScored } from "@/lib/gift-engine";
 import { compareTokens } from "@/lib/utils";
+import { buildSignedUrl } from "@/lib/tokens";
 
 /**
  * GET /api/cron/reminders
@@ -211,6 +212,7 @@ export async function GET(request: NextRequest) {
               customMessage,
               contactId: contact.id,
               userId: user.id,
+              unsubscribeUrl: buildSignedUrl(user.id, "unsubscribe"),
             }),
             headers: {
               ...EMAIL_CONFIG.headers({

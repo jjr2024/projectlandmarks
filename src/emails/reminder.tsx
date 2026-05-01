@@ -29,6 +29,7 @@ interface ReminderEmailProps {
   customMessage?: string | null;
   contactId: string;
   userId: string;
+  unsubscribeUrl?: string;
 }
 
 const brandOrange = "#d05a32";
@@ -51,7 +52,9 @@ export default function ReminderEmail({
   customMessage = null,
   contactId = "",
   userId = "",
+  unsubscribeUrl,
 }: ReminderEmailProps) {
+  const unsubLink = unsubscribeUrl || `https://daysight.xyz/settings`;
   const typeLabel = eventTypeLabel(eventType);
   const isLastMinute = daysBefore <= 2;
 
@@ -126,11 +129,11 @@ export default function ReminderEmail({
                   </Section>
                 )}
 
-                {/* 3-day urgency banner */}
-                {daysBefore === 3 && (
+                {/* Urgency banner for 3-day window (covers range-based matching: 3 days exactly) */}
+                {daysBefore === 3 && !isLastMinute && (
                   <Section style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px" }}>
                     <Text style={{ color: "#dc2626", fontWeight: 600, fontSize: "12px", margin: "0 0 2px 0" }}>Time is running short!</Text>
-                    <Text style={{ color: "#ef4444", fontSize: "11px", margin: 0 }}>Only 3 days left — order soon to ensure delivery in time.</Text>
+                    <Text style={{ color: "#ef4444", fontSize: "11px", margin: 0 }}>Only {daysBefore} days left — order soon to ensure delivery in time.</Text>
                   </Section>
                 )}
 
@@ -174,8 +177,15 @@ export default function ReminderEmail({
               </>
             )}
 
+            {/* Amazon affiliate disclosure */}
+            {!suppressGifts && gifts.length > 0 && (
+              <Text style={{ color: "#c0c5cc", fontSize: "9px", lineHeight: "1.4", margin: "12px 0 0 0", textAlign: "center" as const }}>
+                As an Amazon Associate we earn from qualifying purchases.
+              </Text>
+            )}
+
             {/* Footer */}
-            <Hr style={{ borderColor: "#f3f4f6", margin: "0 0 14px 0" }} />
+            <Hr style={{ borderColor: "#f3f4f6", margin: "14px 0" }} />
             <Section style={{ textAlign: "center" as const }}>
               <table cellPadding="0" cellSpacing="0" style={{ margin: "0 auto 10px" }}>
                 <tbody>
@@ -186,7 +196,7 @@ export default function ReminderEmail({
                 </tbody>
               </table>
               <Text style={{ color: "#9ca3af", fontSize: "10px", lineHeight: "1.5", margin: 0 }}>
-                Daysight · <Link href={`https://daysight.xyz/unsubscribe?token=${userId}`} style={{ color: "#9ca3af" }}>Unsubscribe</Link> · <Link href="https://daysight.xyz/privacy" style={{ color: "#9ca3af" }}>Privacy Policy</Link>
+                Daysight · <Link href={unsubLink} style={{ color: "#9ca3af" }}>Unsubscribe</Link> · <Link href="https://daysight.xyz/privacy" style={{ color: "#9ca3af" }}>Privacy Policy</Link>
                 <br />
                 You&apos;re getting this because you set up reminders for {contactFirstName}.
               </Text>

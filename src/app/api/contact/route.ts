@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
   try {
     await resend().emails.send({
       from: "Daysight Contact Form <noreply@daysight.xyz>",
-      to: "hello@daysight.xyz",
+      to: "info@daysight.xyz",
       replyTo: senderEmail,
       subject: `Contact form: ${senderName}`,
       text: [

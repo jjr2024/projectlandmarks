@@ -8,7 +8,6 @@ export const GIFT_CATEGORIES = [
   "treats",
   "gift_card",
   "experiences",
-  "donation",
   "home",
   "accessories",
 ] as const;

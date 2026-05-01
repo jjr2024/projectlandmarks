@@ -12,6 +12,7 @@ interface ReengagementEmailProps {
   firstName: string;
   variant: "import_nudge" | "sample_reminder" | "concierge_add";
   userId: string;
+  unsubscribeUrl?: string;
 }
 
 const brandOrange = "#d05a32";
@@ -39,13 +40,12 @@ const VARIANTS = {
   },
   concierge_add: {
     day: 30,
-    subject: () => "One last thing — let us add your first contact for you",
-    headline: "Let us set it up for you",
+    subject: () => "One last thing — adding a contact takes 60 seconds",
+    headline: "One more nudge, then we'll stop",
     body: (name: string) =>
-      `Hi ${name},\n\nWe get it — life is busy, and setting up yet another app isn't always at the top of the list.\n\nSo here's an easy way to try Daysight out: just hit reply to this email and type a person's name, the event type (birthday, anniversary, etc.), and the date. Our team will add them to your account so you can see how it works.\n\nThis is just to help you get started — once you see your first reminder, you'll have a feel for whether Daysight is useful for you. No pressure either way.`,
-    ctaText: "Just hit reply — we'll take it from here",
-    ctaUrl: null as string | null,
-    isReplyAction: true,
+      `Hi ${name},\n\nWe get it — life is busy, and setting up yet another app isn't always at the top of the list.\n\nBut here's the thing: adding your first contact takes about 60 seconds. A name, a date, and optionally what they like. That's it.\n\nOnce you do, Daysight runs on autopilot — we'll send you a reminder before their next birthday with a few gift ideas you can order in one click. No more last-minute scrambling.\n\nIf it turns out it's not for you, no worries. But we think you'll be glad you took the minute.`,
+    ctaText: "Add your first contact →",
+    ctaUrl: "https://daysight.xyz/contacts",
   },
 };
 
@@ -53,7 +53,9 @@ export default function ReengagementEmail({
   firstName = "there",
   variant = "import_nudge",
   userId = "",
+  unsubscribeUrl,
 }: ReengagementEmailProps) {
+  const unsubLink = unsubscribeUrl || "https://daysight.xyz/settings";
   const v = VARIANTS[variant];
   const bodyParagraphs = v.body(firstName).split("\n\n");
 
@@ -154,7 +156,7 @@ export default function ReengagementEmail({
             <Hr style={{ borderColor: "#f3f4f6", margin: "8px 0 20px 0" }} />
             <Section style={{ textAlign: "center" as const }}>
               <Text style={{ color: "#9ca3af", fontSize: "11px", lineHeight: "1.6", margin: 0 }}>
-                Daysight · <Link href={`https://daysight.xyz/unsubscribe?token=${userId}`} style={{ color: "#9ca3af" }}>Unsubscribe</Link> · <Link href="https://daysight.xyz/privacy" style={{ color: "#9ca3af" }}>Privacy Policy</Link>
+                Daysight · <Link href={unsubLink} style={{ color: "#9ca3af" }}>Unsubscribe</Link> · <Link href="https://daysight.xyz/privacy" style={{ color: "#9ca3af" }}>Privacy Policy</Link>
                 <br />
                 You&apos;re receiving this because you recently signed up for Daysight.
               </Text>

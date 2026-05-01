@@ -67,19 +67,19 @@ export default function PrivacyPage() {
 
             <h2>2. How We Use Your Information</h2>
             <ul>
-              <li><strong>To provide the service</strong> — sending you reminder emails before the dates you&apos;ve entered.</li>
-              <li><strong>To improve the service</strong> — understanding how people use Daysight so we can make it better.</li>
-              <li><strong>To communicate with you</strong> — responding to questions or support requests you send us.</li>
-              <li><strong>To earn revenue through affiliate commissions</strong> — our reminder emails include gift links. If you click one and make a purchase, an affiliate partner may record the referral and pay us a commission. See Section 4 for details.</li>
+              <li><strong>To provide the service:</strong> sending you reminder emails before the dates you&apos;ve entered.</li>
+              <li><strong>To improve the service:</strong> understanding how people use Daysight so we can make it better.</li>
+              <li><strong>To communicate with you:</strong> responding to questions or support requests you send us.</li>
+              <li><strong>To earn revenue through affiliate commissions:</strong> our reminder emails include gift links. If you click one and make a purchase, an affiliate partner may record the referral and pay us a commission. See Section 4 for details.</li>
             </ul>
 
             <h2>3. How We Share Your Information</h2>
             <p>We do not sell your personal information. We do not share it with advertisers. The limited ways we may share data are:</p>
             <ul>
-              <li><strong>Service providers</strong> — companies that help us operate the service, such as our email delivery provider and cloud hosting. They are contractually required to use your data only as directed by us.</li>
-              <li><strong>Affiliate networks</strong> — when you click a gift link and make a purchase, our affiliate partners receive a referral signal (typically a tracking cookie on your browser). They do not receive your name, email address, or any contact data you&apos;ve entered into Daysight.</li>
-              <li><strong>Legal requirements</strong> — if required by law, court order, or to protect the rights and safety of users or the public, we may disclose information to authorities.</li>
-              <li><strong>Business transfers</strong> — if Daysight is acquired or merged with another company, your data may transfer as part of that transaction. We&apos;ll notify you before your data becomes subject to a different privacy policy.</li>
+              <li><strong>Service providers:</strong> companies that help us operate the service, such as our email delivery provider and cloud hosting. They are contractually required to use your data only as directed by us.</li>
+              <li><strong>Affiliate networks:</strong> when you click a gift link and make a purchase, our affiliate partners receive a referral signal (typically a tracking cookie on your browser). They do not receive your name, email address, or any contact data you&apos;ve entered into Daysight.</li>
+              <li><strong>Legal requirements:</strong> if required by law, court order, or to protect the rights and safety of users or the public, we may disclose information to authorities.</li>
+              <li><strong>Business transfers:</strong> if Daysight is acquired or merged with another company, your data may transfer as part of that transaction. We&apos;ll notify you before your data becomes subject to a different privacy policy.</li>
             </ul>
 
             <h2>4. Affiliate Links</h2>
@@ -105,9 +105,9 @@ export default function PrivacyPage() {
             <h2>6. Cookies</h2>
             <p>We use three categories of cookies:</p>
             <ul>
-              <li><strong>Strictly necessary</strong> — required to keep you logged in and remember your preferences. These are always active and cannot be disabled.</li>
-              <li><strong>Analytics</strong> — help us understand which pages are visited and how the service is used. No personal data is shared with third parties for analytics.</li>
-              <li><strong>Marketing and affiliate tracking</strong> — allows affiliate partners to confirm a purchase was referred by Daysight. This is how we earn commissions that keep the service free.</li>
+              <li><strong>Strictly necessary:</strong> required to keep you logged in and remember your preferences. These are always active and cannot be disabled.</li>
+              <li><strong>Analytics:</strong> help us understand which pages are visited and how the service is used. No personal data is shared with third parties for analytics.</li>
+              <li><strong>Marketing and affiliate tracking:</strong> allows affiliate partners to confirm a purchase was referred by Daysight. This is how we earn commissions that keep the service free.</li>
             </ul>
             <p>
               When you first visit, a banner lets you Accept All, Decline All, or Customize your
@@ -131,8 +131,8 @@ export default function PrivacyPage() {
               information, and opt out of the sale of your personal information.{" "}
               <strong>We do not sell personal information.</strong> To exercise your rights, contact
               us at{" "}
-              <a href="mailto:hello@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                hello@daysight.xyz
+              <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                info@daysight.xyz
               </a>.
             </p>
 
@@ -144,8 +144,8 @@ export default function PrivacyPage() {
               legal basis for processing your data is the performance of a contract (providing the
               service you signed up for) and, where required, your explicit consent. To exercise
               your rights, contact us at{" "}
-              <a href="mailto:hello@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                hello@daysight.xyz
+              <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                info@daysight.xyz
               </a>. You also have the right to lodge a complaint with your local data protection
               authority.
             </p>
@@ -177,8 +177,8 @@ export default function PrivacyPage() {
             <ul>
               <li>
                 Email:{" "}
-                <a href="mailto:hello@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                  hello@daysight.xyz
+                <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                  info@daysight.xyz
                 </a>
               </li>
               <li>

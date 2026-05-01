@@ -5,6 +5,7 @@ import { EMAIL_CONFIG } from "@/lib/email-config";
 import ReengagementEmail, { reengagementSubject } from "@/emails/reengagement";
 import { isRateLimitError, emptyCronResults } from "@/lib/reminders";
 import { compareTokens } from "@/lib/utils";
+import { buildSignedUrl } from "@/lib/tokens";
 
 /**
  * GET /api/cron/reengagement
@@ -95,6 +96,7 @@ export async function GET(request: NextRequest) {
               firstName,
               variant: drip.variant,
               userId: user.id,
+              unsubscribeUrl: buildSignedUrl(user.id, "unsubscribe"),
             }),
             headers: EMAIL_CONFIG.headers({
               userId: user.id,

@@ -206,7 +206,7 @@ export default function EmailQueuePage() {
   };
 
   const formatDate = (month: number, day: number) => {
-    return new Date(2024, month - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return new Date(new Date().getFullYear(), month - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   return (

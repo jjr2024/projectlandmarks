@@ -48,8 +48,8 @@ export default function TermsPage() {
               You are responsible for maintaining the confidentiality of your account credentials
               and for all activity that occurs under your account. You agree to notify us
               immediately at{" "}
-              <a href="mailto:hello@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                hello@daysight.xyz
+              <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                info@daysight.xyz
               </a>{" "}
               if you suspect unauthorized access to your account. We are not liable for losses
               caused by unauthorized use of your account.
@@ -181,8 +181,8 @@ export default function TermsPage() {
             <ul>
               <li>
                 Email:{" "}
-                <a href="mailto:hello@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                  hello@daysight.xyz
+                <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                  info@daysight.xyz
                 </a>
               </li>
               <li>

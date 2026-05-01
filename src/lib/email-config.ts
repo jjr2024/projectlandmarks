@@ -3,17 +3,22 @@
  * Ported from the prototype's js/email-config.js with domain updated to daysight.xyz.
  */
 
+import { buildSignedUrl } from "@/lib/tokens";
+
 export const EMAIL_CONFIG = {
   from: "Daysight <noreply@daysight.xyz>",
   replyTo: "support@daysight.xyz",
 
   /** Compliance headers applied to every outgoing email. */
-  headers: (opts: { userId: string; reminderType?: string; partner?: string; reminderId?: string }) => ({
-    "List-Unsubscribe": `<https://daysight.xyz/unsubscribe?token=${opts.userId}>, <mailto:unsubscribe@daysight.xyz?subject=Unsubscribe-${opts.userId}>`,
-    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-    "Feedback-ID": `${opts.reminderType || "reminder"}:${opts.partner || "daysight"}:daysight`,
-    "X-Entity-Ref-ID": opts.reminderId || "",
-  }),
+  headers: (opts: { userId: string; reminderType?: string; partner?: string; reminderId?: string }) => {
+    const unsubUrl = buildSignedUrl(opts.userId, "unsubscribe");
+    return {
+      "List-Unsubscribe": `<${unsubUrl}>, <mailto:unsubscribe@daysight.xyz?subject=Unsubscribe-${opts.userId}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      "Feedback-ID": `${opts.reminderType || "reminder"}:${opts.partner || "daysight"}:daysight`,
+      "X-Entity-Ref-ID": opts.reminderId || "",
+    };
+  },
 } as const;
 
 /**

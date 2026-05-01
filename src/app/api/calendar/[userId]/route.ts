@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyToken } from "@/lib/tokens";
 
 /**
- * GET /api/calendar/[userId].ics
+ * GET /api/calendar/[userId]?token={hmac}
  *
  * Generates and returns a calendar feed (.ics file) for the user's events.
  * All events are rendered as all-day recurring annual events (RRULE:FREQ=YEARLY).
  *
- * No authentication required — userId in URL acts as an opaque token (UUID format).
+ * Auth: HMAC-signed token in query param. Generated from settings page.
  * This endpoint is idempotent and cacheable.
  */
 
@@ -42,9 +43,15 @@ export async function GET(
 ) {
   const userId = params.userId;
 
-  // Validate userId is a UUID-like string (basic sanity check)
-  if (!userId || !/^[a-f0-9-]{36}$/.test(userId)) {
+  // Validate userId is a proper UUID
+  if (!userId || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(userId)) {
     return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+  }
+
+  // Verify HMAC token from query param
+  const token = request.nextUrl.searchParams.get("token");
+  if (!token || !verifyToken(userId, token, "calendar")) {
+    return NextResponse.json({ error: "Invalid or missing calendar token" }, { status: 403 });
   }
 
   try {
@@ -118,11 +125,12 @@ export async function GET(
           summary += "'s Event";
         }
 
-        // Format date as YYYYMMDD (use 2024 as a placeholder year for format)
-        // The RRULE:FREQ=YEARLY ensures it recurs every year regardless
+        // Format date as YYYYMMDD — use current year so calendar apps show it as upcoming.
+        // RRULE:FREQ=YEARLY ensures it recurs every year.
+        const currentYear = new Date().getFullYear();
         const monthStr = String(evt.month).padStart(2, "0");
         const dayStr = String(evt.day).padStart(2, "0");
-        const startDate = `2024${monthStr}${dayStr}`;
+        const startDate = `${currentYear}${monthStr}${dayStr}`;
 
         // Unique identifier
         const uid = `event-${evt.id}@daysight.xyz`;

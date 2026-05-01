@@ -11,6 +11,7 @@ import {
   emptyCronResults,
 } from "@/lib/reminders";
 import { compareTokens } from "@/lib/utils";
+import { buildSignedUrl } from "@/lib/tokens";
 
 /**
  * GET /api/cron/digest
@@ -125,6 +126,7 @@ export async function GET(request: NextRequest) {
               contactId: e.contact.id,
             })),
             userId: user.id,
+            unsubscribeUrl: buildSignedUrl(user.id, "unsubscribe"),
           }),
           headers: EMAIL_CONFIG.headers({
             userId: user.id,

@@ -36,7 +36,8 @@ const GIFT_OPTIONS = [
   { value: "treats", label: "Treats" },
   { value: "gift_card", label: "Gift Card" },
   { value: "experiences", label: "Experience" },
-  { value: "donation", label: "Donation" },
+  { value: "home", label: "Home" },
+  { value: "accessories", label: "Accessories" },
 ];
 
 const EMPTY_FORM = {

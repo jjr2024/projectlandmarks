@@ -113,7 +113,7 @@ export default function ContactPage() {
               {status === "error" && (
                 <p className="text-sm text-red-600">
                   Something went wrong. Please try again or email us directly at{" "}
-                  <a href="mailto:hello@daysight.xyz" className="underline">hello@daysight.xyz</a>.
+                  <a href="mailto:info@daysight.xyz" className="underline">info@daysight.xyz</a>.
                 </p>
               )}
 
@@ -130,8 +130,8 @@ export default function ContactPage() {
           <div className="mt-12 pt-8 border-t border-gray-100 text-center">
             <p className="text-sm text-gray-500">
               You can also reach us directly at{" "}
-              <a href="mailto:hello@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                hello@daysight.xyz
+              <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                info@daysight.xyz
               </a>
             </p>
           </div>

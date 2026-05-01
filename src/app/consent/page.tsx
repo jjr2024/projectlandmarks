@@ -13,6 +13,14 @@ export default function ConsentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [declining, setDeclining] = useState(false);
+
+  const handleDecline = async () => {
+    setDeclining(true);
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -27,8 +35,8 @@ export default function ConsentPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("You must be logged in.");
-        setLoading(false);
+        // Session expired — redirect to sign in
+        router.push("/auth");
         return;
       }
 
@@ -120,6 +128,16 @@ export default function ConsentPage() {
             {loading ? "Saving..." : "Continue"}
           </button>
         </form>
+
+        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+          <button
+            onClick={handleDecline}
+            disabled={declining}
+            className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {declining ? "Signing out..." : "No thanks, sign me out"}
+          </button>
+        </div>
       </div>
     </div>
   );

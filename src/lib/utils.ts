@@ -45,7 +45,6 @@ const GIFT_LABELS: Record<string, string> = {
   treats: "Treats",
   gift_card: "Gift Card",
   experiences: "Experience",
-  donation: "Donation",
   home: "Home",
   accessories: "Accessories",
 };

@@ -18,7 +18,6 @@ const GIFT_OPTIONS = [
   { value: "treats", label: "Treats", description: "Chocolates & sweets" },
   { value: "gift_card", label: "Gift Card", description: "Always a safe bet" },
   { value: "experiences", label: "Experience", description: "Concerts, dining & more" },
-  { value: "donation", label: "Donation", description: "Charitable giving" },
   { value: "home", label: "Home", description: "Decor & lifestyle" },
   { value: "accessories", label: "Accessories", description: "Fashion & gadgets" },
 ];
@@ -492,19 +491,21 @@ export default function OnboardingPage() {
 
                           {/* High importance + Suppress gifts row */}
                           <div className="flex items-center justify-between pt-2">
-                            <label className="flex items-center gap-2.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={event.high_importance}
-                                onChange={(e) =>
-                                  updateEvent(idx, { high_importance: e.target.checked })
-                                }
-                                className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer"
-                              />
-                              <span className="text-xs font-medium text-gray-600">
-                                High importance
-                              </span>
-                              <span className="relative group">
+                            <div className="flex items-center gap-2.5">
+                              <label className="flex items-center gap-2.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={event.high_importance}
+                                  onChange={(e) =>
+                                    updateEvent(idx, { high_importance: e.target.checked })
+                                  }
+                                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-300 cursor-pointer"
+                                />
+                                <span className="text-xs font-medium text-gray-600">
+                                  High importance
+                                </span>
+                              </label>
+                              <span className="relative group" onClick={(e) => e.preventDefault()}>
                                 <svg
                                   className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help"
                                   fill="none"
@@ -523,7 +524,7 @@ export default function OnboardingPage() {
                                   plan.
                                 </span>
                               </span>
-                            </label>
+                            </div>
                             {events.length > 1 && (
                               <button
                                 type="button"
@@ -535,31 +536,20 @@ export default function OnboardingPage() {
                             )}
                           </div>
 
-                          {/* Suppress gifts */}
-                          <button
-                            type="button"
-                            onClick={() => updateEvent(idx, { suppress_gifts: !event.suppress_gifts })}
-                            className={`w-full flex items-center gap-1.5 text-xs transition-colors rounded-lg px-3 py-2 ${
-                              event.suppress_gifts
-                                ? "bg-gray-200 text-gray-600"
-                                : "text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-                            }`}
-                          >
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                          {/* Suppress gifts — subtle inline toggle */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={event.suppress_gifts}
+                                onChange={(e) => updateEvent(idx, { suppress_gifts: e.target.checked })}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-gray-500 focus:ring-gray-300 cursor-pointer"
                               />
-                            </svg>
-                            Skip gifts for this date
-                          </button>
+                              <span className="text-xs text-gray-400">
+                                Skip gift suggestions for this date
+                              </span>
+                            </label>
+                          </div>
                         </div>
                       )}
                     </div>

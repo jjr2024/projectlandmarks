@@ -58,7 +58,8 @@ const GIFT_OPTIONS = [
   { value: "treats", label: "Treats" },
   { value: "gift_card", label: "Gift Card" },
   { value: "experiences", label: "Experience" },
-  { value: "donation", label: "Donation" },
+  { value: "home", label: "Home" },
+  { value: "accessories", label: "Accessories" },
 ];
 
 const SEND_HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM – 9 PM
@@ -192,9 +193,10 @@ export default function SettingsPage() {
           summary += "'s Event";
         }
 
-        // Format date as YYYYMMDD (all-day event uses DATE format, not DATETIME)
+        // Format date as YYYYMMDD — use current year so calendar apps show upcoming events
+        const currentYear = new Date().getFullYear();
         const dateStr = String(evt.month).padStart(2, "0") + String(evt.day).padStart(2, "0");
-        const startDate = `2024${dateStr}`; // Use a valid year for formatting (iCal doesn't care)
+        const startDate = `${currentYear}${dateStr}`;
 
         // Unique identifier
         const uid = `event-${evt.id}@daysight.xyz`;
@@ -231,12 +233,27 @@ export default function SettingsPage() {
     return text.replace(/[\\,;]/g, (char) => `\\${char}`);
   };
 
-  // Copy subscription URL to clipboard
-  const copySubscriptionURL = () => {
-    const url = `https://daysight.xyz/api/calendar/${userId}.ics`;
-    navigator.clipboard.writeText(url);
-    setCopiedToClipboard(true);
-    setTimeout(() => setCopiedToClipboard(false), 2000);
+  // Copy subscription URL to clipboard (fetches signed URL from server)
+  const [calendarUrl, setCalendarUrl] = useState<string | null>(null);
+  const copySubscriptionURL = async () => {
+    try {
+      // Fetch the signed URL from a lightweight API endpoint
+      if (!calendarUrl) {
+        const res = await fetch(`/api/calendar-url`);
+        if (res.ok) {
+          const data = await res.json();
+          setCalendarUrl(data.url);
+          await navigator.clipboard.writeText(data.url);
+        }
+      } else {
+        await navigator.clipboard.writeText(calendarUrl);
+      }
+      setCopiedToClipboard(true);
+      setTimeout(() => setCopiedToClipboard(false), 2000);
+    } catch {
+      // Fallback: show error
+      console.error("Failed to copy calendar URL");
+    }
   };
 
   const loadProfile = useCallback(async () => {
@@ -409,12 +426,14 @@ export default function SettingsPage() {
     }
   };
 
-  // Account deletion
+  // Account deletion — uses RPC for atomic cascade across all tables
   const handleDeleteAccount = async () => {
     setDeleteError("");
     setDeletingAccount(true);
     try {
-      const { error } = await supabase.from("profiles").delete().eq("id", userId);
+      const { error } = await supabase.rpc("delete_user_account", {
+        target_user_id: userId,
+      });
       if (error) throw error;
       await supabase.auth.signOut();
       router.push("/");

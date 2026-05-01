@@ -18,7 +18,7 @@ Core insight: calendar reminders tell you a birthday is coming — Daysight tell
 
 ```bash
 npm install
-cp .env.local.example .env.local     # fill in Supabase + Resend keys (see Environment Variables below)
+# Create .env.local with required vars (see Environment Variables below)
 npm run dev                           # http://localhost:3000
 npm run build                         # always run before pushing — catches TS errors Vercel will reject
 ```
@@ -89,6 +89,7 @@ projectlandmarks/
 │   │   ├── terms/page.tsx            Terms of Service (15 sections)
 │   │   ├── contact/page.tsx          Contact form (client-side, posts to /api/contact)
 │   │   ├── consent/page.tsx           Consent gate for existing users (outside (app) to avoid redirect loop)
+│   │   ├── unsubscribe/page.tsx      HMAC-verified email unsubscribe (no login required)
 │   │   ├── auth/
 │   │   │   ├── page.tsx              Sign in / sign up (with consent checkboxes on signup)
 │   │   │   ├── callback/route.ts     Supabase auth callback (open redirect protection)
@@ -103,7 +104,9 @@ projectlandmarks/
 │   │   │       ├── resend/route.ts      Resend delivery/open/click webhooks → conversion_events
 │   │   │       └── affiliate/route.ts   Affiliate purchase postbacks → conversion_events
 │   │   │   ├── contact/route.ts         Contact form → sends email via Resend
-│   │   │   └── calendar/[userId]/route.ts  iCalendar (.ics) subscription feed
+│   │   │   ├── calendar/[userId]/route.ts  iCalendar (.ics) subscription feed (HMAC-signed)
+│   │   │   ├── calendar-url/route.ts   Returns signed calendar URL for authenticated user
+│   │   │   └── unsubscribe/route.ts    HMAC-verified unsubscribe API endpoint
 │   │   ├── layout.tsx                Root layout (Inter via next/font, SEO metadata)
 │   │   ├── page.tsx                  Landing page (full marketing: hero, mockup, how-it-works, comparison, CTA, privacy promise)
 │   │   └── globals.css
@@ -127,6 +130,7 @@ projectlandmarks/
 │   │   ├── gift-engine.ts            Weighted scoring engine: scoreGift() + selectGiftsScored()
 │   │   ├── reminders.ts              Shared reminder logic: date math, window matching, idempotency, send caps, rate-limit detection
 │   │   ├── resend.ts                 Resend client instance (with env validation)
+│   │   ├── tokens.ts                 HMAC-signed token generation/verification (unsubscribe, calendar)
 │   │   ├── utils.ts                  Shared utilities (includes compareTokens for timing-safe auth)
 │   │   └── constants.ts              Shared gift categories type + array
 │   ├── __tests__/
@@ -139,7 +143,8 @@ projectlandmarks/
 │   ├── 004_seed_gift_catalog.sql     ~30 sample gifts across all categories/tiers with affinities + tags
 │   ├── 005_email_overrides.sql       email_overrides table for admin custom messages per reminder slot
 │   ├── 006_atomic_drips_sent.sql     RPC function for atomic drips_sent JSONB updates
-│   └── 007_consent_columns.sql      Adds consent_terms, consent_emails, consent_at to profiles; updates handle_new_user() trigger
+│   ├── 007_consent_columns.sql      Adds consent_terms, consent_emails, consent_at to profiles; updates handle_new_user() trigger
+│   └── 008_delete_user_cascade.sql  RPC function delete_user_account() for atomic account deletion
 ├── vercel.json                       Cron schedules (all UTC)
 ├── package.json
 ├── tsconfig.json
@@ -166,7 +171,7 @@ projectlandmarks/
 
 **Consent gating (Amazon affiliate compliance):** Two mandatory checkboxes at signup: (1) agree to Privacy Policy and Terms of Service, (2) agree to receive reminder emails with affiliate links from Amazon.com. Both must be checked before account creation. Consent values are passed via Supabase user metadata and written to `profiles` by the `handle_new_user()` trigger (migration 007). For existing users who signed up before consent was implemented, `(app)/layout.tsx` checks `profiles.consent_terms` and `profiles.consent_emails` — if either is false/null, the user is redirected to `/consent` (a standalone page outside the `(app)` route group to avoid infinite redirect loops). All three cron routes also gate on consent before sending any email. No emails are sent and no platform access is granted until both consents are recorded.
 
-**Security hardening:** All cron routes and webhook endpoints use timing-safe token comparison via `compareTokens()` in `src/lib/utils.ts` (wraps `crypto.timingSafeEqual`). Auth callback validates the `next` parameter against open redirect attacks (rejects protocol-prefixed URLs and double-slash paths). Webhook auth is bearer-token-only (svix-id fallback removed). Gift tag matching uses exact string comparison (not substring).
+**Security hardening:** All cron routes and webhook endpoints use timing-safe token comparison via `compareTokens()` in `src/lib/utils.ts` (wraps `crypto.timingSafeEqual`). Auth callback validates the `next` parameter against open redirect attacks (rejects protocol-prefixed URLs and double-slash paths). Webhook auth is bearer-token-only (svix-id fallback removed). Gift tag matching uses exact string comparison (not substring). Unsubscribe and calendar feed URLs use HMAC-signed tokens (`src/lib/tokens.ts`) derived from CRON_SECRET — no raw UUIDs in email links. Affiliate webhook cross-checks `user_id` against `reminder_log` owner to prevent attribution fraud. Forgot-password always returns generic "check your email" response to prevent email enumeration. Account deletion uses atomic Postgres RPC to prevent orphaned data.
 
 **Email system:** Three cron routes send emails via Resend using React Email templates. Reminders check each verified user's events against reminder windows (21/7/3 days), select gifts from `gift_catalog`, send via Resend, and log to `reminder_log` + `shown_gifts`. Digest sends a monthly summary. Re-engagement sends D+3/D+10/D+30 drip emails to users with zero contacts, tracked via `profiles.drips_sent` JSONB (not `reminder_log`, which has FK constraints on `event_id`/`contact_id`).
 
@@ -253,6 +258,12 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - Dashboard "This month" stat card, 30/90-day filter toggle, email preview modal
 - Feb 29 leap year handling (falls back to Feb 28 in non-leap years)
 - Gift tag matching uses exact string comparison (not substring) to prevent false positives
+- HMAC-signed unsubscribe links (all emails) with `/unsubscribe` page and `/api/unsubscribe` POST endpoint
+- HMAC-signed calendar feed URLs (replaces raw UUID auth on `/api/calendar/[userId]`)
+- Atomic account deletion via Postgres RPC `delete_user_account()` (migration 008) — cascades all user data
+- Affiliate webhook validates user_id ownership against reminder_log
+- Consent page "No thanks, sign me out" decline option
+- Forgot-password shows generic response for all outcomes (prevents email enumeration)
 
 ### Prototype (legacy HTML — feature-complete reference)
 - All of the above plus: gift category preferences UI, budget tiers, cookie consent, admin panel, email preview dev tool, data export, account deletion with cascade, recycling bin with countdown badges, Settings tabs (General/Password/Recycling Bin)
@@ -270,9 +281,14 @@ All cron routes (`reminders`, `digest`, `reengagement`) implement resilience aga
 - ~~Gift selection is basic filter~~ ✅ Resolved in Phase 6. Weighted scoring engine with affinity matching, repeat avoidance, and seeded variety.
 - ~~No cron-side rate-limit handling~~ ✅ Resolved. All three cron routes detect Resend 429 and stop processing. Per-user send cap (3/day) prevents post-outage floods. See § Email Resilience.
 - ~~No user-facing rate-limit handling for auth~~ ✅ Resolved. Auth pages (sign-in, sign-up, forgot-password) detect Supabase 429 responses and show friendly "Too many attempts" messages.
-- ~~No automated tests~~ ✅ Resolved in Phase 9. 80 unit tests covering date math, window matching, gift scoring, idempotency keys, and edge cases (Feb 29, Dec 31 rollover). Run: `npx tsx src/__tests__/reminders.test.ts`. Integration tests for auth + onboarding flow still needed.
+- ~~No automated tests~~ ✅ Resolved in Phase 9. ~73 unit tests across 14 suites covering date math, window matching, gift scoring, idempotency keys, and edge cases (Feb 29, Dec 31 rollover). Run: `npx tsx src/__tests__/reminders.test.ts`. Integration tests for auth + onboarding flow still needed.
 - **UI conformity sweep needed.** Significant visual drift between prototype and Next.js pages: emoji placeholders vs SVG icons, simplified button treatments, missing inline validation, copy differences, missing secondary features (notes field, multiple events in onboarding, etc.). Deferred to post-Phase 9.
 - ~~`/api/test-email` route must be removed~~ ✅ Resolved. Route has been deleted.
+- Privacy Policy and Terms of Service have mismatched data retention timelines (Privacy says 30 days; Terms doesn't specify). Should be aligned.
+- GDPR legal basis for processing is vague — should map each processing activity to a specific legal basis.
+- No `robots.txt` or `sitemap.xml` for SEO.
+- Contact form rate limiting is in-memory (per serverless instance) — can be bypassed by distributed requests. Consider Upstash Redis for production.
+- Digest and re-engagement cron routes lack pre-send dedup logging (acceptable tradeoff, documented in § Email Resilience).
 
 ## Remaining Migration Work
 
@@ -320,11 +336,13 @@ For prototype reference (legacy):
 | `/api/cron/reminders` | GET | Vercel Cron daily 12:00 UTC | `Bearer CRON_SECRET` | Sends reminder emails for events within range-based 21/7/3-day windows (see § Email Resilience) |
 | `/api/cron/digest` | GET | Vercel Cron 1st of month 14:00 UTC | `Bearer CRON_SECRET` | Monthly digest for users with upcoming events |
 | `/api/cron/reengagement` | GET | Vercel Cron daily 13:00 UTC | `Bearer CRON_SECRET` | D+3/D+10/D+30 drip for users with zero contacts |
-| `/api/webhooks/resend` | POST | Resend webhook | `RESEND_WEBHOOK_SECRET` or svix-id | Updates reminder_log status + inserts opened/clicked into conversion_events |
+| `/api/webhooks/resend` | POST | Resend webhook | `Bearer RESEND_WEBHOOK_SECRET` | Updates reminder_log status + inserts opened/clicked into conversion_events |
 | `/api/webhooks/affiliate` | POST | Affiliate partner | `Bearer AFFILIATE_WEBHOOK_SECRET` | Inserts purchased event with commission into conversion_events |
 | `/api/cron/purge` | GET | Vercel Cron daily 04:00 UTC | `Bearer CRON_SECRET` | Hard-deletes soft-deleted contacts older than 7 days |
 | `/api/contact` | POST | Contact form | IP rate limit (5/15min) | Forwards contact form submission via Resend to hello@daysight.xyz |
-| `/api/calendar/[userId]` | GET | Calendar apps | None (UUID as token) | Returns .ics calendar feed with yearly recurring events |
+| `/api/calendar/[userId]` | GET | Calendar apps | HMAC `token` query param | Returns .ics calendar feed with yearly recurring events |
+| `/api/calendar-url` | GET | Settings page | Session cookie | Returns HMAC-signed calendar subscription URL |
+| `/api/unsubscribe` | POST | Unsubscribe page | HMAC `uid` + `token` in body | Sets consent_emails=false on user profile |
 | `/auth/callback` | GET | Supabase redirect | — | Handles OAuth/magic-link callbacks, exchanges code for session |
 
 ## Supabase Schema (Core Tables)

@@ -32,13 +32,14 @@ function ForgotPasswordForm() {
       // Detect rate limiting (Supabase free tier: 3-4 auth emails/hour)
       if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
         setError("Too many requests. Please wait a few minutes and try again.");
-      } else {
-        setError(error.message);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-      return;
+      // For all other errors (including "user not found"), show the same generic
+      // success message to prevent email enumeration attacks.
     }
 
+    // Always show "check your email" regardless of whether the account exists
     setSent(true);
     setLoading(false);
   };

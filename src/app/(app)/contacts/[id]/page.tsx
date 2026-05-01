@@ -89,7 +89,8 @@ const GIFT_OPTIONS = [
   { value: "treats", label: "Treats" },
   { value: "gift_card", label: "Gift Card" },
   { value: "experiences", label: "Experience" },
-  { value: "donation", label: "Donation" },
+  { value: "home", label: "Home" },
+  { value: "accessories", label: "Accessories" },
 ];
 
 const URGENCY_STYLES = {
@@ -202,11 +203,12 @@ export default function ContactDetailPage() {
     setSavingEvent(true);
     setEventError("");
 
-    const clampedDay = Math.min(eventForm.day, maxDays);
-    if (clampedDay !== eventForm.day) {
+    // Reject invalid day for the selected month instead of silently clamping
+    if (eventForm.day > maxDays) {
       const monthName = MONTHS.find((m) => m.value === eventForm.month)?.label || "Month";
-      setDayAdjusted(`Day adjusted to ${clampedDay} for ${monthName}`);
-      setTimeout(() => setDayAdjusted(""), 3000);
+      setEventError(`${monthName} only has ${maxDays} days. Please select a valid day.`);
+      setSavingEvent(false);
+      return;
     }
 
     const payload = {
@@ -215,7 +217,7 @@ export default function ContactDetailPage() {
       event_type: eventForm.event_type,
       event_label: eventForm.event_type === "custom" ? eventForm.event_label.trim() : "",
       month: eventForm.month,
-      day: clampedDay,
+      day: eventForm.day,
       year_started: eventForm.year_started ? parseInt(eventForm.year_started) : null,
       one_time: eventForm.one_time,
       event_year: eventForm.one_time && eventForm.event_year ? parseInt(eventForm.event_year) : null,

@@ -22,6 +22,7 @@ interface DigestEmailProps {
   monthName: string;
   events: DigestEvent[];
   userId: string;
+  unsubscribeUrl?: string;
 }
 
 const brandOrange = "#d05a32";
@@ -51,7 +52,9 @@ export default function DigestEmail({
   monthName = "April",
   events = [],
   userId = "",
+  unsubscribeUrl,
 }: DigestEmailProps) {
+  const unsubLink = unsubscribeUrl || "https://daysight.xyz/settings";
   return (
     <Html>
       <Head />
@@ -90,7 +93,7 @@ export default function DigestEmail({
                       </td>
                       <td style={{ verticalAlign: "middle", textAlign: "right" as const }}>
                         <Link href={`https://daysight.xyz/contacts/${evt.contactId}`} style={{ background: "#f3f4f6", color: "#374151", textDecoration: "none", fontSize: "12px", fontWeight: 600, padding: "6px 14px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-                          Shop →
+                          View →
                         </Link>
                       </td>
                     </tr>
@@ -111,7 +114,7 @@ export default function DigestEmail({
                 </tbody>
               </table>
               <Text style={{ color: "#9ca3af", fontSize: "11px", margin: 0 }}>
-                Daysight · Monthly digest · <Link href={`https://daysight.xyz/unsubscribe?token=${userId}`} style={{ color: "#9ca3af" }}>Unsubscribe</Link>
+                Daysight · Monthly digest · <Link href={unsubLink} style={{ color: "#9ca3af" }}>Unsubscribe</Link>
               </Text>
             </Section>
           </Section>

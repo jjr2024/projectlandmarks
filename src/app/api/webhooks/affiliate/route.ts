@@ -59,26 +59,52 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // If reminder_id is provided, look up lead time for analytics
+  // Require at least one of reminder_id or user_id for attribution
+  if (!body.reminder_id && !body.user_id) {
+    return NextResponse.json({ error: "Must provide reminder_id or user_id" }, { status: 400 });
+  }
+
+  // If reminder_id is provided, look up the reminder and cross-check user_id
   let reminderLead: number | null = null;
+  let verifiedUserId: string | null = body.user_id || null;
+
   if (body.reminder_id) {
     const { data: log } = await supabase
       .from("reminder_log")
-      .select("days_before")
+      .select("days_before, user_id")
       .eq("id", body.reminder_id)
       .maybeSingle();
-    reminderLead = log?.days_before || null;
+
+    if (!log) {
+      return NextResponse.json({ error: "reminder_id not found" }, { status: 400 });
+    }
+
+    reminderLead = log.days_before || null;
+
+    // If both reminder_id and user_id provided, they must match
+    if (body.user_id && log.user_id !== body.user_id) {
+      console.error(`Affiliate webhook user_id mismatch: body=${body.user_id}, reminder=${log.user_id}`);
+      return NextResponse.json({ error: "user_id does not match reminder owner" }, { status: 400 });
+    }
+
+    // Use the verified user_id from the reminder_log
+    verifiedUserId = log.user_id;
   }
 
-  await supabase.from("conversion_events").insert({
+  const { error: insertError } = await supabase.from("conversion_events").insert({
     reminder_id: body.reminder_id || null,
-    user_id: body.user_id || null,
+    user_id: verifiedUserId,
     event_type: "purchased",
     partner: body.partner,
     gift_category: body.gift_category || null,
     reminder_lead: reminderLead,
-    commission: body.commission,
+    commission,
   });
+
+  if (insertError) {
+    console.error("Failed to insert conversion event:", insertError);
+    return NextResponse.json({ error: "Failed to record conversion" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
