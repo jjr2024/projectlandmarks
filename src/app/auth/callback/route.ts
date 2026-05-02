@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -16,12 +17,42 @@ export async function GET(request: Request) {
   }
 
   if (code) {
-    const supabase = createClient();
+    // Create the redirect response FIRST so we can wire session cookies to it.
+    // The previous implementation used the shared createClient() from server.ts
+    // which sets cookies via cookies() from next/headers — those don't propagate
+    // to a separately constructed NextResponse.redirect(). This caused password
+    // reset (and any other code-exchange flow) to silently lose the session.
+    const cookieStore = cookies();
+    const redirectResponse = NextResponse.redirect(`${origin}${next}`);
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              redirectResponse.cookies.set(name, value, options as any);
+            });
+          },
+        },
+      }
+    );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return redirectResponse;
     }
+
+    // Log the error so we can diagnose callback failures in Vercel logs
+    console.error("[auth/callback] Code exchange failed:", error.message, {
+      code: code.slice(0, 8) + "...",
+      next,
+    });
   }
 
   // If no code or exchange failed, redirect to auth with error
