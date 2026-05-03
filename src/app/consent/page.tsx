@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ConsentPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [consentTerms, setConsentTerms] = useState(false);
@@ -36,7 +34,7 @@ export default function ConsentPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // Session expired — redirect to sign in
-        router.push("/auth");
+        window.location.href = "/auth";
         return;
       }
 
@@ -53,7 +51,10 @@ export default function ConsentPage() {
         throw updateError;
       }
 
-      router.push("/dashboard");
+      // Full navigation to bypass Next.js Router Cache — router.push()
+      // would serve the stale RSC payload from (app)/layout.tsx which
+      // still sees consent=false and redirects back here.
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Failed to save consent. Please try again.");
       setLoading(false);
