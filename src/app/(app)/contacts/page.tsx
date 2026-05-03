@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import Link from "next/link";
 import { getInitials, relationshipLabel, giftLabel } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
@@ -154,13 +155,13 @@ export default function ContactsPage() {
       const res = await supabase.from("contacts").insert({ ...payload, user_id: userId });
       error = res.error;
     } else if (modalMode === "edit" && editingId) {
-      const res = await supabase.from("contacts").update(payload).eq("id", editingId);
+      const res = await supabase.from("contacts").update(payload).eq("id", editingId).eq("user_id", userId);
       error = res.error;
     }
 
     setSaving(false);
     if (error) {
-      setSaveError(error.message || "Failed to save contact. Please try again.");
+      setSaveError(friendlyError(error, "save this contact"));
       return;
     }
 
@@ -173,7 +174,8 @@ export default function ContactsPage() {
     await supabase
       .from("contacts")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", deleteTarget.id);
+      .eq("id", deleteTarget.id)
+      .eq("user_id", userId);
     setDeleteTarget(null);
     await loadContacts();
   };

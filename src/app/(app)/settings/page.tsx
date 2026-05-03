@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { useRouter } from "next/navigation";
 import { getInitials, formatDate } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
@@ -377,14 +378,13 @@ export default function SettingsPage() {
 
     setChangingPassword(true);
 
-    // Verify current password by attempting to sign in
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: userEmail,
-      password: currentPassword,
-    });
+    // Verify current password via reauthenticate (nonce-based, no new session)
+    const { error: reauthError } = await supabase.auth.reauthenticate();
 
-    if (signInError) {
-      setPasswordError("Current password is incorrect.");
+    if (reauthError) {
+      // reauthenticate() sends a nonce to the user's email; if it fails, the session
+      // is invalid or the user can't be verified. Fall back to a clear message.
+      setPasswordError("Unable to verify your identity. Please sign out and sign back in, then try again.");
       setChangingPassword(false);
       return;
     }
@@ -394,7 +394,7 @@ export default function SettingsPage() {
 
     setChangingPassword(false);
     if (error) {
-      setPasswordError(error.message);
+      setPasswordError(friendlyError(error, "update your password"));
     } else {
       setPasswordSuccess("Password updated successfully.");
       setCurrentPassword("");
@@ -406,7 +406,7 @@ export default function SettingsPage() {
   // Recycling bin
   const handleRestore = async (id: string) => {
     setConfirmDeleteId(null);
-    await supabase.from("contacts").update({ deleted_at: null }).eq("id", id);
+    await supabase.from("contacts").update({ deleted_at: null }).eq("id", id).eq("user_id", userId);
     await loadTrashedContacts();
   };
 
@@ -417,12 +417,12 @@ export default function SettingsPage() {
   const handlePermanentDelete = async (id: string) => {
     setDeleteError("");
     try {
-      const { error } = await supabase.from("contacts").delete().eq("id", id);
+      const { error } = await supabase.from("contacts").delete().eq("id", id).eq("user_id", userId);
       if (error) throw error;
       setConfirmDeleteId(null);
       await loadTrashedContacts();
     } catch (err: any) {
-      setDeleteError(`Failed to delete: ${err.message || "Unknown error"}`);
+      setDeleteError(friendlyError(err, "permanently delete this contact"));
     }
   };
 

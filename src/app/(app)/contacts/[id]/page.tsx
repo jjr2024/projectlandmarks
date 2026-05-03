@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -230,13 +231,13 @@ export default function ContactDetailPage() {
       const res = await supabase.from("events").insert(payload);
       error = res.error;
     } else if (editingEventId) {
-      const res = await supabase.from("events").update(payload).eq("id", editingEventId);
+      const res = await supabase.from("events").update(payload).eq("id", editingEventId).eq("user_id", userId);
       error = res.error;
     }
 
     setSavingEvent(false);
     if (error) {
-      setEventError(error.message || "Failed to save event. Please try again.");
+      setEventError(friendlyError(error, "save this event"));
       return;
     }
 
@@ -251,9 +252,10 @@ export default function ContactDetailPage() {
     const { error } = await supabase
       .from("events")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", deleteEventTarget.id);
+      .eq("id", deleteEventTarget.id)
+      .eq("user_id", userId);
     if (error) {
-      setEventError(error.message || "Failed to delete event. Please try again.");
+      setEventError(friendlyError(error, "delete this event"));
       return;
     }
     setDeleteEventTarget(null);
@@ -302,11 +304,12 @@ export default function ContactDetailPage() {
         budget_tier: contactForm.budget_tier || null,
         notes: contactForm.notes.trim(),
       })
-      .eq("id", contactId);
+      .eq("id", contactId)
+      .eq("user_id", userId);
 
     setSavingContact(false);
     if (error) {
-      setContactError(error.message || "Failed to save. Please try again.");
+      setContactError(friendlyError(error, "save this contact"));
       return;
     }
 
