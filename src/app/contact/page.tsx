@@ -9,12 +9,14 @@ export default function ContactPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorDetail, setErrorDetail] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !message.trim()) return;
 
     setStatus("sending");
+    setErrorDetail("");
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -28,9 +30,12 @@ export default function ContactPage() {
         setEmail("");
         setMessage("");
       } else {
+        const data = await res.json().catch(() => null);
+        setErrorDetail(data?.error || `Server returned ${res.status}`);
         setStatus("error");
       }
-    } catch {
+    } catch (err: any) {
+      setErrorDetail(err?.message || "Network error");
       setStatus("error");
     }
   }
@@ -111,10 +116,14 @@ export default function ContactPage() {
               </div>
 
               {status === "error" && (
-                <p className="text-sm text-red-600">
-                  Something went wrong. Please try again or email us directly at{" "}
-                  <a href="mailto:info@daysight.xyz" className="underline">info@daysight.xyz</a>.
-                </p>
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+                  <p>Something went wrong. Please try again or email us directly at{" "}
+                    <a href="mailto:info@daysight.xyz" className="underline">info@daysight.xyz</a>.
+                  </p>
+                  {errorDetail && (
+                    <p className="mt-1 text-xs text-red-500">{errorDetail}</p>
+                  )}
+                </div>
               )}
 
               <button

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function ForgotPasswordForm() {
@@ -11,13 +10,7 @@ function ForgotPasswordForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
-  const searchParams = useSearchParams();
   const supabase = createClient();
-
-  useEffect(() => {
-    const prefill = searchParams.get("email");
-    if (prefill) setEmail(prefill);
-  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,11 +18,10 @@ function ForgotPasswordForm() {
     setLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // Route through /auth/callback so the code is exchanged for a
-      // session BEFORE the user lands on the reset-password page.
-      // Without this, reset-password has no session and updateUser() fails
-      // with "Auth session missing".
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+      // Redirect directly to reset-password (PKCE flow).
+      // The code param is exchanged client-side on that page,
+      // avoiding server-side cookie issues in mobile in-app browsers.
+      redirectTo: `${window.location.origin}/auth/reset-password`,
     });
 
     if (error) {

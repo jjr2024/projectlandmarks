@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import Link from "next/link";
 import { getInitials, relationshipLabel, giftLabel } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 
 interface Contact {
@@ -53,6 +54,7 @@ const EMPTY_FORM = {
 };
 
 export default function ContactsPage() {
+  const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -151,9 +153,11 @@ export default function ContactsPage() {
     };
 
     let error;
+    let newContactId: string | null = null;
     if (modalMode === "add") {
-      const res = await supabase.from("contacts").insert({ ...payload, user_id: userId });
+      const res = await supabase.from("contacts").insert({ ...payload, user_id: userId }).select("id").single();
       error = res.error;
+      newContactId = res.data?.id || null;
     } else if (modalMode === "edit" && editingId) {
       const res = await supabase.from("contacts").update(payload).eq("id", editingId).eq("user_id", userId);
       error = res.error;
@@ -166,16 +170,33 @@ export default function ContactsPage() {
     }
 
     closeModal();
+
+    // After adding a new contact, go straight to their detail page with the
+    // Add Event modal open so the user can set up their first event immediately.
+    if (modalMode === "add" && newContactId) {
+      router.push(`/contacts/${newContactId}?addEvent=true`);
+      return;
+    }
+
     await loadContacts();
   };
 
   const handleTrash = async () => {
     if (!deleteTarget) return;
+    const now = new Date().toISOString();
+    // Soft-delete the contact
     await supabase
       .from("contacts")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: now })
       .eq("id", deleteTarget.id)
       .eq("user_id", userId);
+    // Cascade soft-delete to child events so they don't appear in counts/reminders
+    await supabase
+      .from("events")
+      .update({ deleted_at: now })
+      .eq("contact_id", deleteTarget.id)
+      .eq("user_id", userId)
+      .is("deleted_at", null);
     setDeleteTarget(null);
     await loadContacts();
   };

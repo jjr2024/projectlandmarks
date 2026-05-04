@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await resend().emails.send({
+    const { error: sendError } = await resend().emails.send({
       from: "Daysight Contact Form <noreply@daysight.xyz>",
       to: "info@daysight.xyz",
       replyTo: senderEmail,
@@ -99,9 +99,14 @@ export async function POST(request: NextRequest) {
       ].join("\n"),
     });
 
+    if (sendError) {
+      console.error("Contact form Resend error:", sendError);
+      return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error: any) {
-    console.error("Contact form email failed:", error);
+    console.error("Contact form email failed:", error?.message || error);
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

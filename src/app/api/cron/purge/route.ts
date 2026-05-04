@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { compareTokens } from "@/lib/utils";
+import { TRASH_HOLD_DAYS } from "@/lib/constants";
 
 /**
  * GET /api/cron/purge
  *
  * Daily via Vercel Cron. Hard-deletes contacts and events whose `deleted_at`
- * timestamp is older than 7 days. Cascade deletes remove associated child rows
- * (events, reminder_log, shown_gifts, email_overrides) via FK ON DELETE CASCADE.
- *
- * This enforces the 7-day soft-delete expiry policy documented in CLAUDE.md.
+ * timestamp is older than TRASH_HOLD_DAYS. Cascade deletes remove associated
+ * child rows (events, reminder_log, shown_gifts, email_overrides) via FK ON DELETE CASCADE.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -27,8 +26,8 @@ export async function GET(request: NextRequest) {
   const now = new Date();
 
   try {
-    // Calculate the cutoff: 7 days ago (explicit UTC)
-    const cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Calculate the cutoff: TRASH_HOLD_DAYS ago (explicit UTC)
+    const cutoffDate = new Date(now.getTime() - TRASH_HOLD_DAYS * 24 * 60 * 60 * 1000);
     const cutoffISO = cutoffDate.toISOString();
 
     // Hard-delete contacts where deleted_at is older than 7 days

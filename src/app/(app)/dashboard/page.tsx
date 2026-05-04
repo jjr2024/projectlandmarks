@@ -109,8 +109,12 @@ export default function DashboardPage() {
     return () => clearTimeout(timeout);
   }, []);
 
+  // Defensive filter: exclude events whose parent contact was soft-deleted
+  const contactIds = new Set(contacts.map((c) => c.id));
+  const activeEvents = events.filter((e) => contactIds.has(e.contact_id));
+
   // Compute upcoming reminders
-  const upcoming: UpcomingReminder[] = events
+  const upcoming: UpcomingReminder[] = activeEvents
     .map((evt) => {
       const contact = contacts.find((c) => c.id === evt.contact_id);
       if (!contact) return null;
@@ -139,7 +143,7 @@ export default function DashboardPage() {
 
   // Count events this calendar month
   const currentMonth = new Date().getMonth() + 1;
-  const thisMonthCount = events.filter((e) => e.month === currentMonth).length;
+  const thisMonthCount = activeEvents.filter((e) => e.month === currentMonth).length;
 
   const URGENCY_STYLES = {
     urgent: "bg-red-100 text-red-800 border-red-200",
@@ -201,7 +205,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500 mb-1">Events tracked</p>
-          <p className="text-3xl font-bold text-gray-900">{events.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{activeEvents.length}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500 mb-1">Urgent (≤ 3 days)</p>

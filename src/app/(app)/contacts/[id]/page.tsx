@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   getInitials,
@@ -100,9 +100,10 @@ const URGENCY_STYLES = {
   upcoming: "bg-green-100 text-green-800",
 };
 
-export default function ContactDetailPage() {
+function ContactDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const contactId = params.id as string;
 
   const [contact, setContact] = useState<Contact | null>(null);
@@ -164,6 +165,15 @@ export default function ContactDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Auto-open Add Event modal when redirected from new-contact flow
+  useEffect(() => {
+    if (searchParams.get("addEvent") === "true") {
+      setEventModal("add");
+      // Clean up the URL so refreshing doesn't re-open the modal
+      router.replace(`/contacts/${contactId}`, { scroll: false });
+    }
+  }, [searchParams, contactId, router]);
 
   // Max days for selected month
   const maxDays = DAYS_IN_MONTH[eventForm.month] || 31;
@@ -853,5 +863,13 @@ export default function ContactDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ContactDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><p className="text-gray-400">Loading...</p></div>}>
+      <ContactDetailContent />
+    </Suspense>
   );
 }

@@ -45,6 +45,18 @@ interface TrashedContact {
   days_left: number;
 }
 
+interface TrashedEvent {
+  id: string;
+  contact_id: string;
+  event_type: string;
+  event_label: string;
+  month: number;
+  day: number;
+  deleted_at: string;
+  days_left: number;
+  contact_name: string;
+}
+
 const TABS = [
   { key: "general", label: "General" },
   { key: "password", label: "Password" },
@@ -112,16 +124,18 @@ function formatHour(h: number): string {
   return `${h - 12}:00 PM`;
 }
 
-const TRASH_HOLD_DAYS = 7;
+import { TRASH_HOLD_DAYS } from "@/lib/constants";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState("general");
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [initialProfile, setInitialProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [userId, setUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
 
   // Password tab
   const [currentPassword, setCurrentPassword] = useState("");
@@ -133,6 +147,8 @@ export default function SettingsPage() {
 
   // Recycling bin
   const [trashedContacts, setTrashedContacts] = useState<TrashedContact[]>([]);
+  const [trashedEvents, setTrashedEvents] = useState<TrashedEvent[]>([]);
+  const [binSubTab, setBinSubTab] = useState<"contacts" | "events">("contacts");
   const [loadingBin, setLoadingBin] = useState(false);
 
   // Account deletion
@@ -271,29 +287,58 @@ export default function SettingsPage() {
       .eq("id", user.id)
       .single();
 
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+      setInitialProfile(data);
+    }
     setLoading(false);
   }, []);
 
   const loadTrashedContacts = useCallback(async () => {
     if (!userId) return;
     setLoadingBin(true);
-    const { data } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("user_id", userId)
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: true });
+
+    const [contactsRes, eventsRes, allContactsRes] = await Promise.all([
+      supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: true }),
+      supabase
+        .from("events")
+        .select("*")
+        .eq("user_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: true }),
+      // Need all contacts (including active ones) to show names for trashed events
+      supabase
+        .from("contacts")
+        .select("id, first_name, last_name")
+        .eq("user_id", userId),
+    ]);
 
     const now = new Date();
-    const withCountdown = (data || []).map((c: any) => {
-      const deletedAt = new Date(c.deleted_at);
+    const addCountdown = (row: any) => {
+      const deletedAt = new Date(row.deleted_at);
       const expiresAt = new Date(deletedAt.getTime() + TRASH_HOLD_DAYS * 24 * 60 * 60 * 1000);
-      const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-      return { ...c, days_left: daysLeft };
-    });
+      return Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    };
 
-    setTrashedContacts(withCountdown);
+    const contactMap = new Map(
+      (allContactsRes.data || []).map((c: any) => [c.id, `${c.first_name} ${c.last_name || ""}`.trim()])
+    );
+
+    setTrashedContacts(
+      (contactsRes.data || []).map((c: any) => ({ ...c, days_left: addCountdown(c) }))
+    );
+    setTrashedEvents(
+      (eventsRes.data || []).map((e: any) => ({
+        ...e,
+        days_left: addCountdown(e),
+        contact_name: contactMap.get(e.contact_id) || "Unknown contact",
+      }))
+    );
     setLoadingBin(false);
   }, [userId]);
 
@@ -319,6 +364,41 @@ export default function SettingsPage() {
     if (userId) loadCascadeCounts();
   }, [userId, loadCascadeCounts]);
 
+  // Unsaved changes detection (General tab only)
+  const hasUnsavedChanges =
+    profile !== null &&
+    initialProfile !== null &&
+    JSON.stringify(profile) !== JSON.stringify(initialProfile);
+
+  // Warn on browser close / hard navigation when unsaved changes exist
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
+
+  // Tab switch guard — intercept and ask for confirmation
+  const handleTabSwitch = (key: string) => {
+    if (key === tab) return;
+    if (tab === "general" && hasUnsavedChanges) {
+      setPendingTab(key);
+      return;
+    }
+    setTab(key);
+  };
+
+  const confirmTabSwitch = () => {
+    if (pendingTab) {
+      // Revert to saved state
+      if (initialProfile) setProfile(initialProfile);
+      setTab(pendingTab);
+      setPendingTab(null);
+    }
+  };
+
   // General tab handlers
   const handleSaveProfile = async () => {
     if (!profile) return;
@@ -340,7 +420,12 @@ export default function SettingsPage() {
       .eq("id", userId);
 
     setSaving(false);
-    setSaveMsg(error ? "Failed to save." : "Saved!");
+    if (error) {
+      setSaveMsg("Failed to save.");
+    } else {
+      setSaveMsg("Saved!");
+      setInitialProfile(profile); // Mark current state as saved
+    }
     setTimeout(() => setSaveMsg(""), 2000);
   };
 
@@ -406,8 +491,45 @@ export default function SettingsPage() {
   // Recycling bin
   const handleRestore = async (id: string) => {
     setConfirmDeleteId(null);
+    // Read the contact's deleted_at so we can scope the event restore to only
+    // cascade-deleted events (same timestamp). Individually trashed events
+    // will have a different, earlier deleted_at and stay in the bin.
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("deleted_at")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+    // Restore the contact
     await supabase.from("contacts").update({ deleted_at: null }).eq("id", id).eq("user_id", userId);
+    // Only restore child events whose deleted_at matches the contact's (cascade-deleted)
+    if (contact?.deleted_at) {
+      await supabase
+        .from("events")
+        .update({ deleted_at: null })
+        .eq("contact_id", id)
+        .eq("user_id", userId)
+        .eq("deleted_at", contact.deleted_at);
+    }
     await loadTrashedContacts();
+  };
+
+  const handleRestoreEvent = async (id: string) => {
+    setConfirmDeleteId(null);
+    await supabase.from("events").update({ deleted_at: null }).eq("id", id).eq("user_id", userId);
+    await loadTrashedContacts();
+  };
+
+  const handlePermanentDeleteEvent = async (id: string) => {
+    setDeleteError("");
+    try {
+      const { error } = await supabase.from("events").delete().eq("id", id).eq("user_id", userId);
+      if (error) throw error;
+      setConfirmDeleteId(null);
+      await loadTrashedContacts();
+    } catch (err: any) {
+      setDeleteError(friendlyError(err, "permanently delete this event"));
+    }
   };
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -443,29 +565,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Data export
-  const handleExport = async () => {
-    const [contacts, events] = await Promise.all([
-      supabase.from("contacts").select("*").eq("user_id", userId).is("deleted_at", null),
-      supabase.from("events").select("*").eq("user_id", userId).is("deleted_at", null),
-    ]);
-
-    const data = {
-      exported_at: new Date().toISOString(),
-      profile,
-      contacts: contacts.data || [],
-      events: events.data || [],
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `daysight-export-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   if (loading || !profile) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -483,7 +582,7 @@ export default function SettingsPage() {
         {TABS.map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => handleTabSwitch(t.key)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === t.key
                 ? "border-brand-600 text-brand-600"
@@ -491,9 +590,9 @@ export default function SettingsPage() {
             }`}
           >
             {t.label}
-            {t.key === "bin" && trashedContacts.length > 0 && (
+            {t.key === "bin" && (trashedContacts.length + trashedEvents.length) > 0 && (
               <span className="ml-1.5 bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">
-                {trashedContacts.length}
+                {trashedContacts.length + trashedEvents.length}
               </span>
             )}
           </button>
@@ -691,12 +790,6 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Data & Privacy</h2>
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={handleExport}
-                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-              >
-                Export my data
-              </button>
-              <button
                 onClick={() => {
                   setDeleteReason("");
                   setDeleteReasonOther("");
@@ -720,6 +813,9 @@ export default function SettingsPage() {
             </button>
             {saveMsg && (
               <span className="text-sm text-green-600 font-medium">{saveMsg}</span>
+            )}
+            {hasUnsavedChanges && !saveMsg && (
+              <span className="text-sm text-amber-600 font-medium">Unsaved changes</span>
             )}
           </div>
         </div>
@@ -792,8 +888,31 @@ export default function SettingsPage() {
       {tab === "bin" && (
         <div>
           <p className="text-sm text-gray-500 mb-4">
-            Deleted contacts are kept for 7 days before permanent removal.
+            Deleted items are kept for {TRASH_HOLD_DAYS} days before permanent removal.
           </p>
+
+          {/* Sub-tabs: Contacts / Events */}
+          <div className="flex gap-1 mb-4">
+            {(["contacts", "events"] as const).map((st) => (
+              <button
+                key={st}
+                onClick={() => { setBinSubTab(st); setConfirmDeleteId(null); }}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  binSubTab === st
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {st === "contacts" ? "Contacts" : "Events"}
+                {st === "contacts" && trashedContacts.length > 0 && (
+                  <span className="ml-1.5 text-xs opacity-70">({trashedContacts.length})</span>
+                )}
+                {st === "events" && trashedEvents.length > 0 && (
+                  <span className="ml-1.5 text-xs opacity-70">({trashedEvents.length})</span>
+                )}
+              </button>
+            ))}
+          </div>
 
           {deleteError && (
             <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
@@ -803,76 +922,177 @@ export default function SettingsPage() {
 
           {loadingBin ? (
             <p className="text-gray-400 text-sm">Loading...</p>
-          ) : trashedContacts.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center">
-              <p className="text-gray-400">The recycling bin is empty.</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-              {trashedContacts.map((c) => (
-                <div key={c.id} className="px-5 py-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm font-semibold shrink-0">
-                    {getInitials(c.first_name, c.last_name)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-700">
-                      {c.first_name} {c.last_name}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {c.days_left === 0
-                        ? "Expires today"
-                        : `${c.days_left} day${c.days_left !== 1 ? "s" : ""} left`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleRestore(c.id)}
-                      className="text-brand-600 hover:text-brand-700 text-sm font-medium"
-                    >
-                      Restore
-                    </button>
-                    {confirmDeleteId === c.id ? (
-                      <>
-                        <span className="text-xs text-gray-500">Are you sure?</span>
-                        <button
-                          onClick={() => handlePermanentDelete(c.id)}
-                          className="text-red-600 hover:text-red-700 text-xs font-semibold"
-                        >
-                          Yes, delete
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-gray-500 hover:text-gray-700 text-xs font-medium"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
+          ) : binSubTab === "contacts" ? (
+            /* ── Contacts sub-tab ── */
+            trashedContacts.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center">
+                <p className="text-gray-400">No deleted contacts.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                {trashedContacts.map((c) => (
+                  <div key={c.id} className="px-5 py-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm font-semibold shrink-0">
+                      {getInitials(c.first_name, c.last_name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-700">
+                        {c.first_name} {c.last_name}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {c.days_left === 0
+                          ? "Expires today"
+                          : `${c.days_left} day${c.days_left !== 1 ? "s" : ""} left`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setConfirmDeleteId(c.id)}
-                        className="text-red-500 hover:text-red-600 text-sm font-medium"
+                        onClick={() => handleRestore(c.id)}
+                        className="text-brand-600 hover:text-brand-700 text-sm font-medium"
                       >
-                        Delete forever
+                        Restore
                       </button>
-                    )}
+                      {confirmDeleteId === c.id ? (
+                        <>
+                          <span className="text-xs text-gray-500">Are you sure?</span>
+                          <button
+                            onClick={() => handlePermanentDelete(c.id)}
+                            className="text-red-600 hover:text-red-700 text-xs font-semibold"
+                          >
+                            Yes, delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-gray-500 hover:text-gray-700 text-xs font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(c.id)}
+                          className="text-red-500 hover:text-red-600 text-sm font-medium"
+                        >
+                          Delete forever
+                        </button>
+                      )}
+                    </div>
+                    <span
+                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                        c.days_left <= 1
+                          ? "bg-red-100 text-red-700"
+                          : c.days_left <= 3
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {c.days_left}d
+                    </span>
                   </div>
-
-                  {/* Countdown badge */}
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                      c.days_left <= 1
-                        ? "bg-red-100 text-red-700"
-                        : c.days_left <= 3
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {c.days_left}d
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
+          ) : (
+            /* ── Events sub-tab ── */
+            trashedEvents.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center">
+                <p className="text-gray-400">No deleted events.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                {trashedEvents.map((evt) => (
+                  <div key={evt.id} className="px-5 py-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-700">
+                        {evt.event_type === "custom" && evt.event_label
+                          ? evt.event_label
+                          : evt.event_type.charAt(0).toUpperCase() + evt.event_type.slice(1)}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {evt.contact_name} · {evt.month}/{evt.day} · {evt.days_left === 0
+                          ? "Expires today"
+                          : `${evt.days_left} day${evt.days_left !== 1 ? "s" : ""} left`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleRestoreEvent(evt.id)}
+                        className="text-brand-600 hover:text-brand-700 text-sm font-medium"
+                      >
+                        Restore
+                      </button>
+                      {confirmDeleteId === evt.id ? (
+                        <>
+                          <span className="text-xs text-gray-500">Are you sure?</span>
+                          <button
+                            onClick={() => handlePermanentDeleteEvent(evt.id)}
+                            className="text-red-600 hover:text-red-700 text-xs font-semibold"
+                          >
+                            Yes, delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-gray-500 hover:text-gray-700 text-xs font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(evt.id)}
+                          className="text-red-500 hover:text-red-600 text-sm font-medium"
+                        >
+                          Delete forever
+                        </button>
+                      )}
+                    </div>
+                    <span
+                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                        evt.days_left <= 1
+                          ? "bg-red-100 text-red-700"
+                          : evt.days_left <= 3
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {evt.days_left}d
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )
           )}
+        </div>
+      )}
+
+      {/* Unsaved changes confirmation modal */}
+      {pendingTab && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Unsaved changes">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-xs p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Unsaved changes</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              You have unsaved changes in your settings. Discard them?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setPendingTab(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+              >
+                Stay
+              </button>
+              <button
+                onClick={confirmTabSwitch}
+                className="bg-red-500 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

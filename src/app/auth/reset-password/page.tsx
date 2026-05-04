@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,19 +15,37 @@ export default function ResetPasswordPage() {
   const [noSession, setNoSession] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
-  // Check for a valid recovery session on mount.
-  // Without one, updateUser() will fail with "Auth session missing."
+  // PKCE flow: if a ?code= param is present (mobile in-app browser),
+  // exchange it client-side. Otherwise fall back to checking existing session
+  // (desktop flow where callback already set cookies).
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSessionReady(true);
-      } else {
-        setNoSession(true);
-      }
-    });
-  }, [supabase]);
+    const code = searchParams.get("code");
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          console.error("[reset-password] Code exchange failed:", error.message);
+          setNoSession(true);
+        } else {
+          setSessionReady(true);
+          // Clean up URL so refreshing doesn't re-attempt the exchange
+          router.replace("/auth/reset-password", { scroll: false });
+        }
+      });
+    } else {
+      // No code param — check for existing cookie-based session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setSessionReady(true);
+        } else {
+          setNoSession(true);
+        }
+      });
+    }
+  }, [supabase, searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,5 +188,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen flex items-center justify-center px-4"><div className="text-gray-400 text-sm">Loading...</div></main>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

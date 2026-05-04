@@ -158,7 +158,7 @@ export default function AuthPage() {
             <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 mb-4 text-sm">
               Having trouble?{" "}
               <Link
-                href={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                href="/auth/forgot-password"
                 className="font-semibold underline"
               >
                 Reset your password
@@ -219,7 +219,7 @@ export default function AuthPage() {
               {mode === "signin" && (
                 <div className="mt-1 text-right">
                   <Link
-                    href={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                    href="/auth/forgot-password"
                     className="text-sm text-brand-600 hover:underline"
                   >
                     Forgot password?
