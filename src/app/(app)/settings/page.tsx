@@ -6,6 +6,7 @@ import { friendlyError } from "@/lib/errors";
 import { useRouter } from "next/navigation";
 import { getInitials, formatDate } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
+import { Modal } from "@/components/Modal";
 
 interface Profile {
   id: string;
@@ -250,25 +251,26 @@ export default function SettingsPage() {
     return text.replace(/[\\,;]/g, (char) => `\\${char}`);
   };
 
-  // Copy subscription URL to clipboard (fetches signed URL from server)
+  // Calendar subscription URL — eagerly fetched on mount once userId is known
   const [calendarUrl, setCalendarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/calendar-url`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data?.url) setCalendarUrl(data.url); })
+      .catch(() => {});
+  }, [userId]);
+
   const copySubscriptionURL = async () => {
     try {
-      // Fetch the signed URL from a lightweight API endpoint
-      if (!calendarUrl) {
-        const res = await fetch(`/api/calendar-url`);
-        if (res.ok) {
-          const data = await res.json();
-          setCalendarUrl(data.url);
-          await navigator.clipboard.writeText(data.url);
-        }
-      } else {
-        await navigator.clipboard.writeText(calendarUrl);
+      const url = calendarUrl ?? (await fetch(`/api/calendar-url`).then((r) => r.json()).then((d) => d.url));
+      if (url) {
+        setCalendarUrl(url);
+        await navigator.clipboard.writeText(url);
+        setCopiedToClipboard(true);
+        setTimeout(() => setCopiedToClipboard(false), 2000);
       }
-      setCopiedToClipboard(true);
-      setTimeout(() => setCopiedToClipboard(false), 2000);
     } catch {
-      // Fallback: show error
       console.error("Failed to copy calendar URL");
     }
   };
@@ -732,7 +734,8 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  value={`https://daysight.xyz/api/calendar/${userId}.ics`}
+                  value={calendarUrl ?? ""}
+                  placeholder="Loading calendar URL…"
                   readOnly
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600 focus:outline-none"
                 />
@@ -1071,9 +1074,9 @@ export default function SettingsPage() {
       )}
 
       {/* Unsaved changes confirmation modal */}
-      {pendingTab && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Unsaved changes">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-xs p-6">
+      {/* Escape = Stay (safe default for destructive guard) */}
+      <Modal open={!!pendingTab} onClose={() => setPendingTab(null)} label="Unsaved changes" panelClassName="max-w-xs">
+        <div>
             <h2 className="text-lg font-bold text-gray-900 mb-2">Unsaved changes</h2>
             <p className="text-sm text-gray-500 mb-5">
               You have unsaved changes in your settings. Discard them?
@@ -1092,14 +1095,12 @@ export default function SettingsPage() {
                 Discard
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Delete reason modal (optional step before confirmation) */}
-      {showDeleteReasonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Delete reason">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+      <Modal open={showDeleteReasonModal} onClose={() => setShowDeleteReasonModal(false)} label="Delete reason">
+        <div>
             <h2 className="text-lg font-bold text-gray-900 mb-2">We&apos;re sorry to see you go</h2>
             <p className="text-sm text-gray-500 mb-4">
               Mind sharing why? This helps us improve Daysight.
@@ -1151,14 +1152,12 @@ export default function SettingsPage() {
                 Continue
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Delete account modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+      <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} label="Delete account">
+        <div>
             <h2 className="text-lg font-bold text-red-600 mb-2">Delete your account?</h2>
             <p className="text-sm text-gray-500 mb-4">
               This will permanently delete your account and all associated data:
@@ -1200,14 +1199,12 @@ export default function SettingsPage() {
                 {deletingAccount ? "Deleting..." : "Delete my account"}
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Calendar help modal */}
-      {showCalendarHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Calendar feed help">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[80vh] overflow-y-auto">
+      <Modal open={showCalendarHelp} onClose={() => setShowCalendarHelp(false)} label="Calendar feed help" panelClassName="max-w-md max-h-[80vh] overflow-y-auto">
+        <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">How to use the calendar feed</h2>
               <button
@@ -1259,9 +1256,8 @@ export default function SettingsPage() {
             >
               Got it
             </button>
-          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

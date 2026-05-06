@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getInitials, relationshipLabel, giftLabel } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
+import { Modal } from "@/components/Modal";
 
 interface Contact {
   id: string;
@@ -14,6 +15,7 @@ interface Contact {
   first_name: string;
   last_name: string;
   relationship: string;
+  pronoun: string | null;
   gift_categories: string[];
   gift_other: string;
   high_importance: boolean;
@@ -42,10 +44,18 @@ const GIFT_OPTIONS = [
   { value: "accessories", label: "Accessories" },
 ];
 
+const PRONOUN_OPTIONS = [
+  { value: "he/him", label: "He/Him" },
+  { value: "she/her", label: "She/Her" },
+  { value: "they/them", label: "They/Them" },
+  { value: "other", label: "Other" },
+];
+
 const EMPTY_FORM = {
   first_name: "",
   last_name: "",
   relationship: "friend",
+  pronoun: "" as string,
   gift_categories: [] as string[],
   gift_other: "",
   high_importance: false,
@@ -112,6 +122,7 @@ export default function ContactsPage() {
       first_name: c.first_name,
       last_name: c.last_name,
       relationship: c.relationship,
+      pronoun: c.pronoun || "",
       gift_categories: c.gift_categories || [],
       gift_other: c.gift_other || "",
       high_importance: c.high_importance,
@@ -145,6 +156,7 @@ export default function ContactsPage() {
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
       relationship: form.relationship,
+      pronoun: form.pronoun || null,
       gift_categories: form.gift_categories,
       gift_other: form.gift_other.trim(),
       high_importance: form.high_importance,
@@ -313,9 +325,8 @@ export default function ContactsPage() {
       )}
 
       {/* Add/Edit modal */}
-      {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+      <Modal open={!!modalMode} onClose={closeModal} label="Contact form" panelClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+        <div>
             <h2 className="text-xl font-bold mb-4">
               {modalMode === "add" ? "Add Contact" : "Edit Contact"}
             </h2>
@@ -363,6 +374,23 @@ export default function ContactsPage() {
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Pronouns */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <select
+                value={form.pronoun}
+                onChange={(e) => setForm({ ...form, pronoun: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Not specified</option>
+                {PRONOUN_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </select>
             </div>
@@ -465,17 +493,15 @@ export default function ContactsPage() {
                 {saving ? "Saving..." : modalMode === "add" ? "Add Contact" : "Save Changes"}
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} label="Delete contact">
+        <div>
             <h2 className="text-lg font-bold text-gray-900 mb-2">Move to bin?</h2>
             <p className="text-sm text-gray-500 mb-4">
-              <strong>{deleteTarget.first_name} {deleteTarget.last_name}</strong> will be moved to
+              <strong>{deleteTarget?.first_name} {deleteTarget?.last_name}</strong> will be moved to
               the recycling bin. You can restore them within 7 days from Settings.
             </p>
             <div className="flex justify-end gap-3">
@@ -492,9 +518,8 @@ export default function ContactsPage() {
                 Move to bin
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

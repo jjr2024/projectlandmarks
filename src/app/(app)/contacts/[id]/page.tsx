@@ -17,12 +17,14 @@ import {
   urgencyClass,
 } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
+import { Modal } from "@/components/Modal";
 
 interface Contact {
   id: string;
   first_name: string;
   last_name: string;
   relationship: string;
+  pronoun: string | null;
   gift_categories: string[];
   gift_other: string;
   high_importance: boolean;
@@ -84,6 +86,13 @@ const RELATIONSHIPS = [
   { value: "other", label: "Other" },
 ];
 
+const PRONOUN_OPTIONS = [
+  { value: "he/him", label: "He/Him" },
+  { value: "she/her", label: "She/Her" },
+  { value: "they/them", label: "They/Them" },
+  { value: "other", label: "Other" },
+];
+
 const GIFT_OPTIONS = [
   { value: "flowers", label: "Flowers" },
   { value: "wine", label: "Wine" },
@@ -118,6 +127,7 @@ function ContactDetailContent() {
     first_name: "",
     last_name: "",
     relationship: "friend",
+    pronoun: "" as string,
     gift_categories: [] as string[],
     gift_other: "",
     high_importance: false,
@@ -278,6 +288,7 @@ function ContactDetailContent() {
       first_name: contact.first_name,
       last_name: contact.last_name,
       relationship: contact.relationship,
+      pronoun: contact.pronoun || "",
       gift_categories: contact.gift_categories || [],
       gift_other: contact.gift_other || "",
       high_importance: contact.high_importance,
@@ -308,6 +319,7 @@ function ContactDetailContent() {
         first_name: contactForm.first_name.trim(),
         last_name: contactForm.last_name.trim(),
         relationship: contactForm.relationship,
+        pronoun: contactForm.pronoun || null,
         gift_categories: contactForm.gift_categories,
         gift_other: contactForm.gift_other.trim(),
         high_importance: contactForm.high_importance,
@@ -501,9 +513,8 @@ function ContactDetailContent() {
       )}
 
       {/* Event add/edit modal */}
-      {eventModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+      <Modal open={!!eventModal} onClose={() => setEventModal(null)} label="Event form" panelClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+        <div>
             <h2 className="text-xl font-bold mb-4">
               {eventModal === "add" ? "Add Event" : "Edit Event"}
             </h2>
@@ -695,14 +706,12 @@ function ContactDetailContent() {
                 {savingEvent ? "Saving..." : eventModal === "add" ? "Add Event" : "Save Changes"}
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Contact edit modal */}
-      {contactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Edit contact">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+      <Modal open={contactModal} onClose={() => setContactModal(false)} label="Edit contact" panelClassName="max-w-lg max-h-[90vh] overflow-y-auto">
+        <div>
             <h2 className="text-xl font-bold mb-4">Edit Contact</h2>
 
             {contactError && (
@@ -742,6 +751,22 @@ function ContactDetailContent() {
               >
                 {RELATIONSHIPS.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <select
+                value={contactForm.pronoun}
+                onChange={(e) => setContactForm({ ...contactForm, pronoun: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Not specified</option>
+                {PRONOUN_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </select>
             </div>
@@ -830,19 +855,17 @@ function ContactDetailContent() {
                 {savingContact ? "Saving..." : "Save Changes"}
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Delete event confirmation */}
-      {deleteEventTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-label="Contact form">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+      <Modal open={!!deleteEventTarget} onClose={() => setDeleteEventTarget(null)} label="Delete event">
+        <div>
             <h2 className="text-lg font-bold text-gray-900 mb-2">Move event to bin?</h2>
             <p className="text-sm text-gray-500 mb-4">
               This will move this{" "}
-              {eventTypeLabel(deleteEventTarget.event_type).toLowerCase()} on{" "}
-              {formatDate(deleteEventTarget.month, deleteEventTarget.day)}{" "}
+              {deleteEventTarget && eventTypeLabel(deleteEventTarget.event_type).toLowerCase()} on{" "}
+              {deleteEventTarget && formatDate(deleteEventTarget.month, deleteEventTarget.day)}{" "}
               to the recycling bin. It will be permanently deleted after 7 days.
             </p>
             <div className="flex justify-end gap-3">
@@ -859,9 +882,8 @@ function ContactDetailContent() {
                 Move to bin
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
