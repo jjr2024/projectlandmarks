@@ -81,6 +81,7 @@ src/
 supabase/migrations/
 ├── 001 Core tables    002 drips_sent JSONB    003 email resilience    004 gift catalog seed
 ├── 005 email_overrides    006 atomic drips_sent RPC    007 consent columns    008 delete_user_account RPC
+├── 013 add pronoun→gender to contacts    014 rename pronoun to gender (Male/Female/Other/N/A)
 ```
 
 ## Architecture
@@ -134,7 +135,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 | Table | Key columns |
 |---|---|
 | `profiles` | display_name, timezone, preferred_send_hour, drips_sent, consent_terms, consent_emails |
-| `contacts` | first_name, last_name, relationship, gift_categories, budget_tier, deleted_at |
+| `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, deleted_at |
 | `events` | event_type, month, day, high_importance, suppress_gifts, contact_id FK, user_id, deleted_at |
 | `reminder_log` | user_id, event_id, contact_id, days_before, event_date, resend_id, status, gift_ids |
 | `shown_gifts` | contact_id, gift_id, year |
@@ -193,7 +194,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 
 ## Gotchas
 
-- `npm run build` before push — Vercel strict mode catches errors `next dev` misses
+- `npm run build` before push — Vercel strict mode catches errors `next dev` misses. However, full builds typically time out in constrained environments (e.g. Cowork). Use `npx tsc --noEmit` for fast type-checking during AI-assisted sessions; reserve full `npm run build` for local terminal sessions.
 - `useSearchParams()` needs `<Suspense>` boundary in Next.js 14 production builds
 - Use individual `@react-email/*` packages, not the unified `react-email` (heavy CLI)
 - `Precedence: bulk` header removed — was causing Gmail Promotions classification

@@ -12,11 +12,11 @@ const RELATIONSHIPS = [
   { value: "other", label: "Other" },
 ];
 
-const PRONOUN_OPTIONS = [
-  { value: "he/him", label: "He/Him" },
-  { value: "she/her", label: "She/Her" },
-  { value: "they/them", label: "They/Them" },
-  { value: "other", label: "Other" },
+const GENDER_OPTIONS = [
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+  { value: "Other", label: "Other" },
+  { value: "N/A", label: "N/A" },
 ];
 
 const GIFT_OPTIONS = [
@@ -64,7 +64,7 @@ export default function OnboardingPage() {
     first_name: "",
     last_name: "",
     relationship: "friend",
-    pronoun: "",
+    gender: "",
   });
   const [events, setEvents] = useState<EventData[]>([
     {
@@ -139,7 +139,7 @@ export default function OnboardingPage() {
           first_name: contact.first_name.trim(),
           last_name: contact.last_name.trim(),
           relationship: contact.relationship,
-          pronoun: contact.pronoun || null,
+          gender: contact.gender || null,
           gift_categories: giftCategories,
           gift_other: giftOther.trim(),
           budget_tier: budgetTier || null,
@@ -361,19 +361,19 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Pronouns */}
+                {/* Gender */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+                    Gender <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <select
-                    value={contact.pronoun}
-                    onChange={(e) => setContact({ ...contact, pronoun: e.target.value })}
+                    value={contact.gender}
+                    onChange={(e) => setContact({ ...contact, gender: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                   >
                     <option value="">Not specified</option>
-                    {PRONOUN_OPTIONS.map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
+                    {GENDER_OPTIONS.map((g) => (
+                      <option key={g.value} value={g.value}>{g.label}</option>
                     ))}
                   </select>
                 </div>

@@ -15,7 +15,7 @@ interface Contact {
   first_name: string;
   last_name: string;
   relationship: string;
-  pronoun: string | null;
+  gender: string | null;
   gift_categories: string[];
   gift_other: string;
   high_importance: boolean;
@@ -44,18 +44,18 @@ const GIFT_OPTIONS = [
   { value: "accessories", label: "Accessories" },
 ];
 
-const PRONOUN_OPTIONS = [
-  { value: "he/him", label: "He/Him" },
-  { value: "she/her", label: "She/Her" },
-  { value: "they/them", label: "They/Them" },
-  { value: "other", label: "Other" },
+const GENDER_OPTIONS = [
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+  { value: "Other", label: "Other" },
+  { value: "N/A", label: "N/A" },
 ];
 
 const EMPTY_FORM = {
   first_name: "",
   last_name: "",
   relationship: "friend",
-  pronoun: "" as string,
+  gender: "" as string,
   gift_categories: [] as string[],
   gift_other: "",
   high_importance: false,
@@ -122,7 +122,7 @@ export default function ContactsPage() {
       first_name: c.first_name,
       last_name: c.last_name,
       relationship: c.relationship,
-      pronoun: c.pronoun || "",
+      gender: c.gender || "",
       gift_categories: c.gift_categories || [],
       gift_other: c.gift_other || "",
       high_importance: c.high_importance,
@@ -156,7 +156,7 @@ export default function ContactsPage() {
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
       relationship: form.relationship,
-      pronoun: form.pronoun || null,
+      gender: form.gender || null,
       gift_categories: form.gift_categories,
       gift_other: form.gift_other.trim(),
       high_importance: form.high_importance,
@@ -378,19 +378,19 @@ export default function ContactsPage() {
               </select>
             </div>
 
-            {/* Pronouns */}
+            {/* Gender */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+                Gender <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <select
-                value={form.pronoun}
-                onChange={(e) => setForm({ ...form, pronoun: e.target.value })}
+                value={form.gender}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">Not specified</option>
-                {PRONOUN_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
+                {GENDER_OPTIONS.map((g) => (
+                  <option key={g.value} value={g.value}>{g.label}</option>
                 ))}
               </select>
             </div>

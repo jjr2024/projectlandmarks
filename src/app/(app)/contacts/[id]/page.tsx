@@ -24,7 +24,7 @@ interface Contact {
   first_name: string;
   last_name: string;
   relationship: string;
-  pronoun: string | null;
+  gender: string | null;
   gift_categories: string[];
   gift_other: string;
   high_importance: boolean;
@@ -86,11 +86,11 @@ const RELATIONSHIPS = [
   { value: "other", label: "Other" },
 ];
 
-const PRONOUN_OPTIONS = [
-  { value: "he/him", label: "He/Him" },
-  { value: "she/her", label: "She/Her" },
-  { value: "they/them", label: "They/Them" },
-  { value: "other", label: "Other" },
+const GENDER_OPTIONS = [
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+  { value: "Other", label: "Other" },
+  { value: "N/A", label: "N/A" },
 ];
 
 const GIFT_OPTIONS = [
@@ -127,7 +127,7 @@ function ContactDetailContent() {
     first_name: "",
     last_name: "",
     relationship: "friend",
-    pronoun: "" as string,
+    gender: "" as string,
     gift_categories: [] as string[],
     gift_other: "",
     high_importance: false,
@@ -288,7 +288,7 @@ function ContactDetailContent() {
       first_name: contact.first_name,
       last_name: contact.last_name,
       relationship: contact.relationship,
-      pronoun: contact.pronoun || "",
+      gender: contact.gender || "",
       gift_categories: contact.gift_categories || [],
       gift_other: contact.gift_other || "",
       high_importance: contact.high_importance,
@@ -319,7 +319,7 @@ function ContactDetailContent() {
         first_name: contactForm.first_name.trim(),
         last_name: contactForm.last_name.trim(),
         relationship: contactForm.relationship,
-        pronoun: contactForm.pronoun || null,
+        gender: contactForm.gender || null,
         gift_categories: contactForm.gift_categories,
         gift_other: contactForm.gift_other.trim(),
         high_importance: contactForm.high_importance,
@@ -757,16 +757,16 @@ function ContactDetailContent() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+                Gender <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <select
-                value={contactForm.pronoun}
-                onChange={(e) => setContactForm({ ...contactForm, pronoun: e.target.value })}
+                value={contactForm.gender}
+                onChange={(e) => setContactForm({ ...contactForm, gender: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">Not specified</option>
-                {PRONOUN_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
+                {GENDER_OPTIONS.map((g) => (
+                  <option key={g.value} value={g.value}>{g.label}</option>
                 ))}
               </select>
             </div>
