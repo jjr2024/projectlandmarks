@@ -22,7 +22,8 @@
     "next": "^14.2.30",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "resend": "^4.1.0"
+    "resend": "^4.1.0",
+    "supabase": "^2.98.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
