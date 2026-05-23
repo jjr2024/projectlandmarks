@@ -106,11 +106,11 @@ export default function ReengagementEmail({
                     <tbody>
                       <tr>
                         <td style={{ width: "36px", verticalAlign: "middle" }}>
-                          <div style={{ width: "36px", height: "36px", background: "#fdf5f0", borderRadius: "8px", color: brandOrange, fontWeight: 700, fontSize: "13px", textAlign: "center" as const, lineHeight: "36px" }}>B</div>
+                          <div style={{ width: "36px", height: "36px", background: "#fdf5f0", borderRadius: "8px", color: brandOrange, fontWeight: 700, fontSize: "13px", textAlign: "center" as const, lineHeight: "36px" }}>U</div>
                         </td>
                         <td style={{ paddingLeft: "12px", verticalAlign: "middle" }}>
-                          <Text style={{ fontWeight: 600, color: "#111827", fontSize: "13px", margin: 0 }}>Spring Bouquet</Text>
-                          <Text style={{ color: "#6b7280", fontSize: "11px", margin: 0 }}>The Bouqs Co. · $45</Text>
+                          <Text style={{ fontWeight: 600, color: "#111827", fontSize: "13px", margin: 0 }}>Signature Rose Bouquet</Text>
+                          <Text style={{ color: "#6b7280", fontSize: "11px", margin: 0 }}>UrbanStems · $55</Text>
                         </td>
                         <td style={{ verticalAlign: "middle", textAlign: "right" as const }}>
                           <span style={{ background: brandOrange, color: "white", fontSize: "12px", fontWeight: 600, padding: "6px 12px", borderRadius: "6px" }}>Buy →</span>

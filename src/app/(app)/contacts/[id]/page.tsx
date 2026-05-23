@@ -28,6 +28,7 @@ interface Contact {
   gift_categories: string[];
   gift_other: string;
   high_importance: boolean;
+  has_pets: boolean;
   budget_tier: string | null;
   notes: string;
 }
@@ -96,11 +97,16 @@ const GENDER_OPTIONS = [
 const GIFT_OPTIONS = [
   { value: "flowers", label: "Flowers" },
   { value: "wine", label: "Wine" },
-  { value: "treats", label: "Treats" },
-  { value: "gift_card", label: "Gift Card" },
-  { value: "experiences", label: "Experience" },
+  { value: "food_snacks", label: "Food & Snacks" },
   { value: "home", label: "Home" },
-  { value: "accessories", label: "Accessories" },
+  { value: "books", label: "Books" },
+  { value: "electronics", label: "Electronics" },
+  { value: "sports", label: "Sports" },
+  { value: "apparel", label: "Apparel" },
+  { value: "beauty", label: "Beauty" },
+  { value: "jewelry", label: "Jewelry" },
+  { value: "wellness", label: "Wellness" },
+  { value: "games_toys", label: "Games & Toys" },
 ];
 
 const URGENCY_STYLES = {
@@ -131,6 +137,7 @@ function ContactDetailContent() {
     gift_categories: [] as string[],
     gift_other: "",
     high_importance: false,
+    has_pets: false,
     budget_tier: "" as string,
     notes: "",
   });
@@ -292,6 +299,7 @@ function ContactDetailContent() {
       gift_categories: contact.gift_categories || [],
       gift_other: contact.gift_other || "",
       high_importance: contact.high_importance,
+      has_pets: contact.has_pets || false,
       budget_tier: contact.budget_tier || "",
       notes: contact.notes || "",
     });
@@ -323,6 +331,7 @@ function ContactDetailContent() {
         gift_categories: contactForm.gift_categories,
         gift_other: contactForm.gift_other.trim(),
         high_importance: contactForm.high_importance,
+        has_pets: contactForm.has_pets,
         budget_tier: contactForm.budget_tier || null,
         notes: contactForm.notes.trim(),
       })
@@ -467,18 +476,20 @@ function ContactDetailContent() {
                     )}
 
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <span
+                      <button
+                        type="button"
                         onClick={() => openEditEvent(evt)}
-                        className="text-gray-400 hover:text-gray-600 text-sm"
+                        className="text-gray-400 hover:text-gray-600 text-sm bg-transparent border-none p-0 cursor-pointer"
                       >
                         Edit
-                      </span>
-                      <span
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setDeleteEventTarget(evt)}
-                        className="text-gray-400 hover:text-red-500 text-sm cursor-pointer"
+                        className="text-gray-400 hover:text-red-500 text-sm bg-transparent border-none p-0 cursor-pointer"
                       >
                         Delete
-                      </span>
+                      </button>
                     </div>
                   </button>
                 </li>
@@ -568,10 +579,17 @@ function ContactDetailContent() {
                   value={eventForm.month}
                   onChange={(e) => {
                     const m = parseInt(e.target.value);
+                    const maxDay = DAYS_IN_MONTH[m] || 31;
+                    const clampedDay = Math.min(eventForm.day, maxDay);
+                    if (clampedDay < eventForm.day) {
+                      setDayAdjusted(`Day adjusted from ${eventForm.day} to ${clampedDay} to fit the selected month.`);
+                    } else {
+                      setDayAdjusted("");
+                    }
                     setEventForm({
                       ...eventForm,
                       month: m,
-                      day: Math.min(eventForm.day, DAYS_IN_MONTH[m] || 31),
+                      day: clampedDay,
                     });
                   }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -637,7 +655,7 @@ function ContactDetailContent() {
                   value={eventForm.event_year}
                   onChange={(e) => setEventForm({ ...eventForm, event_year: e.target.value })}
                   placeholder={String(new Date().getFullYear())}
-                  min="2024"
+                  min={new Date().getFullYear()}
                   max="2100"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
@@ -826,6 +844,18 @@ function ContactDetailContent() {
                   className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                 />
                 <span className="text-sm text-gray-700">High importance (extra early reminders)</span>
+              </label>
+            </div>
+
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={contactForm.has_pets}
+                  onChange={(e) => setContactForm({ ...contactForm, has_pets: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm text-gray-700">Has pet(s) (include pet gift ideas)</span>
               </label>
             </div>
 

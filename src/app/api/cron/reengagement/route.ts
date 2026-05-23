@@ -39,10 +39,19 @@ export async function GET(request: NextRequest) {
   const results = emptyCronResults();
 
   try {
-    const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
-    if (usersError) throw usersError;
+    // Paginate listUsers — Supabase returns max 1000 per page
+    const allUsers: any[] = [];
+    let page = 1;
+    const perPage = 1000;
+    while (true) {
+      const { data, error: usersError } = await supabase.auth.admin.listUsers({ page, perPage });
+      if (usersError) throw usersError;
+      allUsers.push(...data.users);
+      if (data.users.length < perPage) break;
+      page++;
+    }
 
-    const verifiedUsers = users.users.filter((u) => !!u.email_confirmed_at);
+    const verifiedUsers = allUsers.filter((u) => !!u.email_confirmed_at);
 
     for (const user of verifiedUsers) {
       if (results.rateLimited) break;
@@ -134,6 +143,9 @@ export async function GET(request: NextRequest) {
           results.sent++;
           break; // One drip per user per run
         }
+
+        // Break outer loop immediately after a 429, not after starting the next user
+        if (results.rateLimited) break;
       } catch (userError: any) {
         results.errors.push(`User ${user.id}: ${userError.message}`);
       }

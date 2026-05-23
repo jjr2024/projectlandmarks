@@ -28,6 +28,7 @@ import {
   scoreGift,
   buildShuffleSeed,
   parseTagHints,
+  mapGenderToTag,
   GiftRow,
   ScoringContext,
 } from "@/lib/gift-engine";
@@ -382,6 +383,7 @@ describe("scoreGift(gift, ctx)", () => {
     category: "electronics",
     price_tier: "mid",
     tags: ["coffee", "kitchen"],
+    gender_tags: [],
     relationship_affinities: ["colleague", "friend"],
     event_affinities: ["birthday"],
     is_last_minute: false,
@@ -399,6 +401,8 @@ describe("scoreGift(gift, ctx)", () => {
     previousGiftIds: new Set(),
     repeatCounts: new Map(),
     shuffleSeed: 12345,
+    hasPets: false,
+    gender: null,
     ...overrides,
   });
 
@@ -615,5 +619,146 @@ describe("parseTagHints(giftOther)", () => {
   test("case-insensitive: all output is lowercase", () => {
     const result = parseTagHints("COFFEE, Tea, WiNe");
     assert.deepStrictEqual(result, ["coffee", "tea", "wine"]);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─ GENDER SCORING TESTS ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("mapGenderToTag(gender)", () => {
+  test("Female → 'woman'", () => {
+    assert.strictEqual(mapGenderToTag("Female"), "woman");
+  });
+
+  test("Male → 'man'", () => {
+    assert.strictEqual(mapGenderToTag("Male"), "man");
+  });
+
+  test("case-insensitive: 'female' → 'woman'", () => {
+    assert.strictEqual(mapGenderToTag("female"), "woman");
+  });
+
+  test("case-insensitive: 'MALE' → 'man'", () => {
+    assert.strictEqual(mapGenderToTag("MALE"), "man");
+  });
+
+  test("'woman' input → 'woman'", () => {
+    assert.strictEqual(mapGenderToTag("woman"), "woman");
+  });
+
+  test("'man' input → 'man'", () => {
+    assert.strictEqual(mapGenderToTag("man"), "man");
+  });
+
+  test("Other → null (no gender scoring)", () => {
+    assert.strictEqual(mapGenderToTag("Other"), null);
+  });
+
+  test("N/A → null", () => {
+    assert.strictEqual(mapGenderToTag("N/A"), null);
+  });
+
+  test("null → null", () => {
+    assert.strictEqual(mapGenderToTag(null), null);
+  });
+
+  test("empty string → null", () => {
+    assert.strictEqual(mapGenderToTag(""), null);
+  });
+});
+
+describe("scoreGift — gender scoring", () => {
+  // Re-create helpers here scoped to this describe block with gender-aware defaults
+  const giftWith = (overrides?: Partial<GiftRow>): GiftRow => ({
+    id: "gift-g1",
+    name: "Test Gift",
+    partner: "amazon",
+    affiliate_url: "https://example.com",
+    image_url: null,
+    category: "jewelry",
+    price_tier: "mid",
+    tags: [],
+    gender_tags: [],
+    relationship_affinities: [],
+    event_affinities: [],
+    is_last_minute: false,
+    is_active: true,
+    ...overrides,
+  });
+
+  const ctxWith = (overrides?: Partial<ScoringContext>): ScoringContext => ({
+    categories: ["jewelry"],
+    budgetTier: "mid",
+    relationship: "friend",
+    eventType: "birthday",
+    tagHints: [],
+    daysUntil: 10,
+    previousGiftIds: new Set(),
+    repeatCounts: new Map(),
+    shuffleSeed: 42,
+    hasPets: false,
+    gender: null,
+    ...overrides,
+  });
+
+  test("female contact + woman-tagged gift → +20 bonus", () => {
+    const base = scoreGift(giftWith({ gender_tags: ["woman"] }), ctxWith({ gender: null }));
+    const withGender = scoreGift(giftWith({ gender_tags: ["woman"] }), ctxWith({ gender: "Female" }));
+    assert.strictEqual(withGender - base, 20);
+  });
+
+  test("male contact + man-tagged gift → +20 bonus", () => {
+    const base = scoreGift(giftWith({ gender_tags: ["man"] }), ctxWith({ gender: null }));
+    const withGender = scoreGift(giftWith({ gender_tags: ["man"] }), ctxWith({ gender: "Male" }));
+    assert.strictEqual(withGender - base, 20);
+  });
+
+  test("female contact + man-tagged gift → -10 mismatch penalty", () => {
+    const base = scoreGift(giftWith({ gender_tags: ["man"] }), ctxWith({ gender: null }));
+    const withGender = scoreGift(giftWith({ gender_tags: ["man"] }), ctxWith({ gender: "Female" }));
+    assert.strictEqual(withGender - base, -10);
+  });
+
+  test("male contact + woman-tagged gift → -10 mismatch penalty", () => {
+    const base = scoreGift(giftWith({ gender_tags: ["woman"] }), ctxWith({ gender: null }));
+    const withGender = scoreGift(giftWith({ gender_tags: ["woman"] }), ctxWith({ gender: "Male" }));
+    assert.strictEqual(withGender - base, -10);
+  });
+
+  test("gender-neutral gift (empty gender_tags) → no bonus or penalty for any gender", () => {
+    const neutral = giftWith({ gender_tags: [] });
+    const scoreNull = scoreGift(neutral, ctxWith({ gender: null }));
+    const scoreFemale = scoreGift(neutral, ctxWith({ gender: "Female" }));
+    const scoreMale = scoreGift(neutral, ctxWith({ gender: "Male" }));
+    assert.strictEqual(scoreNull, scoreFemale);
+    assert.strictEqual(scoreNull, scoreMale);
+  });
+
+  test("Other/N/A contact → no bonus or penalty on gendered gifts", () => {
+    const womanGift = giftWith({ gender_tags: ["woman"] });
+    const scoreNull = scoreGift(womanGift, ctxWith({ gender: null }));
+    const scoreOther = scoreGift(womanGift, ctxWith({ gender: "Other" }));
+    const scoreNA = scoreGift(womanGift, ctxWith({ gender: "N/A" }));
+    assert.strictEqual(scoreNull, scoreOther);
+    assert.strictEqual(scoreNull, scoreNA);
+  });
+
+  test("unisex-tagged gift → no mismatch penalty for any gender", () => {
+    const unisex = giftWith({ gender_tags: ["unisex"] });
+    const scoreNull = scoreGift(unisex, ctxWith({ gender: null }));
+    const scoreFemale = scoreGift(unisex, ctxWith({ gender: "Female" }));
+    const scoreMale = scoreGift(unisex, ctxWith({ gender: "Male" }));
+    // No penalty: female/male on unisex should not get -10
+    assert.strictEqual(scoreNull, scoreFemale);
+    assert.strictEqual(scoreNull, scoreMale);
+  });
+
+  test("woman-tagged gift scores higher than man-tagged for female contact", () => {
+    const ctx = ctxWith({ gender: "Female" });
+    const womanScore = scoreGift(giftWith({ gender_tags: ["woman"] }), ctx);
+    const manScore = scoreGift(giftWith({ gender_tags: ["man"] }), ctx);
+    // +20 vs -10 = 30 point difference
+    assert.strictEqual(womanScore - manScore, 30);
   });
 });

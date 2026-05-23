@@ -81,8 +81,8 @@ export default function Home() {
                 ideas she&apos;d love:
               </p>
               <div className="space-y-2 mb-4">
-                <EmailMockGift name="Tulip Bouquet from Bouqs" detail="From $49 · Free delivery" />
-                <EmailMockGift name="Amazon Gift Card" detail="Any amount · Instant delivery" />
+                <EmailMockGift name="The Sorbet Flower Bouquet" detail="UrbanStems · Mid-range" />
+                <EmailMockGift name="Ferrero Collection Assorted" detail="Amazon · Under $30" />
               </div>
               <p className="text-xs text-gray-400 text-center">
                 Daysight · Edit preferences · Unsubscribe
@@ -116,7 +116,7 @@ export default function Home() {
             <StepCard
               step={2}
               title="Pick gift preferences"
-              description="Tell us what each person is into (flowers, wine, experiences, gift cards) and we'll match our suggestions to them."
+              description="Tell us what each person is into (flowers, beauty, wellness, games & toys — 12 categories in all) and we'll match our suggestions to them."
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               }

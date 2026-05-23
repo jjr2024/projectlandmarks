@@ -19,6 +19,7 @@ interface Contact {
   gift_categories: string[];
   gift_other: string;
   high_importance: boolean;
+  has_pets: boolean;
   budget_tier: string | null;
   notes: string;
   deleted_at: string | null;
@@ -37,11 +38,16 @@ const RELATIONSHIPS = [
 const GIFT_OPTIONS = [
   { value: "flowers", label: "Flowers" },
   { value: "wine", label: "Wine" },
-  { value: "treats", label: "Treats" },
-  { value: "gift_card", label: "Gift Card" },
-  { value: "experiences", label: "Experience" },
+  { value: "food_snacks", label: "Food & Snacks" },
   { value: "home", label: "Home" },
-  { value: "accessories", label: "Accessories" },
+  { value: "books", label: "Books" },
+  { value: "electronics", label: "Electronics" },
+  { value: "sports", label: "Sports" },
+  { value: "apparel", label: "Apparel" },
+  { value: "beauty", label: "Beauty" },
+  { value: "jewelry", label: "Jewelry" },
+  { value: "wellness", label: "Wellness" },
+  { value: "games_toys", label: "Games & Toys" },
 ];
 
 const GENDER_OPTIONS = [
@@ -59,6 +65,7 @@ const EMPTY_FORM = {
   gift_categories: [] as string[],
   gift_other: "",
   high_importance: false,
+  has_pets: false,
   budget_tier: "" as string,
   notes: "",
 };
@@ -126,6 +133,7 @@ export default function ContactsPage() {
       gift_categories: c.gift_categories || [],
       gift_other: c.gift_other || "",
       high_importance: c.high_importance,
+      has_pets: c.has_pets || false,
       budget_tier: c.budget_tier || "",
       notes: c.notes || "",
     });
@@ -160,6 +168,7 @@ export default function ContactsPage() {
       gift_categories: form.gift_categories,
       gift_other: form.gift_other.trim(),
       high_importance: form.high_importance,
+      has_pets: form.has_pets,
       budget_tier: form.budget_tier || null,
       notes: form.notes.trim(),
     };
@@ -465,6 +474,21 @@ export default function ContactsPage() {
               </label>
             </div>
 
+            {/* Has pets */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.has_pets}
+                  onChange={(e) => setForm({ ...form, has_pets: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm text-gray-700">
+                  Has pet(s) (include pet gift ideas)
+                </span>
+              </label>
+            </div>
+
             {/* Notes */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -502,7 +526,7 @@ export default function ContactsPage() {
             <h2 className="text-lg font-bold text-gray-900 mb-2">Move to bin?</h2>
             <p className="text-sm text-gray-500 mb-4">
               <strong>{deleteTarget?.first_name} {deleteTarget?.last_name}</strong> will be moved to
-              the recycling bin. You can restore them within 7 days from Settings.
+              the recycling bin. You can restore them within 7 days from <Link href="/settings" className="text-brand-600 hover:underline font-medium">Settings</Link>.
             </p>
             <div className="flex justify-end gap-3">
               <button

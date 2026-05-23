@@ -22,11 +22,16 @@ const GENDER_OPTIONS = [
 const GIFT_OPTIONS = [
   { value: "flowers", label: "Flowers", description: "Bouquets & arrangements" },
   { value: "wine", label: "Wine", description: "Bottles & subscriptions" },
-  { value: "treats", label: "Treats", description: "Chocolates & sweets" },
-  { value: "gift_card", label: "Gift Card", description: "Always a safe bet" },
-  { value: "experiences", label: "Experience", description: "Concerts, dining & more" },
-  { value: "home", label: "Home", description: "Decor & lifestyle" },
-  { value: "accessories", label: "Accessories", description: "Fashion & gadgets" },
+  { value: "food_snacks", label: "Food & Snacks", description: "Chocolates, treats & gourmet" },
+  { value: "home", label: "Home", description: "Decor, kitchen & lifestyle" },
+  { value: "books", label: "Books", description: "Fiction & non-fiction" },
+  { value: "electronics", label: "Electronics", description: "Tech & gadgets" },
+  { value: "sports", label: "Sports", description: "Gear & active lifestyle" },
+  { value: "apparel", label: "Apparel", description: "Clothing & shoes" },
+  { value: "beauty", label: "Beauty", description: "Skincare & self-care" },
+  { value: "jewelry", label: "Jewelry", description: "Rings, necklaces & watches" },
+  { value: "wellness", label: "Wellness", description: "Health & fitness" },
+  { value: "games_toys", label: "Games & Toys", description: "Fun for all ages" },
 ];
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({
@@ -82,6 +87,7 @@ export default function OnboardingPage() {
   const [giftCategories, setGiftCategories] = useState<string[]>([]);
   const [giftOther, setGiftOther] = useState("");
   const [budgetTier, setBudgetTier] = useState("");
+  const [hasPets, setHasPets] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
@@ -142,6 +148,7 @@ export default function OnboardingPage() {
           gender: contact.gender || null,
           gift_categories: giftCategories,
           gift_other: giftOther.trim(),
+          has_pets: hasPets,
           budget_tier: budgetTier || null,
         })
         .select()
@@ -676,13 +683,13 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setGiftCategories(["gift_card"]);
+                  setGiftCategories(["flowers", "home"]);
                   handleSaveAndFinish();
                 }}
                 disabled={saving}
                 className="w-full border-2 border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-700 font-medium py-3 rounded-xl text-sm transition-colors mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Not sure? Default to gift cards
+                Not sure? Skip categories and continue
               </button>
 
               <div className="mb-4">
@@ -712,6 +719,19 @@ export default function OnboardingPage() {
                   <option value="mid">$50–$100</option>
                   <option value="high">Over $100</option>
                 </select>
+              </div>
+
+              {/* Has pets toggle */}
+              <div className="mb-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasPets}
+                    onChange={(e) => setHasPets(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-gray-700">Has pet(s) (include pet gift ideas)</span>
+                </label>
               </div>
 
               {saveError && (

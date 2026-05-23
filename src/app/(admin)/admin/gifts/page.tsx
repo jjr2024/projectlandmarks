@@ -8,6 +8,7 @@ const CATEGORIES = [...GIFT_CATEGORIES] as string[];
 
 
 const PRICE_TIERS = ["low", "mid", "high"];
+const GENDER_TAG_OPTIONS = ["woman", "man", "unisex"];
 const RELATIONSHIPS = ["family", "friend", "colleague", "other"];
 const EVENT_TYPES = ["birthday", "anniversary", "custom"];
 
@@ -19,6 +20,7 @@ interface GiftItem {
   category: string;
   price_tier: string;
   tags: string[];
+  gender_tags: string[];
   relationship_affinities: string[];
   event_affinities: string[];
   is_last_minute: boolean;
@@ -27,7 +29,7 @@ interface GiftItem {
 
 const EMPTY_GIFT: Omit<GiftItem, "id"> = {
   name: "", partner: "", affiliate_url: "", category: "flowers", price_tier: "mid",
-  tags: [], relationship_affinities: [], event_affinities: [],
+  tags: [], gender_tags: [], relationship_affinities: [], event_affinities: [],
   is_last_minute: false, is_active: true,
 };
 
@@ -156,6 +158,7 @@ export default function GiftCatalogPage() {
             <Select label="Category" value={form.category} options={CATEGORIES} onChange={(v) => setForm({ ...form, category: v })} />
             <Select label="Price Tier" value={form.price_tier} options={PRICE_TIERS} onChange={(v) => setForm({ ...form, price_tier: v })} />
             <Input label="Tags (comma-separated)" value={form.tags.join(", ")} onChange={(v) => setForm({ ...form, tags: v.split(",").map((s) => s.trim()).filter(Boolean) })} />
+            <MultiCheck label="Gender Tags" options={GENDER_TAG_OPTIONS} selected={form.gender_tags} onChange={(v) => setForm({ ...form, gender_tags: v })} />
             <MultiCheck label="Relationship Affinities" options={RELATIONSHIPS} selected={form.relationship_affinities} onChange={(v) => setForm({ ...form, relationship_affinities: v })} />
             <MultiCheck label="Event Affinities" options={EVENT_TYPES} selected={form.event_affinities} onChange={(v) => setForm({ ...form, event_affinities: v })} />
             <div className="flex items-center gap-4">

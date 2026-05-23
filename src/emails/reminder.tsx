@@ -122,10 +122,7 @@ export default function ReminderEmail({
                 {isLastMinute && (
                   <Section style={{ background: "#fff7ed", border: "2px solid #fed7aa", borderRadius: "10px", padding: "12px 16px", marginBottom: "14px" }}>
                     <Text style={{ color: "#c2410c", fontWeight: 700, fontSize: "13px", margin: "0 0 3px 0" }}>You still have options.</Text>
-                    <Text style={{ color: "#ea580c", fontSize: "12px", margin: "0 0 10px 0" }}>Every gift below ships today or delivers instantly.</Text>
-                    <Link href="https://www.amazon.com/gift-cards" style={{ display: "block", background: "#c2410c", color: "white", textDecoration: "none", fontWeight: 700, fontSize: "13px", padding: "10px 16px", borderRadius: "8px", textAlign: "center" as const }}>
-                      Send an e-gift card right now →
-                    </Link>
+                    <Text style={{ color: "#ea580c", fontSize: "12px", margin: 0 }}>Every gift below ships today or delivers instantly.</Text>
                   </Section>
                 )}
 
@@ -140,7 +137,7 @@ export default function ReminderEmail({
                 {/* Gift Ideas header */}
                 <Text style={{ color: "#111827", fontSize: "12px", fontWeight: 600, margin: "0 0 10px 0", textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Gift Ideas</Text>
 
-                {/* Gift cards — stacked layout for mobile compatibility */}
+                {/* Gift items — stacked layout for mobile compatibility */}
                 {gifts.map((gift, i) => (
                   <Section key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px 16px", marginBottom: "8px", background: "#fafafa" }}>
                     {/* Top row: icon + name/description */}
@@ -161,17 +158,17 @@ export default function ReminderEmail({
                       </tbody>
                     </table>
                     {/* Button on its own row — full width, mobile-friendly */}
-                    <Link href={gift.affiliate_url || "#"} style={{ display: "inline-block", background: brandOrange, color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 20px", borderRadius: "8px", textAlign: "center" as const, marginTop: "10px" }}>
+                    <Link href={gift.affiliate_url || "#"} style={{ display: "block", width: "100%", background: brandOrange, color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 20px", borderRadius: "8px", textAlign: "center" as const, marginTop: "10px" }}>
                       Buy Now →
                     </Link>
                   </Section>
                 ))}
 
-                {/* Gift card fallback */}
+                {/* Browse more CTA */}
                 <Section style={{ background: "#fdf5f0", border: "1px solid #f9cfb8", borderRadius: "10px", padding: "14px 18px", textAlign: "center" as const, marginBottom: "16px", marginTop: "4px" }}>
-                  <Text style={{ color: "#6b7280", fontSize: "12px", margin: "0 0 8px 0" }}>Not sure? Can&apos;t go wrong with this:</Text>
-                  <Link href="https://www.amazon.com/gift-cards" style={{ display: "inline-block", background: "white", border: `2px solid ${brandOrange}`, color: brandOrange, textDecoration: "none", fontWeight: 700, fontSize: "13px", padding: "8px 20px", borderRadius: "8px" }}>
-                    Send an Amazon Gift Card
+                  <Text style={{ color: "#6b7280", fontSize: "12px", margin: "0 0 8px 0" }}>Want more options? We update our picks regularly.</Text>
+                  <Link href={`https://daysight.xyz/contacts/${contactId}`} style={{ display: "inline-block", background: "white", border: `2px solid ${brandOrange}`, color: brandOrange, textDecoration: "none", fontWeight: 700, fontSize: "13px", padding: "8px 20px", borderRadius: "8px" }}>
+                    Update Gift Preferences
                   </Link>
                 </Section>
               </>

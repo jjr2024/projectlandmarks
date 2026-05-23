@@ -60,7 +60,7 @@ src/
 │       ├── cron/              reminders, digest, reengagement, purge
 │       ├── webhooks/          resend, affiliate
 │       ├── contact/           Contact form → Resend
-│       ├── calendar/[userId]  .ics feed (HMAC-signed)
+│       ├── calendar/[userId]  .ics feed (HMAC-signed, RFC 5545 line folding)
 │       ├── calendar-url/      Signed calendar URL
 │       └── unsubscribe/       HMAC-verified unsubscribe
 ├── components/                sidebar, admin-sidebar, marketing-nav, marketing-footer, email-verification-banner, gift-icons
@@ -81,7 +81,9 @@ src/
 supabase/migrations/
 ├── 001 Core tables    002 drips_sent JSONB    003 email resilience    004 gift catalog seed
 ├── 005 email_overrides    006 atomic drips_sent RPC    007 consent columns    008 delete_user_account RPC
-├── 013 add pronoun→gender to contacts    014 rename pronoun to gender (Male/Female/Other/N/A)
+├── 009 event soft delete    010 RLS deny writes    011 fix email cap index    012 anonymize conversion_events
+├── 013 add pronoun→gender    014 rename pronoun to gender (Male/Female/Other/N/A)
+├── 015 add has_pets boolean    016 remap gift categories, reseed catalog, add gender_tags, update defaults
 ```
 
 ## Architecture
@@ -110,9 +112,11 @@ supabase/migrations/
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
 
-**Email system:** Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = monthly summary. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`).
+**Email system:** Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = monthly summary. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
 
-**Gift engine (`lib/gift-engine.ts`):** Deterministic weighted scoring. Weights: category (+40), budget tier (+20), relationship affinity (+15), event affinity (+15), tag overlap (+3/tag), last-minute bonus/penalty (±10–20), repeat penalty (−25/prior showing), seeded shuffle (0–9). Returns top 3. No LLM. Fallback gifts scored through same pipeline.
+**Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
+
+**Gift engine (`lib/gift-engine.ts`):** Deterministic weighted scoring. Weights: category (+40), budget tier (+20), gender match (+20) / gender mismatch (−10), relationship affinity (+15), event affinity (+15), tag overlap (+3/tag), last-minute bonus/penalty (±10–20), repeat penalty (−25/prior showing), PET_BONUS (+30 when contact.has_pets and gift category is "pet"), seeded shuffle (0–9). Returns top 3. No LLM. Fallback default categories: `["flowers", "home"]`. "pet" is engine-only (not user-selectable) — dynamically injected into query when `contact.has_pets` is true. Gender scoring uses `gender_tags` on `gift_catalog` (values: "woman", "man", "unisex", or empty for neutral). Contacts with gender "Other", "N/A", or null skip gender scoring entirely. `mapGenderToTag()` maps contact gender → gift tag. Last-minute broadening uses two parallel queries (category match + is_last_minute=true) then deduplicates — do NOT use PostgREST `.or()` with `.in()` (quoting issues).
 
 **Admin panel:** Analytics dashboard (KPIs, conversion funnel, breakdowns from `conversion_events`), email queue (per-slot custom message editor via `email_overrides`), gift catalog CRUD. Custom messages rendered as "A note from Daysight" in reminder emails.
 
@@ -135,11 +139,11 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 | Table | Key columns |
 |---|---|
 | `profiles` | display_name, timezone, preferred_send_hour, drips_sent, consent_terms, consent_emails |
-| `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, deleted_at |
-| `events` | event_type, month, day, high_importance, suppress_gifts, contact_id FK, user_id, deleted_at |
+| `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, has_pets, deleted_at |
+| `events` | event_type, month, day, high_importance, suppress_gifts, one_time, event_year, contact_id FK, user_id, deleted_at |
 | `reminder_log` | user_id, event_id, contact_id, days_before, event_date, resend_id, status, gift_ids |
 | `shown_gifts` | contact_id, gift_id, year |
-| `gift_catalog` | name, category, partner, price_tier, tags, affiliate_url, is_active, is_last_minute |
+| `gift_catalog` | name, category, partner, price_tier, description, tags, gender_tags, affiliate_url, is_active, is_last_minute |
 | `email_overrides` | user_id, event_id, days_before, event_year, custom_message (unique composite) |
 | `conversion_events` | reminder_id, user_id, event_type, partner, gift_category, commission |
 
@@ -178,19 +182,26 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Urgency: 0–3 days = red, 4–7 = orange, 8+ = green
 - Auth errors: always generic "Invalid email or password" on sign-in (no email enumeration). Duplicate email detected via empty `identities` array.
 - Domain: `daysight.xyz`
+- Gift categories (12 user-selectable): flowers, wine, food_snacks, home, books, electronics, sports, apparel, beauty, jewelry, wellness, games_toys. Plus `pet` (engine-only, not user-selectable — triggered by `has_pets` toggle on contacts)
+- Gender tags on gifts: `"woman"`, `"man"`, `"unisex"`, or empty (gender-neutral). Stored in `gift_catalog.gender_tags` text[]. Admin UI exposes a multi-select. Contacts with gender Other/N/A/null skip gender scoring.
 
 ## Known Limitations
 
 - No Google OAuth (disabled with "coming soon" in prototype)
-- Affiliate links are placeholder URLs — no real program connected
+- Affiliate links use clean `/dp/ASIN?tag=` format for Amazon; UrbanStems/Wine.com use original URLs
+- Gift catalog XLS v2.0 has `clean_affiliate_url` column (use this for DB seeding, not `affiliate_url`). XLS also contains internal-reference columns not used by the webapp: `is_active`, `image_url`, `asin`, `current_price`, `star_rating`, `review_count`, `last_updated`, `affiliate`. XLS descriptions are the source of truth for product copy.
+- `relationship_affinities` and `event_affinities` default to "all" in catalog — scoring weights (+15 each) are unused until populated
+- `is_last_minute` is over-tagged (97% = yes) — needs audit to flag only truly instant-delivery items
 - No contact import (CSV, Google Contacts, vCard)
-- UI conformity sweep needed (visual drift between prototype and Next.js)
 - Privacy Policy and Terms have mismatched retention timelines
 - GDPR legal basis vague — should map processing activities to specific bases
 - No `robots.txt` or `sitemap.xml`
 - Contact form rate limiting is in-memory (bypassable on serverless). Consider Upstash Redis.
 - Digest/re-engagement cron routes lack pre-send dedup (acceptable tradeoff)
 - Remaining from prototype: data export
+- Affiliate webhook accepts unverified user_id-only postbacks (trade-off T-1 — pending owner decision on HMAC/stricter validation)
+- Resend spam complaints mapped to "bounced" status instead of triggering auto-unsubscribe (trade-off T-2 — pending owner decision)
+- `shown_gifts` insert errors silently swallowed in reminder cron (acceptable — doesn't block email delivery)
 
 ## Gotchas
 
@@ -198,8 +209,10 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - `useSearchParams()` needs `<Suspense>` boundary in Next.js 14 production builds
 - Use individual `@react-email/*` packages, not the unified `react-email` (heavy CLI)
 - `Precedence: bulk` header removed — was causing Gmail Promotions classification
-- Emails: pixels only (no rem/em/%), stacked layout for gift cards, `inline-block` buttons
+- Emails: pixels only (no rem/em/%), stacked layout for gift cards. CTA buttons use `display: "block"` + `width: "100%"` for mobile tap targets; secondary buttons use `inline-block`
 - Resend idempotency keys are deterministic — always include one when adding email-sending code
 - `nextOccurrence()` and `formatEventDate()` are in `src/lib/reminders.ts` — never re-duplicate
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)
+- Year rollover: `buildEventDateStr()` uses `eventDate.getFullYear()` (from `nextOccurrence()`), NOT `now.getFullYear()` — fixes Dec cron runs for Jan events
 - Vercel deployment protection blocks API requests on previews — use `npx vercel curl` or test locally
+- PostgREST `.or()` with `.in()` has quoting issues — use parallel queries instead (see gift-engine.ts)

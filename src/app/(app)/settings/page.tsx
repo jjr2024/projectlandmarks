@@ -69,11 +69,16 @@ const REMINDER_OPTIONS = [1, 3, 7, 14, 21];
 const GIFT_OPTIONS = [
   { value: "flowers", label: "Flowers" },
   { value: "wine", label: "Wine" },
-  { value: "treats", label: "Treats" },
-  { value: "gift_card", label: "Gift Card" },
-  { value: "experiences", label: "Experience" },
+  { value: "food_snacks", label: "Food & Snacks" },
   { value: "home", label: "Home" },
-  { value: "accessories", label: "Accessories" },
+  { value: "books", label: "Books" },
+  { value: "electronics", label: "Electronics" },
+  { value: "sports", label: "Sports" },
+  { value: "apparel", label: "Apparel" },
+  { value: "beauty", label: "Beauty" },
+  { value: "jewelry", label: "Jewelry" },
+  { value: "wellness", label: "Wellness" },
+  { value: "games_toys", label: "Games & Toys" },
 ];
 
 const SEND_HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM – 9 PM
@@ -347,7 +352,7 @@ export default function SettingsPage() {
   const loadCascadeCounts = useCallback(async () => {
     if (!userId) return;
     const [contacts, events] = await Promise.all([
-      supabase.from("contacts").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("contacts").select("id", { count: "exact", head: true }).eq("user_id", userId).is("deleted_at", null),
       supabase.from("events").select("id", { count: "exact", head: true }).eq("user_id", userId).is("deleted_at", null),
     ]);
     setContactCount(contacts.count || 0);

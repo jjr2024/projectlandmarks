@@ -5,11 +5,16 @@
 export const GIFT_CATEGORIES = [
   "flowers",
   "wine",
-  "treats",
-  "gift_card",
-  "experiences",
+  "food_snacks",
   "home",
-  "accessories",
+  "books",
+  "electronics",
+  "sports",
+  "apparel",
+  "beauty",
+  "jewelry",
+  "wellness",
+  "games_toys",
 ] as const;
 
 export type GiftCategory = (typeof GIFT_CATEGORIES)[number];

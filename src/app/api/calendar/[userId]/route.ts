@@ -37,6 +37,19 @@ function escapeICSText(text: string): string {
     .replace(/\n/g, "\\n");
 }
 
+/** Fold ICS lines longer than 75 octets per RFC 5545 §3.1 */
+function foldLine(line: string): string {
+  if (line.length <= 75) return line;
+  const parts: string[] = [];
+  parts.push(line.slice(0, 75));
+  let i = 75;
+  while (i < line.length) {
+    parts.push(" " + line.slice(i, i + 74));
+    i += 74;
+  }
+  return parts.join("\r\n");
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { userId: string } }
@@ -126,25 +139,36 @@ export async function GET(
           summary += "'s Event";
         }
 
-        // Format date as YYYYMMDD — use current year so calendar apps show it as upcoming.
-        // RRULE:FREQ=YEARLY ensures it recurs every year.
+        // Format date as YYYYMMDD.
+        // One-time events use their stored event_year (or current year as fallback)
+        // and do NOT get an RRULE. Recurring events use the current year with RRULE:FREQ=YEARLY.
         const currentYear = new Date().getFullYear();
+        const eventYear = evt.one_time && evt.event_year ? evt.event_year : currentYear;
         const monthStr = String(evt.month).padStart(2, "0");
         const dayStr = String(evt.day).padStart(2, "0");
-        const startDate = `${currentYear}${monthStr}${dayStr}`;
+        const startDate = `${eventYear}${monthStr}${dayStr}`;
 
         // Unique identifier
         const uid = `event-${evt.id}@daysight.xyz`;
 
-        icsLines.push(
+        const veventLines = [
           "BEGIN:VEVENT",
           `DTSTART;VALUE=DATE:${startDate}`,
-          `SUMMARY:${escapeICSText(summary)}`,
-          "RRULE:FREQ=YEARLY",
+          foldLine(`SUMMARY:${escapeICSText(summary)}`),
+        ];
+
+        // Only add yearly recurrence for non-one-time events
+        if (!evt.one_time) {
+          veventLines.push("RRULE:FREQ=YEARLY");
+        }
+
+        veventLines.push(
           `UID:${uid}`,
           `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
           "END:VEVENT"
         );
+
+        icsLines.push(...veventLines);
       }
     }
 

@@ -9,6 +9,8 @@
  * SCORING WEIGHTS (tuned for relevance, see § Gift Engine in CLAUDE.md):
  *   Category match:      +40  (hard filter in query, but double-weighted in score)
  *   Budget tier match:   +20
+ *   Gender match:        +20  (gift's gender_tags includes mapped contact gender)
+ *   Gender mismatch:     -10  (gift has gender_tags but wrong gender for contact)
  *   Relationship affinity:+15  (gift's relationship_affinities includes contact's relationship)
  *   Event affinity:      +15  (gift's event_affinities includes event_type)
  *   Tag overlap:         +3 per matching tag (contact.gift_other words vs gift.tags)
@@ -37,6 +39,7 @@ export interface GiftRow {
   tags: string[];
   relationship_affinities: string[];
   event_affinities: string[];
+  gender_tags: string[];
   is_last_minute: boolean;
   is_active: boolean;
 }
@@ -60,6 +63,10 @@ export interface ScoringContext {
   repeatCounts: Map<string, number>;
   /** Deterministic seed for shuffle jitter (e.g. hash of contact_id + year) */
   shuffleSeed: number;
+  /** Whether this contact has pets — boosts pet-category gifts */
+  hasPets: boolean;
+  /** Contact's gender ('Male'|'Female'|'Other'|'N/A'|null) — for gender-aware scoring */
+  gender: string | null;
 }
 
 export interface ScoredGift extends GiftRow {
@@ -71,6 +78,8 @@ export interface ScoredGift extends GiftRow {
 const W = {
   CATEGORY_MATCH:      40,
   BUDGET_MATCH:        20,
+  GENDER_MATCH:        20,
+  GENDER_MISMATCH:    -10,
   RELATIONSHIP_MATCH:  15,
   EVENT_MATCH:         15,
   TAG_OVERLAP:          3,   // per matching tag
@@ -78,6 +87,7 @@ const W = {
   LAST_MINUTE_PENALTY: -20,
   REPEAT_PENALTY:      -25,  // per occurrence in past 2 years
   SHUFFLE_RANGE:        9,   // max jitter added
+  PET_BONUS:           30,   // bonus for pet-category gifts when contact has pets
 } as const;
 
 // ── Pure scoring function (testable without DB) ─────────────────────────────
@@ -90,9 +100,28 @@ export function scoreGift(gift: GiftRow, ctx: ScoringContext): number {
     score += W.CATEGORY_MATCH;
   }
 
+  // Pet bonus: boost pet-category gifts when contact has pets
+  if (ctx.hasPets && gift.category === "pet") {
+    score += W.PET_BONUS;
+  }
+
   // Budget tier match
   if (ctx.budgetTier && gift.price_tier === ctx.budgetTier) {
     score += W.BUDGET_MATCH;
+  }
+
+  // Gender scoring: boost matching gender, penalize mismatch.
+  // Only applies when the gift has gender_tags AND the contact has a gendered value.
+  // "Other", "N/A", or null contacts skip gender scoring entirely (no bonus or penalty).
+  if (gift.gender_tags && gift.gender_tags.length > 0 && ctx.gender) {
+    const genderTag = mapGenderToTag(ctx.gender);
+    if (genderTag) {
+      if (gift.gender_tags.includes(genderTag)) {
+        score += W.GENDER_MATCH;
+      } else if (!gift.gender_tags.includes("unisex")) {
+        score += W.GENDER_MISMATCH;
+      }
+    }
   }
 
   // Relationship affinity
@@ -144,6 +173,18 @@ function seededJitter(giftId: string, seed: number, range: number): number {
   return Math.abs(hash % (range + 1));
 }
 
+// ── Map contact gender to gift tag ─────────────────────────────────────────
+// Returns the tag string used in gift_catalog.gender_tags, or null if gender
+// is not gendered (Other, N/A, null) — in which case scoring is skipped.
+
+export function mapGenderToTag(gender: string | null): string | null {
+  if (!gender) return null;
+  const g = gender.trim().toLowerCase();
+  if (g === "female" || g === "woman") return "woman";
+  if (g === "male" || g === "man") return "man";
+  return null; // Other, N/A, empty — no gender-based scoring
+}
+
 // ── Seed from contact_id + year (deterministic per contact per year) ────────
 
 export function buildShuffleSeed(contactId: string, year: number): number {
@@ -179,24 +220,52 @@ export async function selectGiftsScored(
   const categories: string[] =
     contact.gift_categories?.length > 0
       ? contact.gift_categories
-      : ["flowers", "gift_card"];
+      : ["flowers", "home"];
+
+  // Include pet category in query when contact has pets
+  const queryCategories = contact.has_pets && !categories.includes("pet")
+    ? [...categories, "pet"]
+    : categories;
 
   // 2. Fetch candidate gifts — broad query, scoring narrows later
   //    Include all active gifts in matching categories.
   //    If last-minute, also include last-minute gifts from OTHER categories as fallback.
-  let query = supabase
-    .from("gift_catalog")
-    .select("*")
-    .eq("is_active", true);
+  //    Uses two separate queries instead of .or() to avoid fragile PostgREST string syntax.
+  let candidates: GiftRow[] = [];
 
   if (daysUntil <= REMINDER_WINDOWS.LAST_MINUTE) {
-    // Broaden: preferred categories OR any last-minute item
-    // Supabase .or() filter:
-    query = query.or(
-      `category.in.(${categories.map((c: string) => `"${c}"`).join(",")}),is_last_minute.eq.true`
-    );
+    // Two queries: preferred categories + all last-minute items from any category
+    const [categoryResult, lastMinuteResult] = await Promise.all([
+      supabase
+        .from("gift_catalog")
+        .select("*")
+        .eq("is_active", true)
+        .in("category", queryCategories)
+        .limit(50),
+      supabase
+        .from("gift_catalog")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_last_minute", true)
+        .limit(50),
+    ]);
+
+    // Merge and deduplicate by gift ID
+    const seen = new Set<string>();
+    for (const gift of [...(categoryResult.data || []), ...(lastMinuteResult.data || [])]) {
+      if (!seen.has(gift.id)) {
+        seen.add(gift.id);
+        candidates.push(gift);
+      }
+    }
   } else {
-    query = query.in("category", categories);
+    const { data } = await supabase
+      .from("gift_catalog")
+      .select("*")
+      .eq("is_active", true)
+      .in("category", queryCategories)
+      .limit(50);
+    candidates = data || [];
   }
 
   // 3. Fetch shown_gifts history for repeat penalty (past 2 years)
@@ -228,10 +297,11 @@ export async function selectGiftsScored(
     previousGiftIds,
     repeatCounts,
     shuffleSeed: buildShuffleSeed(contact.id, currentYear),
+    hasPets: contact.has_pets || false,
+    gender: contact.gender || null,
   };
 
-  const { data: candidates } = await query.limit(50);
-  if (!candidates || candidates.length === 0) {
+  if (candidates.length === 0) {
     // Ultimate fallback: score any active gifts through the same pipeline
     const { data: fallback } = await supabase
       .from("gift_catalog")

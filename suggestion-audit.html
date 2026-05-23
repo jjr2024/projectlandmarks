@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daysight — 10-Item Suggestion Audit</title>
+<style>
+:root { color-scheme: light; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #1a1a2e; padding: 24px; line-height: 1.55; }
+h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+.summary-bar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.summary-chip { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+.chip-done { background: #d4edda; color: #155724; }
+.chip-partial { background: #fff3cd; color: #856404; }
+.chip-not { background: #f8d7da; color: #721c24; }
+.chip-new { background: #d6e9f8; color: #0c5189; }
+
+.card { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.card-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; user-select: none; }
+.card-header:hover { background: #f8f8fa; }
+.card-num { font-size: 13px; font-weight: 700; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.num-done { background: #28a745; }
+.num-partial { background: #e0a800; }
+.num-not { background: #dc3545; }
+.num-new { background: #0c7cc4; }
+.card-title { font-size: 14px; font-weight: 600; flex: 1; }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
+.badge-done { background: #d4edda; color: #155724; }
+.badge-partial { background: #fff3cd; color: #856404; }
+.badge-not { background: #f8d7da; color: #721c24; }
+.badge-new { background: #d6e9f8; color: #0c5189; }
+.chevron { font-size: 16px; color: #999; transition: transform 0.2s; flex-shrink: 0; }
+.card.open .chevron { transform: rotate(90deg); }
+.card-body { padding: 0 16px 16px 52px; font-size: 13px; color: #333; display: none; }
+.card.open .card-body { display: block; }
+.card-body p { margin-bottom: 8px; }
+.card-body strong { color: #1a1a2e; }
+.card-body .finding { background: #f4f6f8; border-left: 3px solid #ccc; padding: 8px 12px; margin: 8px 0; border-radius: 0 6px 6px 0; font-size: 12.5px; }
+.finding.warn { border-left-color: #e0a800; background: #fffbea; }
+.finding.good { border-left-color: #28a745; background: #edf7ed; }
+.finding.bad { border-left-color: #dc3545; background: #fef0f0; }
+.effort { margin-top: 8px; font-size: 12px; padding: 6px 10px; background: #f0f0f5; border-radius: 6px; }
+.effort span { font-weight: 600; }
+
+.section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin: 24px 0 10px; }
+
+table.data { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+table.data th { text-align: left; padding: 4px 8px; background: #f4f6f8; border-bottom: 2px solid #ddd; }
+table.data td { padding: 4px 8px; border-bottom: 1px solid #eee; }
+table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<h1>Daysight — Suggestion Audit</h1>
+<p class="subtitle">10-item list from previous session · Analyzed May 13, 2026</p>
+
+<div class="summary-bar">
+  <span class="summary-chip chip-done">&#10003; 3 Done</span>
+  <span class="summary-chip chip-not">&#10007; 7 Not Started</span>
+  <span class="summary-chip chip-new">&#9733; 4 New Suggestions</span>
+</div>
+
+<!-- ── DONE ── -->
+<div class="section-label">Done</div>
+
+<div class="card open">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-done">2</span>
+    <span class="card-title">Add Books, Electronics, Sports as first-class webapp categories</span>
+    <span class="badge badge-done">Done</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>All three are in <code>GIFT_CATEGORIES</code> in constants.ts. They appear in onboarding, contact forms, and settings. The gift-icons.tsx component falls back to a generic icon for these three (no custom icons yet), but functionally complete.</p>
+    <div class="finding good">Confirmed: <code>["flowers","wine","treats","gift_card","experiences","home","accessories","books","electronics","sports"]</code></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-done">6</span>
+    <span class="card-title">Surface current_price and star_rating in emails</span>
+    <span class="badge badge-done">Done (by decision)</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>You decided <strong>not</strong> to surface these. Price is only for tagging the price tier; star_rating is a sanity check on catalog inclusion. No code changes needed — this is resolved.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-done">10</span>
+    <span class="card-title">Add "Has Pet(s)" toggle on contacts</span>
+    <span class="badge badge-done">Done</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>Migration 015 adds <code>has_pets BOOLEAN NOT NULL DEFAULT false</code> to contacts. Checkbox appears in onboarding and contact forms. Gift engine applies <strong>+30 PET_BONUS</strong> for pet-category items when enabled. Engine dynamically injects "pet" into the category query without it being a user-selectable category. Clean implementation.</p>
+    <div class="finding good">PET_BONUS = +30 — strongest affinity signal after category match (+40).</div>
+  </div>
+</div>
+
+<!-- ── NOT STARTED ── -->
+<div class="section-label">Not Started</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">1</span>
+    <span class="card-title">Consolidate 18 XLS categories → ~10 webapp categories</span>
+    <span class="badge badge-not">Not Started</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>The XLS still has <strong>18 distinct categories</strong>. The webapp has 10. Only 7 names overlap exactly (accessories, books, electronics, flowers, home, sports, wine). Critical mismatches:</p>
+    <table class="data">
+      <tr><th>XLS value</th><th>Webapp value</th><th>Problem</th></tr>
+      <tr><td>treat (4 items)</td><td>treats</td><td>Singular vs plural — won't match</td></tr>
+      <tr><td>food (2 items)</td><td>treats</td><td>No mapping exists</td></tr>
+      <tr><td>clothing (4), shoes (2)</td><td>—</td><td>No webapp category covers these</td></tr>
+      <tr><td>beauty (2), jewelry (2)</td><td>accessories</td><td>No mapping; "accessories" is vague</td></tr>
+      <tr><td>cooking (2), health (4), music (1), toys & games (4)</td><td>—</td><td>Orphaned — unreachable by any user selection</td></tr>
+    </table>
+    <div class="finding bad"><strong>This is the most impactful gap.</strong> ~30 of 67 catalog items (45%) can never be served because their XLS category doesn't match any webapp category. The gift engine filters <code>.in("category", queryCategories)</code> — exact string match only.</div>
+    <div class="effort"><span>Effort:</span> Medium. Requires: (1) decide on the category mapping, (2) update the XLS, (3) re-seed the gift_catalog table, (4) optionally update constants.ts if category names change. The original suggestion (merge food+treat→Treats & Food, shoes+clothing→Fashion) is still sound.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">3</span>
+    <span class="card-title">Retire gift_card and experiences categories</span>
+    <span class="badge badge-not">Not Started</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>Both <code>gift_card</code> and <code>experiences</code> remain in <code>GIFT_CATEGORIES</code> and appear in the UI. The XLS has <strong>zero items</strong> in either category. A user who selects only these will get the fallback defaults (flowers + gift_card), which means gift_card selections self-reference into an empty result.</p>
+    <div class="finding warn">Worse: <code>gift_card</code> is the fallback category. If a user has no preferences set, the engine queries <code>["flowers", "gift_card"]</code> — but there are no gift_card items in the catalog, so half the fallback query returns nothing.</div>
+    <div class="effort"><span>Effort:</span> Small. Remove from GIFT_CATEGORIES, update fallback in gift-engine.ts, remove from UI forms. Could reframe as tags/modifiers later if real gift cards are added to the catalog.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">4</span>
+    <span class="card-title">Populate relationship_affinities in XLS</span>
+    <span class="badge badge-not">Not Started</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>Every single row (67/67) has <code>relationship_affinities = "all"</code>. The +15 scoring weight is completely wasted — all gifts score identically on this axis.</p>
+    <div class="finding bad">The engine already has the scoring logic built. This is pure data work with zero code changes needed.</div>
+    <div class="effort"><span>Effort:</span> Small-Medium. Requires domain judgment (which gifts suit which relationships: partner, parent, friend, sibling, coworker, child). Could be done in a single XLS editing pass + re-seed.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">5</span>
+    <span class="card-title">Populate event_affinities in XLS</span>
+    <span class="badge badge-not">Not Started</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>Same situation: 67/67 rows have <code>event_affinities = "all"</code>. The +15 weight is unused. Flowers for anniversary vs. electronics for birthday — these distinctions don't exist yet.</p>
+    <div class="effort"><span>Effort:</span> Small. Simpler than #4 since event types are fewer (birthday, anniversary, holiday). Can be done alongside #4 in one pass.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">7</span>
+    <span class="card-title">Drop asin and affiliate columns from XLS</span>
+    <span class="badge badge-not">Not Started</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>Both columns still present. <code>asin</code> has 55/67 populated (Amazon items); <code>affiliate</code> is 67/67 populated. Neither is consumed by the gift engine or email templates — <code>affiliate_url</code> and <code>partner</code> are the columns actually used.</p>
+    <div class="effort"><span>Effort:</span> Trivial. Delete two columns from the XLS. Verify the seed migration doesn't reference them. No code changes.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">8</span>
+    <span class="card-title">Replace "Accessories" with Beauty & Self-Care / Jewelry</span>
+    <span class="badge badge-not">Not Started</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p><code>accessories</code> remains in GIFT_CATEGORIES. The XLS has only 2 items under "accessories" but 2 under "beauty" and 2 under "jewelry" — those 4 items are currently unreachable. This ties directly into suggestion #1 (category consolidation).</p>
+    <div class="effort"><span>Effort:</span> Small. Best done as part of the #1 consolidation. Replace "accessories" with "beauty" and "jewelry" in constants.ts, update forms, and align XLS categories.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-not">9</span>
+    <span class="card-title">Add is_last_minute flag to digital/instant-delivery items</span>
+    <span class="badge badge-not">Needs Revision</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>The column exists and is populated, but <strong>incorrectly</strong>: 65 of 67 items (97%) are marked <code>is_last_minute = yes</code>. This defeats the entire purpose. The flag was meant to identify digital/instant-delivery items that are still good picks with ≤2 days notice — things like e-gift cards, digital subscriptions, or downloadable content. Marking physical Amazon products as last-minute is wrong.</p>
+    <div class="finding bad">With 97% flagged, the +10 last-minute bonus is nearly universal and the -20 penalty almost never fires. The scoring distinction is meaningless.</div>
+    <div class="effort"><span>Effort:</span> Small. Audit the 67 items, set most physical products to "no", keep "yes" only for truly instant-delivery items. Currently the catalog may have very few genuinely digital items, so this might also require adding some.</div>
+  </div>
+</div>
+
+<!-- ── NEW SUGGESTIONS ── -->
+<div class="section-label">New Suggestions (from this audit)</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-new">A</span>
+    <span class="card-title">Fix the category mismatch between DB seed and webapp — items are unreachable</span>
+    <span class="badge badge-new">Critical</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>This is the operational consequence of #1 being unfinished. Right now, if the gift_catalog was seeded from the XLS as-is, items with categories like "treat", "food", "clothing", "shoes", "beauty", "jewelry", "cooking", "health", "music", "toys & games" would <strong>never be served</strong> because the engine filters on exact category match against user-selected webapp categories. You need either a category mapping layer in the engine or — simpler — align the XLS categories to the webapp categories before seeding.</p>
+    <div class="finding bad">This should be resolved before any catalog re-seed. It's the single biggest data quality issue.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-new">B</span>
+    <span class="card-title">Add custom icons for Books, Electronics, Sports in gift-icons.tsx</span>
+    <span class="badge badge-new">Minor</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>These three categories were added in the previous session but <code>gift-icons.tsx</code> has no icons for them — they fall back to a generic gift icon. Small polish item.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-new">C</span>
+    <span class="card-title">Fix the fallback categories in gift-engine.ts</span>
+    <span class="badge badge-new">Important</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>When a contact has no gift_categories set, the engine defaults to <code>["flowers", "gift_card"]</code>. Since "gift_card" has zero catalog items, this fallback is half-broken. Should be changed to categories with actual catalog coverage, e.g., <code>["flowers", "home"]</code> or a broader default set.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <span class="card-num num-new">D</span>
+    <span class="card-title">Consider adding more genuinely digital/instant-delivery items to the catalog</span>
+    <span class="badge badge-new">Nice to Have</span>
+    <span class="chevron">›</span>
+  </div>
+  <div class="card-body">
+    <p>Once is_last_minute is corrected (suggestion #9), you may find you have very few truly last-minute items. The engine's last-minute logic is well-built (+10 bonus, -20 penalty, broadened query), but it needs actual digital products to work with — streaming subscriptions, e-gift cards, digital magazine subscriptions, online course passes, etc.</p>
+  </div>
+</div>
+
+<script>
+// Start with only Done items open
+document.querySelectorAll('.card').forEach(c => {
+  if (!c.classList.contains('open')) {
+    // already handled in HTML
+  }
+});
+</script>
+</body>
+</html>

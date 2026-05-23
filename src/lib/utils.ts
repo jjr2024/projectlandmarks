@@ -42,11 +42,17 @@ export function relationshipLabel(rel: string): string {
 const GIFT_LABELS: Record<string, string> = {
   flowers: "Flowers",
   wine: "Wine",
-  treats: "Treats",
-  gift_card: "Gift Card",
-  experiences: "Experience",
+  food_snacks: "Food & Snacks",
   home: "Home",
-  accessories: "Accessories",
+  books: "Books",
+  electronics: "Electronics",
+  sports: "Sports",
+  apparel: "Apparel",
+  beauty: "Beauty",
+  jewelry: "Jewelry",
+  wellness: "Wellness",
+  games_toys: "Games & Toys",
+  pet: "Pet",
 };
 
 export function giftLabelSingle(cat: string): string {

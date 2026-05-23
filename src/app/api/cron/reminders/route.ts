@@ -50,10 +50,19 @@ export async function GET(request: NextRequest) {
   const results: CronResults = emptyCronResults();
 
   try {
-    const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
-    if (usersError) throw usersError;
+    // Paginate listUsers — Supabase returns max 1000 per page
+    const allUsers: any[] = [];
+    let page = 1;
+    const perPage = 1000;
+    while (true) {
+      const { data, error: usersError } = await supabase.auth.admin.listUsers({ page, perPage });
+      if (usersError) throw usersError;
+      allUsers.push(...data.users);
+      if (data.users.length < perPage) break;
+      page++;
+    }
 
-    const verifiedUsers = users.users.filter((u) => !!u.email_confirmed_at);
+    const verifiedUsers = allUsers.filter((u) => !!u.email_confirmed_at);
 
     for (const user of verifiedUsers) {
       // Stop all processing if we've been rate-limited
@@ -86,7 +95,9 @@ export async function GET(request: NextRequest) {
           .gte("created_at", twentyFourHoursAgo.toISOString());
 
         let userSendsThisRun = 0;
-        const userAtCap = (recentSendCount || 0) + userSendsThisRun >= MAX_EMAILS_PER_USER_PER_DAY;
+        // Pre-loop check: skip users already at cap from prior cron runs (DB count only).
+        // In-loop check at line ~122 adds userSendsThisRun for mid-run cap enforcement.
+        const userAtCap = (recentSendCount || 0) >= MAX_EMAILS_PER_USER_PER_DAY;
         if (userAtCap) {
           results.deferred++;
           continue;
@@ -123,7 +134,9 @@ export async function GET(request: NextRequest) {
           const window = matchReminderWindow(daysUntil, event.high_importance);
           if (!window) continue;
 
-          const eventDateStr = buildEventDateStr(now.getFullYear(), event.month, event.day);
+          // Use the year from nextOccurrence, not now.getFullYear() —
+          // fixes year-rollover bug when cron runs in Dec for a Jan event.
+          const eventDateStr = buildEventDateStr(eventDate.getFullYear(), event.month, event.day);
 
           // ── Dedup: check reminder_log for existing entry ───────────────
           // Matches on canonical days_before (21/7/3), not actual daysUntil.
@@ -204,7 +217,7 @@ export async function GET(request: NextRequest) {
               gifts: gifts.map((g: any) => ({
                 name: g.name,
                 partner: g.partner,
-                description: g.tags?.join(", ") || "",
+                description: g.description || g.tags?.join(", ") || "",
                 price: g.price_tier === "low" ? "Under $30" : g.price_tier === "mid" ? "$30-75" : "$75+",
                 affiliate_url: g.affiliate_url || "#",
               })),
