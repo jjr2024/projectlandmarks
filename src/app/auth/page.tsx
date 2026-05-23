@@ -135,7 +135,16 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
+    <main className="min-h-screen flex items-center justify-center px-4 relative">
+      <Link
+        href="/"
+        className="absolute top-6 left-6 text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 19l-7-7 7-7" />
+        </svg>
+        Home
+      </Link>
       <div className="w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-2">
           {mode === "signin" ? "Welcome back to " : "Get started with "}

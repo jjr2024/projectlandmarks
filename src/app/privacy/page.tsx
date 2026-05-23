@@ -1,4 +1,3 @@
-import Link from "next/link";
 import MarketingNav from "@/components/marketing-nav";
 import MarketingFooter from "@/components/marketing-footer";
 import type { Metadata } from "next";
@@ -14,13 +13,6 @@ export default function PrivacyPage() {
       <MarketingNav />
       <main className="pt-28 pb-24 px-6">
         <div className="max-w-2xl mx-auto">
-
-          {/* Legal review notice — remove before publishing */}
-          <div className="mb-8 bg-amber-50 border border-amber-300 rounded-lg px-5 py-4 text-sm text-amber-800">
-            <strong>⚠ Pending legal review.</strong> This policy has been updated for accuracy but
-            has not yet been reviewed by a qualified lawyer. Do not publish to production until
-            legal sign-off is obtained.
-          </div>
 
           <div className="mb-10">
             <h1 className="text-3xl font-extrabold text-gray-900 mb-3">Privacy Policy</h1>
@@ -250,21 +242,12 @@ export default function PrivacyPage() {
             </p>
 
             <h2>11. Contact Us</h2>
-            <p>Questions about this policy or your data? We&apos;re happy to help.</p>
-            <ul>
-              <li>
-                Email:{" "}
-                <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                  info@daysight.xyz
-                </a>
-              </li>
-              <li>
-                Web form:{" "}
-                <Link href="/contact" className="text-brand-600 underline hover:text-brand-700">
-                  Contact us
-                </Link>
-              </li>
-            </ul>
+            <p>
+              Questions about this policy or your data? We&apos;re happy to help. Reach us at{" "}
+              <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                info@daysight.xyz
+              </a>.
+            </p>
           </div>
         </div>
       </main>

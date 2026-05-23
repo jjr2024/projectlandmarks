@@ -70,6 +70,7 @@ export default function OnboardingPage() {
     last_name: "",
     relationship: "friend",
     gender: "",
+    notes: "",
   });
   const [events, setEvents] = useState<EventData[]>([
     {
@@ -82,6 +83,7 @@ export default function OnboardingPage() {
     },
   ]);
   const [expandedEventIndex, setExpandedEventIndex] = useState(0);
+  const [advancedOpenIndexes, setAdvancedOpenIndexes] = useState<Set<number>>(new Set());
 
   // Step 3: Gift prefs
   const [giftCategories, setGiftCategories] = useState<string[]>([]);
@@ -150,6 +152,7 @@ export default function OnboardingPage() {
           gift_other: giftOther.trim(),
           has_pets: hasPets,
           budget_tier: budgetTier || null,
+          notes: contact.notes.trim(),
         })
         .select()
         .single();
@@ -167,6 +170,9 @@ export default function OnboardingPage() {
           day: Math.min(e.day, DAYS_IN_MONTH[e.month] || 31),
           high_importance: e.high_importance,
           suppress_gifts: e.suppress_gifts,
+          year_started: e.year_started || null,
+          one_time: e.one_time || false,
+          event_year: e.one_time && e.event_year ? e.event_year : null,
         }));
 
         const { error: eventError } = await supabase
@@ -204,6 +210,15 @@ export default function OnboardingPage() {
     if (expandedEventIndex >= newEvents.length) {
       setExpandedEventIndex(Math.max(0, newEvents.length - 1));
     }
+  };
+
+  const toggleAdvanced = (index: number) => {
+    setAdvancedOpenIndexes((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
   };
 
   const updateEvent = (index: number, updates: Partial<EventData>) => {
@@ -247,7 +262,14 @@ export default function OnboardingPage() {
             <div>
               <div className="text-center mb-10">
                 <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                  <span className="text-3xl">&#128075;</span>
+                  <svg className="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 11.5V7a5 5 0 0 1 10 0v1" />
+                    <path d="M5.5 11.5a1.5 1.5 0 0 0-1.5 1.5v1a8 8 0 0 0 16 0v-1a1.5 1.5 0 0 0-1.5-1.5" />
+                    <path d="M12 20v2" />
+                    <path d="M8 11.5V9" />
+                    <path d="M12 11.5V8" />
+                    <path d="M16 11.5V9" />
+                  </svg>
                 </div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-3">
                   Welcome, <span className="text-brand-600">{firstName}</span>!
@@ -260,8 +282,11 @@ export default function OnboardingPage() {
 
               <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 mb-8">
                 <div className="flex items-center gap-4 p-5">
-                  <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center shrink-0 text-lg">
-                    &#128100;
+                  <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                    </svg>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">
@@ -274,8 +299,15 @@ export default function OnboardingPage() {
                   <span className="ml-auto text-xs text-gray-400">~1 min</span>
                 </div>
                 <div className="flex items-center gap-4 p-5">
-                  <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center shrink-0 text-lg">
-                    &#127873;
+                  <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="8" width="18" height="13" rx="2" />
+                      <path d="M12 8V3" />
+                      <path d="M12 8H7.5a2.5 2.5 0 0 1 0-5C9.5 3 12 8 12 8z" />
+                      <path d="M12 8h4.5a2.5 2.5 0 0 0 0-5C14.5 3 12 8 12 8z" />
+                      <path d="M12 8v13" />
+                      <path d="M3 14h18" />
+                    </svg>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">
@@ -383,6 +415,20 @@ export default function OnboardingPage() {
                       <option key={g.value} value={g.value}>{g.label}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={contact.notes}
+                    onChange={(e) => setContact({ ...contact, notes: e.target.value })}
+                    rows={2}
+                    placeholder="Anything helpful for gift picking..."
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  />
                 </div>
 
                 {/* Events */}
@@ -584,6 +630,76 @@ export default function OnboardingPage() {
                                 Skip gift suggestions for this date
                               </span>
                             </label>
+                          </div>
+
+                          {/* Advanced options (collapsed by default) */}
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleAdvanced(idx)}
+                              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <svg
+                                className={`w-3 h-3 transition-transform ${advancedOpenIndexes.has(idx) ? "rotate-90" : ""}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              Advanced options
+                            </button>
+
+                            {advancedOpenIndexes.has(idx) && (
+                              <div className="mt-3 space-y-3 pl-4 border-l-2 border-gray-100">
+                                {/* Year started */}
+                                <div>
+                                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                                    Year started <span className="font-normal normal-case text-gray-400">(optional)</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={event.year_started || ""}
+                                    onChange={(e) => updateEvent(idx, { year_started: e.target.value ? parseInt(e.target.value) : undefined })}
+                                    placeholder="e.g. 1990"
+                                    min="1900"
+                                    max="2100"
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                  />
+                                </div>
+
+                                {/* One-time event */}
+                                <div>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={event.one_time || false}
+                                      onChange={(e) => updateEvent(idx, { one_time: e.target.checked })}
+                                      className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                    />
+                                    <span className="text-xs text-gray-600">One-time event (don&apos;t repeat annually)</span>
+                                  </label>
+                                </div>
+
+                                {/* Event year (shown when one-time) */}
+                                {event.one_time && (
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                                      Event year
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={event.event_year || ""}
+                                      onChange={(e) => updateEvent(idx, { event_year: e.target.value ? parseInt(e.target.value) : undefined })}
+                                      placeholder={String(new Date().getFullYear())}
+                                      min={new Date().getFullYear()}
+                                      max="2100"
+                                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

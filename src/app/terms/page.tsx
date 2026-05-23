@@ -177,21 +177,12 @@ export default function TermsPage() {
             </p>
 
             <h2>15. Contact Us</h2>
-            <p>Questions about these Terms?</p>
-            <ul>
-              <li>
-                Email:{" "}
-                <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
-                  info@daysight.xyz
-                </a>
-              </li>
-              <li>
-                Web form:{" "}
-                <Link href="/contact" className="text-brand-600 underline hover:text-brand-700">
-                  Contact us
-                </Link>
-              </li>
-            </ul>
+            <p>
+              Questions about these Terms? Reach us at{" "}
+              <a href="mailto:info@daysight.xyz" className="text-brand-600 underline hover:text-brand-700">
+                info@daysight.xyz
+              </a>.
+            </p>
           </div>
         </div>
       </main>
