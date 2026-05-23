@@ -548,7 +548,7 @@ function ContactDetailContent() {
               <select
                 value={eventForm.event_type}
                 onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               >
                 <option value="birthday">Birthday</option>
                 <option value="anniversary">Anniversary</option>
@@ -566,7 +566,7 @@ function ContactDetailContent() {
                   value={eventForm.event_label}
                   onChange={(e) => setEventForm({ ...eventForm, event_label: e.target.value })}
                   placeholder="e.g. Graduation"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 />
               </div>
             )}
@@ -592,7 +592,7 @@ function ContactDetailContent() {
                       day: clampedDay,
                     });
                   }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 >
                   {MONTHS.map((m) => (
                     <option key={m.value} value={m.value}>
@@ -606,7 +606,7 @@ function ContactDetailContent() {
                 <select
                   value={eventForm.day}
                   onChange={(e) => setEventForm({ ...eventForm, day: parseInt(e.target.value) })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 >
                   {Array.from({ length: maxDays }, (_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -629,7 +629,7 @@ function ContactDetailContent() {
                 placeholder="e.g. 1990"
                 min="1900"
                 max="2100"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               />
             </div>
 
@@ -657,7 +657,7 @@ function ContactDetailContent() {
                   placeholder={String(new Date().getFullYear())}
                   min={new Date().getFullYear()}
                   max="2100"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 />
               </div>
             )}
@@ -676,17 +676,17 @@ function ContactDetailContent() {
                 <span className="text-sm text-gray-700">High importance</span>
               </label>
 
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={eventForm.suppress_gifts}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, suppress_gifts: e.target.checked })
-                  }
-                  className="w-3.5 h-3.5 rounded border-gray-300 text-gray-500 focus:ring-gray-300 cursor-pointer"
-                />
-                <span className="text-xs text-gray-400">Skip gift suggestions</span>
-              </label>
+              <button
+                type="button"
+                onClick={() => setEventForm({ ...eventForm, suppress_gifts: !eventForm.suppress_gifts })}
+                className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                  eventForm.suppress_gifts
+                    ? "bg-gray-200 text-gray-600"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                }`}
+              >
+                Skip gift suggestions
+              </button>
             </div>
 
             {/* Actions */}
@@ -730,7 +730,7 @@ function ContactDetailContent() {
                   required
                   value={contactForm.first_name}
                   onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 />
               </div>
               <div>
@@ -739,7 +739,7 @@ function ContactDetailContent() {
                   type="text"
                   value={contactForm.last_name}
                   onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 />
               </div>
             </div>
@@ -749,7 +749,7 @@ function ContactDetailContent() {
               <select
                 value={contactForm.relationship}
                 onChange={(e) => setContactForm({ ...contactForm, relationship: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               >
                 {RELATIONSHIPS.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
@@ -764,7 +764,7 @@ function ContactDetailContent() {
               <select
                 value={contactForm.gender}
                 onChange={(e) => setContactForm({ ...contactForm, gender: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               >
                 <option value="">Not specified</option>
                 {GENDER_OPTIONS.map((g) => (
@@ -801,7 +801,7 @@ function ContactDetailContent() {
                 value={contactForm.gift_other}
                 onChange={(e) => setContactForm({ ...contactForm, gift_other: e.target.value })}
                 placeholder="e.g. Board games, puzzles"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               />
             </div>
 
@@ -810,7 +810,7 @@ function ContactDetailContent() {
               <select
                 value={contactForm.budget_tier}
                 onChange={(e) => setContactForm({ ...contactForm, budget_tier: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               >
                 <option value="">Any budget</option>
                 <option value="low">Under $50</option>
@@ -850,7 +850,7 @@ function ContactDetailContent() {
                 onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
                 rows={2}
                 placeholder="Anything helpful for gift picking..."
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               />
             </div>
 

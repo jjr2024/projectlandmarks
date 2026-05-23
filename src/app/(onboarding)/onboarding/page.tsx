@@ -261,16 +261,6 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div>
               <div className="text-center mb-10">
-                <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                  <svg className="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 11.5V7a5 5 0 0 1 10 0v1" />
-                    <path d="M5.5 11.5a1.5 1.5 0 0 0-1.5 1.5v1a8 8 0 0 0 16 0v-1a1.5 1.5 0 0 0-1.5-1.5" />
-                    <path d="M12 20v2" />
-                    <path d="M8 11.5V9" />
-                    <path d="M12 11.5V8" />
-                    <path d="M16 11.5V9" />
-                  </svg>
-                </div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-3">
                   Welcome, <span className="text-brand-600">{firstName}</span>!
                 </h1>
@@ -362,7 +352,7 @@ export default function OnboardingPage() {
                       onChange={(e) => setContact({ ...contact, first_name: e.target.value })}
                       placeholder="Sarah"
                       autoFocus
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                     />
                   </div>
                   <div>
@@ -372,7 +362,7 @@ export default function OnboardingPage() {
                       value={contact.last_name}
                       onChange={(e) => setContact({ ...contact, last_name: e.target.value })}
                       placeholder="Chen"
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                     />
                   </div>
                 </div>
@@ -408,7 +398,7 @@ export default function OnboardingPage() {
                   <select
                     value={contact.gender}
                     onChange={(e) => setContact({ ...contact, gender: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                   >
                     <option value="">Not specified</option>
                     {GENDER_OPTIONS.map((g) => (
@@ -427,7 +417,7 @@ export default function OnboardingPage() {
                     onChange={(e) => setContact({ ...contact, notes: e.target.value })}
                     rows={2}
                     placeholder="Anything helpful for gift picking..."
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                   />
                 </div>
 
@@ -523,7 +513,7 @@ export default function OnboardingPage() {
                                 value={event.event_label}
                                 onChange={(e) => updateEvent(idx, { event_label: e.target.value })}
                                 placeholder="e.g. Graduation"
-                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                               />
                             </div>
                           )}
@@ -543,7 +533,7 @@ export default function OnboardingPage() {
                                     day: Math.min(event.day, DAYS_IN_MONTH[m] || 31),
                                   });
                                 }}
-                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                               >
                                 <option value={0}>Month</option>
                                 {MONTHS.map((m) => (
@@ -555,7 +545,7 @@ export default function OnboardingPage() {
                               <select
                                 value={event.day}
                                 onChange={(e) => updateEvent(idx, { day: parseInt(e.target.value) })}
-                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                               >
                                 <option value={0}>Day</option>
                                 {Array.from(
@@ -570,7 +560,7 @@ export default function OnboardingPage() {
                             </div>
                           </div>
 
-                          {/* High importance + Suppress gifts row */}
+                          {/* High importance + Skip gifts + Remove row */}
                           <div className="flex items-center justify-between pt-2">
                             <div className="flex items-center gap-2.5">
                               <label className="flex items-center gap-2.5 cursor-pointer">
@@ -606,33 +596,31 @@ export default function OnboardingPage() {
                                 </span>
                               </span>
                             </div>
-                            {events.length > 1 && (
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleRemoveEvent(idx)}
-                                className="text-xs text-red-500 hover:text-red-600 font-medium"
+                                onClick={() => updateEvent(idx, { suppress_gifts: !event.suppress_gifts })}
+                                className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                                  event.suppress_gifts
+                                    ? "bg-gray-200 text-gray-600"
+                                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                                }`}
                               >
-                                Remove
+                                Skip gifts
                               </button>
-                            )}
+                              {events.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEvent(idx)}
+                                  className="text-xs text-red-500 hover:text-red-600 font-medium"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
                           </div>
 
-                          {/* Suppress gifts — subtle inline toggle */}
-                          <div className="flex items-center gap-2 pt-1">
-                            <label className="flex items-center gap-1.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={event.suppress_gifts}
-                                onChange={(e) => updateEvent(idx, { suppress_gifts: e.target.checked })}
-                                className="w-3.5 h-3.5 rounded border-gray-300 text-gray-500 focus:ring-gray-300 cursor-pointer"
-                              />
-                              <span className="text-xs text-gray-400">
-                                Skip gift suggestions for this date
-                              </span>
-                            </label>
-                          </div>
-
-                          {/* Advanced options (collapsed by default) */}
+                          {/* Other options (collapsed by default) */}
                           <div className="pt-2">
                             <button
                               type="button"
@@ -647,7 +635,7 @@ export default function OnboardingPage() {
                               >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
-                              Advanced options
+                              Other options
                             </button>
 
                             {advancedOpenIndexes.has(idx) && (
@@ -664,7 +652,7 @@ export default function OnboardingPage() {
                                     placeholder="e.g. 1990"
                                     min="1900"
                                     max="2100"
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                   />
                                 </div>
 
@@ -694,7 +682,7 @@ export default function OnboardingPage() {
                                       placeholder={String(new Date().getFullYear())}
                                       min={new Date().getFullYear()}
                                       max="2100"
-                                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                   </div>
                                 )}
@@ -817,7 +805,7 @@ export default function OnboardingPage() {
                   value={giftOther}
                   onChange={(e) => setGiftOther(e.target.value)}
                   placeholder="e.g. Board games, puzzles, cooking"
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 />
               </div>
 
@@ -828,7 +816,7 @@ export default function OnboardingPage() {
                 <select
                   value={budgetTier}
                   onChange={(e) => setBudgetTier(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 >
                   <option value="">Any budget</option>
                   <option value="low">Under $50</option>

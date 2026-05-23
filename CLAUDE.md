@@ -4,7 +4,7 @@
 
 ## Project Status
 
-**Production-ready.** Next.js + Supabase + Resend + Vercel, live and auto-deploying. Phases 1–9 complete. UI conformity sweep deferred to post-launch.
+**Production-ready.** Next.js + Supabase + Resend + Vercel, live and auto-deploying. Phases 1–9 complete. UI conformity sweep done (input styling, icon consistency, onboarding parity).
 
 Legacy prototype HTML files in repo root are read-only reference. All development targets `src/`.
 
@@ -54,12 +54,11 @@ src/
 │   ├── (admin)/admin/         Admin (is_admin gated): dashboard, queue, gifts, error boundary
 │   ├── (app)/                 Auth'd pages (shared sidebar): dashboard, contacts, contacts/[id], settings, error boundary
 │   ├── (onboarding)/          Isolated layout: onboarding
-│   ├── about|privacy|terms|contact|consent|unsubscribe/  Public pages
-│   ├── auth/                  Sign in/up, callback, forgot-password, reset-password
+│   ├── about|privacy|terms|contact|consent|unsubscribe/  Public pages (contact = static email page, no form)
+│   ├── auth/                  Sign in/up (with ← Home link), callback, forgot-password, reset-password
 │   └── api/
 │       ├── cron/              reminders, digest, reengagement, purge
 │       ├── webhooks/          resend, affiliate
-│       ├── contact/           Contact form → Resend
 │       ├── calendar/[userId]  .ics feed (HMAC-signed, RFC 5545 line folding)
 │       ├── calendar-url/      Signed calendar URL
 │       └── unsubscribe/       HMAC-verified unsubscribe
@@ -93,6 +92,10 @@ supabase/migrations/
 **Soft-delete:** `deleted_at` on contacts and events. Purge cron hard-deletes after 7 days (cascades to events, reminder_log, shown_gifts).
 
 **Route groups:** `(app)` = auth'd sidebar layout. `(onboarding)` = isolated layout. `(admin)` = admin sidebar, gated on `profiles.is_admin`.
+
+**Onboarding:** 4-step flow (Welcome → Contact+Events → Gift prefs → Done). Collects full contact fields including notes. Events include "Other options" expandable (year_started, one_time, event_year) — collapsed by default to keep the happy path clean. Icons use inline SVGs (no emojis). "Skip gifts" is a toggle button, not a checkbox.
+
+**Public pages:** Contact page is a simple static page with a mailto link to info@daysight.xyz (no form, no API route). Privacy policy has no disclaimer banner. Terms and privacy both reference email-only contact.
 
 **Middleware:** Supabase SSR cookies. Protects app routes → redirects unauth'd to `/auth`. Redirects auth'd away from `/auth` (except reset-password).
 
@@ -159,7 +162,6 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 | `/api/cron/purge` | GET | `Bearer CRON_SECRET` | Daily 04:00 UTC — hard-delete expired trash |
 | `/api/webhooks/resend` | POST | `Bearer RESEND_WEBHOOK_SECRET` | Delivery events → reminder_log + conversion_events |
 | `/api/webhooks/affiliate` | POST | `Bearer AFFILIATE_WEBHOOK_SECRET` | Purchase postbacks → conversion_events |
-| `/api/contact` | POST | IP rate limit (5/15min) | Contact form → Resend |
 | `/api/calendar/[userId]` | GET | HMAC token | .ics feed |
 | `/api/calendar-url` | GET | Session cookie | Signed calendar URL |
 | `/api/unsubscribe` | POST | HMAC uid+token | Set consent_emails=false |
@@ -196,7 +198,6 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Privacy Policy and Terms have mismatched retention timelines
 - GDPR legal basis vague — should map processing activities to specific bases
 - No `robots.txt` or `sitemap.xml`
-- Contact form rate limiting is in-memory (bypassable on serverless). Consider Upstash Redis.
 - Digest/re-engagement cron routes lack pre-send dedup (acceptable tradeoff)
 - Remaining from prototype: data export
 - Affiliate webhook accepts unverified user_id-only postbacks (trade-off T-1 — pending owner decision on HMAC/stricter validation)
