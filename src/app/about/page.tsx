@@ -20,7 +20,7 @@ function AboutContent() {
           <p>
             When I was a young finance professional in NYC, I remembered birthdays too
             late to actually do anything for them (if I remembered them at all!). I
-            started Daysight to help you (and me!) stop making the same mistake.
+            started Daysight to help you (and me) stop making the same mistake.
           </p>
           <p>
             A calendar reminder the day-of at 9am isn&apos;t that helpful. Daysight
@@ -50,8 +50,11 @@ function AboutContent() {
               We don&apos;t track you across the web and we don&apos;t contact the people you add.
             </p>
             <p>
-              You can export your data or delete your account at any time.
-              No retention periods, no hidden backups, no hoops. When we say delete, we mean it.
+              You can delete your account at any time from Settings. Personal data is
+              permanently removed within 7 days — contacts, events, reminder history,
+              all of it. We do retain anonymized, non-identifiable analytics (like
+              aggregate purchase and email statistics) to improve the service, but
+              nothing that can be traced back to you.
             </p>
           </div>
         </div>
