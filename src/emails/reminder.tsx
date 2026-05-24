@@ -7,6 +7,7 @@ import { Text } from "@react-email/text";
 import { Link } from "@react-email/link";
 import { Hr } from "@react-email/hr";
 import * as React from "react";
+import { GiftCategoryIcon } from "@/components/gift-icons";
 
 interface GiftItem {
   name: string;
@@ -14,6 +15,7 @@ interface GiftItem {
   description: string;
   price: string;
   affiliate_url: string;
+  category: string;
 }
 
 interface ReminderEmailProps {
@@ -38,6 +40,26 @@ const brandOrangeLight = "#e47243";
 
 function eventTypeLabel(eventType: string): string {
   return { birthday: "birthday", anniversary: "anniversary", custom: "event" }[eventType] || "event";
+}
+
+function categoryLabel(category: string): string {
+  return (
+    {
+      flowers: "Flowers",
+      wine: "Wine",
+      food_snacks: "Food & Snacks",
+      home: "Home",
+      books: "Books",
+      electronics: "Electronics",
+      sports: "Sports",
+      apparel: "Apparel",
+      beauty: "Beauty",
+      jewelry: "Jewelry",
+      wellness: "Wellness",
+      games_toys: "Games & Toys",
+      pet: "Pet",
+    }[category] || category
+  );
 }
 
 export default function ReminderEmail({
@@ -125,7 +147,7 @@ export default function ReminderEmail({
             {suppressGifts && (
               <Section style={{ background: "#fdf5f0", border: "1px solid #f9cfb8", borderRadius: "10px", padding: "16px 20px", marginBottom: "16px", textAlign: "center" as const }}>
                 <Text style={{ color: "#374151", fontSize: "14px", lineHeight: "1.5", margin: 0 }}>
-                  Just a heads-up so this date doesn&apos;t slip by. We&apos;re thinking of you. ❤️
+                  Just a heads-up so this date doesn&apos;t slip by. We&apos;re thinking of you.
                 </Text>
               </Section>
             )}
@@ -155,6 +177,34 @@ export default function ReminderEmail({
                 {/* Gift items — text-only cards (no product images) */}
                 {gifts.map((gift, i) => (
                   <Section key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px 16px", marginBottom: "8px", background: "#fafafa" }}>
+                    {/* Category badge — soft-edge chip with SVG icon + label */}
+                    {gift.category && (
+                      <table cellPadding="0" cellSpacing="0" style={{ marginBottom: "8px" }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ background: "#fff6f1", border: "1px solid #f5e6d3", borderRadius: "8px", padding: "4px 10px" }}>
+                              <table cellPadding="0" cellSpacing="0">
+                                <tbody>
+                                  <tr>
+                                    <td style={{ verticalAlign: "middle", paddingRight: "6px", color: brandOrange, lineHeight: 0 }}>
+                                      <GiftCategoryIcon
+                                        category={gift.category}
+                                        className=""
+                                        strokeWidth={1.75}
+                                        style={{ width: "14px", height: "14px", display: "block" }}
+                                      />
+                                    </td>
+                                    <td style={{ verticalAlign: "middle", color: brandOrange, fontSize: "11px", fontWeight: 600, letterSpacing: "0.03em", textTransform: "uppercase" as const }}>
+                                      {categoryLabel(gift.category)}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
                     {/* Name / description / price — full card width */}
                     <Text style={{ fontWeight: 600, color: "#111827", fontSize: "14px", margin: 0 }}>{gift.name}</Text>
                     <Text style={{ color: "#6b7280", fontSize: "12px", margin: "2px 0 0 0", lineHeight: "1.4" }}>{gift.description}</Text>

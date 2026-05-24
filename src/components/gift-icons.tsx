@@ -4,19 +4,25 @@ interface GiftCategoryIconProps {
   category: string;
   className?: string;
   strokeWidth?: number;
+  style?: React.CSSProperties;
 }
 
 /**
  * GiftCategoryIcon - renders SVG icons for gift categories
- * Icons are stroke-based, inherit currentColor, and use 24x24 viewBox
+ * Icons are stroke-based, inherit currentColor, and use 24x24 viewBox.
+ * Accepts optional `style` so the same component can be used in email
+ * templates (where Tailwind classes don't apply) — pass inline width/height
+ * via `style={{ width, height }}` and an empty `className`.
  */
 export function GiftCategoryIcon({
   category,
   className = "w-6 h-6",
   strokeWidth = 1.5,
+  style,
 }: GiftCategoryIconProps) {
   const baseProps = {
     className,
+    style,
     fill: "none",
     stroke: "currentColor",
     strokeWidth,

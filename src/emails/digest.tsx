@@ -7,6 +7,7 @@ import { Text } from "@react-email/text";
 import { Link } from "@react-email/link";
 import { Hr } from "@react-email/hr";
 import * as React from "react";
+import { EventTypeIcon } from "@/components/event-icons";
 
 interface DigestEvent {
   contactName: string;
@@ -58,32 +59,75 @@ export default function DigestEmail({
   return (
     <Html>
       <Head />
-      <Body style={{ backgroundColor: "#f3f4f6", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", margin: 0, padding: "24px 0" }}>
-        <Container style={{ maxWidth: "560px", margin: "0 auto" }}>
-          {/* Header */}
-          <Section style={{ background: `linear-gradient(135deg, ${brandOrange}, ${brandOrangeDark})`, borderRadius: "16px 16px 0 0", padding: "28px 40px", textAlign: "center" as const }}>
-            <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: "13px", fontWeight: 500, margin: "0 0 4px 0" }}>Monthly Planning Digest</Text>
-            <Text style={{ color: "white", fontSize: "22px", fontWeight: 700, margin: 0 }}>{monthName}&apos;s coming up</Text>
-            <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", margin: "6px 0 0 0" }}>Here&apos;s everyone with an event this month.</Text>
+      <Body style={{ backgroundColor: "#f3f4f6", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", margin: 0, padding: "16px 0" }}>
+        <Container style={{ maxWidth: "600px", width: "100%", margin: "0 auto" }}>
+          {/* Header — compact, matches reminder template */}
+          <Section style={{ background: `linear-gradient(135deg, ${brandOrange}, ${brandOrangeDark})`, borderRadius: "12px 12px 0 0", padding: "20px 32px", textAlign: "center" as const }}>
+            <table cellPadding="0" cellSpacing="0" style={{ margin: "0 auto 8px" }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: "32px", height: "32px", verticalAlign: "middle" }}>
+                    {/* Daysight logo — hosted PNG (data: URIs are blocked by Gmail) */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="https://daysight.xyz/email/logo-daysight.png"
+                      alt="Daysight"
+                      width="32"
+                      height="32"
+                      style={{ display: "block", border: "none", borderRadius: "8px" }}
+                    />
+                  </td>
+                  <td style={{ paddingLeft: "10px", verticalAlign: "middle" }}>
+                    <span style={{ color: "#ffffff", fontSize: "18px", fontWeight: 800, letterSpacing: "0.01em", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+                      Daysight
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: "11px", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em", margin: "0 0 4px 0" }}>Monthly Planning Digest</Text>
+            <Text style={{ color: "#ffffff", fontSize: "18px", fontWeight: 700, lineHeight: "1.3", margin: 0 }}>{monthName}&apos;s coming up</Text>
           </Section>
 
           {/* Body */}
-          <Section style={{ backgroundColor: "white", padding: "28px 40px", borderRadius: "0 0 16px 16px" }}>
-            <Text style={{ color: "#374151", fontSize: "15px", margin: "0 0 20px 0" }}>Hi {firstName},</Text>
-            <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 24px 0", lineHeight: "1.6" }}>
+          <Section style={{ backgroundColor: "white", padding: "24px 32px", borderRadius: "0 0 12px 12px" }}>
+            <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 12px 0" }}>Hi {firstName},</Text>
+            <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 16px 0", lineHeight: "1.5" }}>
               Here&apos;s a look at everyone who has something special coming up this month. You&apos;ve got plenty of time to order with standard shipping — no rush yet.
             </Text>
 
             {/* Event list */}
             {events.map((evt, i) => (
-              <Section key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "12px", padding: "14px 18px", marginBottom: "10px", background: "#fafafa" }}>
+              <Section key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", background: "#fafafa" }}>
                 <table cellPadding="0" cellSpacing="0" width="100%">
                   <tbody>
                     <tr>
                       <td style={{ width: "36px", verticalAlign: "middle" }}>
-                        <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: eventBgColor(evt.eventType), color: eventTextColor(evt.eventType), textAlign: "center" as const, lineHeight: "36px", fontSize: "16px" }}>
-                          {evt.eventType === "birthday" ? "🎂" : evt.eventType === "anniversary" ? "❤️" : "📅"}
-                        </div>
+                        <table cellPadding="0" cellSpacing="0" style={{ width: "36px", height: "36px" }}>
+                          <tbody>
+                            <tr>
+                              <td
+                                align="center"
+                                style={{
+                                  width: "36px",
+                                  height: "36px",
+                                  borderRadius: "8px",
+                                  background: eventBgColor(evt.eventType),
+                                  color: eventTextColor(evt.eventType),
+                                  textAlign: "center" as const,
+                                  verticalAlign: "middle",
+                                }}
+                              >
+                                <EventTypeIcon
+                                  type={evt.eventType}
+                                  className=""
+                                  strokeWidth={1.75}
+                                  style={{ width: "18px", height: "18px", display: "inline-block", verticalAlign: "middle" }}
+                                />
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </td>
                       <td style={{ paddingLeft: "14px", verticalAlign: "middle" }}>
                         <Text style={{ fontWeight: 600, color: "#111827", fontSize: "14px", margin: 0 }}>{evt.contactName}</Text>
@@ -103,18 +147,18 @@ export default function DigestEmail({
             ))}
 
             {/* Footer */}
-            <Hr style={{ borderColor: "#f3f4f6", margin: "20px 0" }} />
+            <Hr style={{ borderColor: "#f3f4f6", margin: "14px 0" }} />
             <Section style={{ textAlign: "center" as const }}>
               <table cellPadding="0" cellSpacing="0" style={{ margin: "0 auto 10px" }}>
                 <tbody>
                   <tr>
-                    <td style={{ padding: "0 10px" }}><Link href="https://daysight.xyz/contacts" style={{ color: brandOrangeLight, textDecoration: "none", fontSize: "13px", fontWeight: 500 }}>Manage contacts</Link></td>
-                    <td style={{ padding: "0 10px" }}><Link href="https://daysight.xyz/settings" style={{ color: brandOrangeLight, textDecoration: "none", fontSize: "13px", fontWeight: 500 }}>Turn off digest</Link></td>
+                    <td style={{ padding: "0 8px" }}><Link href="https://daysight.xyz/contacts" style={{ color: brandOrangeLight, textDecoration: "none", fontSize: "12px", fontWeight: 500 }}>Manage contacts</Link></td>
+                    <td style={{ padding: "0 8px" }}><Link href="https://daysight.xyz/settings" style={{ color: brandOrangeLight, textDecoration: "none", fontSize: "12px", fontWeight: 500 }}>Turn off digest</Link></td>
                   </tr>
                 </tbody>
               </table>
-              <Text style={{ color: "#9ca3af", fontSize: "11px", margin: 0 }}>
-                Daysight · Monthly digest · <Link href={unsubLink} style={{ color: "#9ca3af" }}>Unsubscribe</Link>
+              <Text style={{ color: "#9ca3af", fontSize: "10px", lineHeight: "1.5", margin: 0 }}>
+                Daysight · Monthly digest · <Link href={unsubLink} style={{ color: "#9ca3af" }}>Unsubscribe</Link> · <Link href="https://daysight.xyz/privacy" style={{ color: "#9ca3af" }}>Privacy Policy</Link>
               </Text>
             </Section>
           </Section>

@@ -220,6 +220,7 @@ export async function GET(request: NextRequest) {
                 description: g.description || g.tags?.join(", ") || "",
                 price: g.price_tier === "low" ? "<$50" : g.price_tier === "mid" ? "$50–$100" : ">$100",
                 affiliate_url: g.affiliate_url || "#",
+                category: g.category,
               })),
               suppressGifts: event.suppress_gifts,
               lastYearLine,
