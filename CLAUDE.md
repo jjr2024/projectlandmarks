@@ -191,13 +191,12 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 
 - No Google OAuth (disabled with "coming soon" in prototype)
 - Affiliate links use clean `/dp/ASIN?tag=` format for Amazon; UrbanStems/Wine.com use original URLs
-- Gift catalog XLS v2.0 has `clean_affiliate_url` column (use this for DB seeding, not `affiliate_url`). XLS also contains internal-reference columns not used by the webapp: `is_active`, `image_url`, `asin`, `current_price`, `star_rating`, `review_count`, `last_updated`, `affiliate`. XLS descriptions are the source of truth for product copy.
+- Gift catalog XLS v2.0 has `clean_affiliate_url` column (use this for DB seeding, not `affiliate_url`). XLS also contains internal-reference columns not used by the webapp: `is_active`, `image_url`, `asin`, `current_price`, `star_rating`, `review_count`, `last_updated`, `affiliate`. `image_url` is intentionally unused — reminder emails are text-only (no product images) and the contact page links by gift name. XLS descriptions are the source of truth for product copy.
 - `relationship_affinities` and `event_affinities` default to "all" in catalog — scoring weights (+15 each) are unused until populated
 - `is_last_minute` is over-tagged (97% = yes) — needs audit to flag only truly instant-delivery items
 - No contact import (CSV, Google Contacts, vCard)
 - Privacy Policy and Terms have mismatched retention timelines
 - GDPR legal basis vague — should map processing activities to specific bases
-- No `robots.txt` or `sitemap.xml`
 - Digest/re-engagement cron routes lack pre-send dedup (acceptable tradeoff)
 - Remaining from prototype: data export
 - Affiliate webhook accepts unverified user_id-only postbacks (trade-off T-1 — pending owner decision on HMAC/stricter validation)
@@ -210,7 +209,8 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - `useSearchParams()` needs `<Suspense>` boundary in Next.js 14 production builds
 - Use individual `@react-email/*` packages, not the unified `react-email` (heavy CLI)
 - `Precedence: bulk` header removed — was causing Gmail Promotions classification
-- Emails: pixels only (no rem/em/%), stacked layout for gift cards. CTA buttons use `display: "block"` + `width: "100%"` for mobile tap targets; secondary buttons use `inline-block`
+- Emails: pixels only (no rem/em/%), stacked layout for gift cards (text-only — title/description/price/CTA, no product images). CTA buttons use `display: "block"` + `width: "100%"` for mobile tap targets; secondary buttons use `inline-block`
+- Email images must be hosted at absolute HTTPS URLs (Gmail strips `data:` URIs). Logo lives at `public/email/logo-daysight.png` → `https://daysight.xyz/email/logo-daysight.png`. Header wordmark uses an explicit inline `<span style="color:#ffffff">` — raw `<td>` color is stripped by some clients
 - Resend idempotency keys are deterministic — always include one when adding email-sending code
 - `nextOccurrence()` and `formatEventDate()` are in `src/lib/reminders.ts` — never re-duplicate
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)

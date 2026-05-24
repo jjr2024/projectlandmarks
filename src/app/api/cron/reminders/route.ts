@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
                 name: g.name,
                 partner: g.partner,
                 description: g.description || g.tags?.join(", ") || "",
-                price: g.price_tier === "low" ? "Under $30" : g.price_tier === "mid" ? "$30-75" : "$75+",
+                price: g.price_tier === "low" ? "<$50" : g.price_tier === "mid" ? "$50–$100" : ">$100",
                 affiliate_url: g.affiliate_url || "#",
               })),
               suppressGifts: event.suppress_gifts,

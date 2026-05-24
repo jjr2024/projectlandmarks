@@ -56,6 +56,9 @@ interface ShownGift {
   gift_name: string;
   gift_category: string | null;
   gift_partner: string | null;
+  // Joined from gift_catalog. Null when the catalog row has been deleted
+  // (shown_gifts.gift_id is `on delete set null`) or never linked.
+  gift_catalog: { affiliate_url: string | null } | null;
 }
 
 const DAYS_IN_MONTH: Record<number, number> = {
@@ -165,7 +168,11 @@ function ContactDetailContent() {
     const [contactRes, eventsRes, giftsRes] = await Promise.all([
       supabase.from("contacts").select("*").eq("id", contactId).is("deleted_at", null).single(),
       supabase.from("events").select("*").eq("contact_id", contactId).is("deleted_at", null).order("month", { ascending: true }),
-      supabase.from("shown_gifts").select("*").eq("contact_id", contactId).order("year", { ascending: false }),
+      supabase
+        .from("shown_gifts")
+        .select("*, gift_catalog(affiliate_url)")
+        .eq("contact_id", contactId)
+        .order("year", { ascending: false }),
     ]);
 
     if (!contactRes.data) {
@@ -509,16 +516,30 @@ function ContactDetailContent() {
             </p>
           </div>
           <ul className="divide-y divide-gray-100">
-            {shownGifts.map((sg) => (
-              <li key={sg.id} className="px-5 py-3 flex items-center gap-3">
-                <span className="text-sm text-gray-500 w-10 shrink-0">{sg.year}</span>
-                <span className="text-sm text-gray-400">{formatDate(sg.event_month, sg.event_day)} —</span>
-                <span className="text-sm text-gray-700">{sg.gift_name}</span>
-                {sg.gift_partner && (
-                  <span className="text-xs text-gray-400">via {sg.gift_partner}</span>
-                )}
-              </li>
-            ))}
+            {shownGifts.map((sg) => {
+              const affiliateUrl = sg.gift_catalog?.affiliate_url || null;
+              return (
+                <li key={sg.id} className="px-5 py-3 flex items-center gap-3">
+                  <span className="text-sm text-gray-500 w-10 shrink-0">{sg.year}</span>
+                  <span className="text-sm text-gray-400">{formatDate(sg.event_month, sg.event_day)} —</span>
+                  {affiliateUrl ? (
+                    <a
+                      href={affiliateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow sponsored"
+                      className="text-sm text-brand-600 hover:text-brand-700 hover:underline font-medium"
+                    >
+                      {sg.gift_name}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-gray-700">{sg.gift_name}</span>
+                  )}
+                  {sg.gift_partner && (
+                    <span className="text-xs text-gray-400">via {sg.gift_partner}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

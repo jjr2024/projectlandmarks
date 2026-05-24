@@ -1224,10 +1224,10 @@ export default function SettingsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">Google Calendar</h3>
                 <ol className="list-decimal list-inside space-y-1 text-gray-600">
-                  <li>Go to Settings → Add other calendars (+ icon)</li>
-                  <li>Choose &ldquo;Subscribe to calendar&rdquo;</li>
+                  <li>Click the + button next to &ldquo;Other calendars&rdquo;</li>
+                  <li>Choose &ldquo;From URL&rdquo;</li>
                   <li>Paste the subscription URL</li>
-                  <li>Click Subscribe</li>
+                  <li>Click &ldquo;Add calendar&rdquo;</li>
                 </ol>
               </div>
 

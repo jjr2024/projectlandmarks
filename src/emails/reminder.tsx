@@ -75,15 +75,30 @@ export default function ReminderEmail({
         <Container style={{ maxWidth: "600px", width: "100%", margin: "0 auto" }}>
           {/* Header — compact */}
           <Section style={{ background: `linear-gradient(135deg, ${brandOrange}, ${brandOrangeDark})`, borderRadius: "12px 12px 0 0", padding: "20px 32px", textAlign: "center" as const }}>
-            <table cellPadding="0" cellSpacing="0" style={{ margin: "0 auto 6px" }}>
+            <table cellPadding="0" cellSpacing="0" style={{ margin: "0 auto 8px" }}>
               <tbody>
                 <tr>
-                  <td style={{ width: "22px", height: "22px", background: "rgba(255,255,255,0.2)", borderRadius: "6px", textAlign: "center" as const, fontSize: "12px", verticalAlign: "middle" }}>★</td>
-                  <td style={{ paddingLeft: "6px", color: "rgba(255,255,255,0.9)", fontSize: "12px", fontWeight: 600, verticalAlign: "middle" }}>Daysight</td>
+                  <td style={{ width: "32px", height: "32px", verticalAlign: "middle" }}>
+                    {/* Daysight logo — hosted PNG (data: URIs are blocked by Gmail) */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="https://daysight.xyz/email/logo-daysight.png"
+                      alt="Daysight"
+                      width="32"
+                      height="32"
+                      style={{ display: "block", border: "none", borderRadius: "8px" }}
+                    />
+                  </td>
+                  <td style={{ paddingLeft: "10px", verticalAlign: "middle" }}>
+                    {/* Solid-white inline span — some clients strip color styles off raw <td> */}
+                    <span style={{ color: "#ffffff", fontSize: "18px", fontWeight: 800, letterSpacing: "0.01em", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+                      Daysight
+                    </span>
+                  </td>
                 </tr>
               </tbody>
             </table>
-            <Text style={{ color: "white", fontSize: "18px", fontWeight: 700, lineHeight: "1.3", margin: 0 }}>{headline}</Text>
+            <Text style={{ color: "#ffffff", fontSize: "18px", fontWeight: 700, lineHeight: "1.3", margin: 0 }}>{headline}</Text>
           </Section>
 
           {/* Body */}
@@ -137,30 +152,33 @@ export default function ReminderEmail({
                 {/* Gift Ideas header */}
                 <Text style={{ color: "#111827", fontSize: "12px", fontWeight: 600, margin: "0 0 10px 0", textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Gift Ideas</Text>
 
-                {/* Gift items — stacked layout for mobile compatibility */}
+                {/* Gift items — text-only cards (no product images) */}
                 {gifts.map((gift, i) => (
                   <Section key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px 16px", marginBottom: "8px", background: "#fafafa" }}>
-                    {/* Top row: icon + name/description */}
-                    <table cellPadding="0" cellSpacing="0" width="100%">
+                    {/* Name / description / price — full card width */}
+                    <Text style={{ fontWeight: 600, color: "#111827", fontSize: "14px", margin: 0 }}>{gift.name}</Text>
+                    <Text style={{ color: "#6b7280", fontSize: "12px", margin: "2px 0 0 0", lineHeight: "1.4" }}>{gift.description}</Text>
+                    <Text style={{ color: brandOrangeLight, fontSize: "12px", fontWeight: 600, margin: "2px 0 0 0" }}>{gift.price}</Text>
+                    {/* Button on its own row — table-based for email client compatibility */}
+                    <table cellPadding="0" cellSpacing="0" width="100%" style={{ marginTop: "10px" }}>
                       <tbody>
                         <tr>
-                          <td style={{ width: "36px", verticalAlign: "top", paddingTop: "2px" }}>
-                            <div style={{ width: "36px", height: "36px", background: "#fdf5f0", borderRadius: "8px", color: brandOrange, fontWeight: 700, fontSize: "14px", textAlign: "center" as const, lineHeight: "36px" }}>
-                              {gift.partner?.charAt(0) || "G"}
-                            </div>
-                          </td>
-                          <td style={{ paddingLeft: "12px", verticalAlign: "top" }}>
-                            <Text style={{ fontWeight: 600, color: "#111827", fontSize: "14px", margin: 0 }}>{gift.name}</Text>
-                            <Text style={{ color: "#6b7280", fontSize: "12px", margin: "2px 0 0 0", lineHeight: "1.4" }}>{gift.description}</Text>
-                            <Text style={{ color: brandOrangeLight, fontSize: "12px", fontWeight: 600, margin: "2px 0 0 0" }}>{gift.price}</Text>
+                          <td align="center">
+                            <table cellPadding="0" cellSpacing="0">
+                              <tbody>
+                                <tr>
+                                  <td align="center" style={{ background: brandOrange, borderRadius: "8px" }}>
+                                    <Link href={gift.affiliate_url || "#"} style={{ display: "inline-block", color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 24px", borderRadius: "8px" }}>
+                                      {gift.affiliate_url && gift.affiliate_url !== "#" ? "Buy Now (Affiliate Link) →" : "Buy Now →"}
+                                    </Link>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </td>
                         </tr>
                       </tbody>
                     </table>
-                    {/* Button on its own row — full width, mobile-friendly */}
-                    <Link href={gift.affiliate_url || "#"} style={{ display: "block", width: "100%", background: brandOrange, color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 20px", borderRadius: "8px", textAlign: "center" as const, marginTop: "10px" }}>
-                      Buy Now →
-                    </Link>
                   </Section>
                 ))}
 
