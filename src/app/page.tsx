@@ -72,20 +72,22 @@ export default function Home() {
                 <div>
                   <div className="text-xs text-gray-500">From: Daysight</div>
                   <div className="font-semibold text-gray-900 text-sm">
-                    Your mom Sarah&apos;s birthday is in 7 days
+                    Sarah&apos;s birthday is in 7 days
                   </div>
                 </div>
               </div>
+              <p className="text-sm text-gray-700 mb-1">Hi Alex,</p>
               <p className="text-sm text-gray-700 mb-4">
-                Hi Alex — Sarah&apos;s birthday is <strong>March 31st</strong>. Here are a few
-                ideas she&apos;d love:
+                Sarah&apos;s birthday is coming up on <strong>March 31st</strong> — 7 days from now.
+                Here are a few gift ideas she&apos;d love, ready to order in one click.
               </p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Gift Ideas</p>
               <div className="space-y-2 mb-4">
-                <EmailMockGift name="The Sorbet Flower Bouquet" detail="UrbanStems · Mid-range" />
-                <EmailMockGift name="Ferrero Collection Assorted" detail="Amazon · Under $30" />
+                <EmailMockGift name="The Sorbet Flower Bouquet" description="Hand-tied bouquet of pastel roses, ranunculus, and lisianthus" price="Mid-range" />
+                <EmailMockGift name="Ferrero Collection Assorted" description="24-piece assorted chocolates — Rocher, Rondnoir, and Raffaello" price="Under $30" />
               </div>
               <p className="text-xs text-gray-400 text-center">
-                Daysight · Edit preferences · Unsubscribe
+                Edit preferences · Settings · Unsubscribe · Privacy
               </p>
             </div>
           </div>
@@ -288,21 +290,17 @@ export default function Home() {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function EmailMockGift({ name, detail }: { name: string; detail: string }) {
+function EmailMockGift({ name, description, price }: { name: string; description: string; price: string }) {
   return (
-    <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
-      <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center">
-        <svg className="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-        </svg>
+    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+      <div className="text-sm font-semibold text-gray-900">{name}</div>
+      <div className="text-xs text-gray-500 mt-0.5 leading-snug">{description}</div>
+      <div className="text-xs font-semibold text-brand-400 mt-0.5">{price}</div>
+      <div className="mt-2">
+        <span className="block text-center bg-brand-600 text-white text-xs font-semibold px-3 py-2 rounded-lg">
+          Buy Now →
+        </span>
       </div>
-      <div className="flex-1">
-        <div className="text-sm font-medium text-gray-900">{name}</div>
-        <div className="text-xs text-gray-500">{detail}</div>
-      </div>
-      <span className="bg-brand-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg">
-        Buy Now
-      </span>
     </div>
   );
 }
