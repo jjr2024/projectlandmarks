@@ -405,18 +405,23 @@ function ContactsPageContent() {
 
             {/* Relationship */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-              <select
-                value={form.relationship}
-                onChange={(e) => setForm({ ...form, relationship: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-2">Relationship</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {RELATIONSHIPS.map((r) => (
-                  <option key={r.value} value={r.value}>
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, relationship: r.value })}
+                    className={`border-2 rounded-lg py-2 text-sm font-medium transition-colors ${
+                      form.relationship === r.value
+                        ? "border-brand-600 bg-brand-50 text-brand-700"
+                        : "border-gray-200 text-gray-500 hover:border-brand-300"
+                    }`}
+                  >
                     {r.label}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
             {/* Gender */}

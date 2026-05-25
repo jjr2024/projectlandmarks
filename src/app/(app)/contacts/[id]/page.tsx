@@ -242,6 +242,10 @@ function ContactDetailContent() {
 
   const handleSaveEvent = async () => {
     if (eventForm.event_type === "custom" && !eventForm.event_label.trim()) return;
+    if (eventForm.one_time && !eventForm.event_year) {
+      setEventError("Year is required for one-time events.");
+      return;
+    }
     setSavingEvent(true);
     setEventError("");
 
@@ -691,17 +695,26 @@ function ContactDetailContent() {
                 <input
                   type="checkbox"
                   checked={eventForm.one_time}
-                  onChange={(e) => setEventForm({ ...eventForm, one_time: e.target.checked })}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setEventForm({
+                      ...eventForm,
+                      one_time: checked,
+                      event_year: checked && !eventForm.event_year ? String(new Date().getFullYear()) : checked ? eventForm.event_year : "",
+                    });
+                  }}
                   className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                 />
                 <span className="text-sm text-gray-700">One-time event (don&apos;t repeat annually)</span>
               </label>
             </div>
 
-            {/* Event year (for one-time) */}
+            {/* Event year (required for one-time) */}
             {eventForm.one_time && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Event year</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Event year <span className="text-red-400">*</span>
+                </label>
                 <input
                   type="number"
                   value={eventForm.event_year}
@@ -709,8 +722,13 @@ function ContactDetailContent() {
                   placeholder={String(new Date().getFullYear())}
                   min={new Date().getFullYear()}
                   max="2100"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                  className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 ${
+                    !eventForm.event_year ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {!eventForm.event_year && (
+                  <p className="text-xs text-red-500 mt-1">Year is required for one-time events</p>
+                )}
               </div>
             )}
 
@@ -797,16 +815,23 @@ function ContactDetailContent() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-              <select
-                value={contactForm.relationship}
-                onChange={(e) => setContactForm({ ...contactForm, relationship: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-2">Relationship</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {RELATIONSHIPS.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setContactForm({ ...contactForm, relationship: r.value })}
+                    className={`border-2 rounded-lg py-2 text-sm font-medium transition-colors ${
+                      contactForm.relationship === r.value
+                        ? "border-brand-600 bg-brand-50 text-brand-700"
+                        : "border-gray-200 text-gray-500 hover:border-brand-300"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div className="mb-4">

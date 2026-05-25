@@ -29,7 +29,7 @@ import { buildSignedUrl } from "@/lib/tokens";
  * RESILIENCE (see CLAUDE.md § Email Resilience):
  *  1. Pre-send logging — 'pending' row before Resend call; updated to 'sent'/'failed' after.
  *  2. Idempotency key — deterministic key prevents Resend from sending dupes.
- *  3. Range-based windows — missed cron days caught within ±2 day range.
+ *  3. Range-based windows — per-user day preferences with late-side tolerance.
  *  4. Per-user send cap — max 3 emails/user/24h; excess deferred to next run.
  *  5. 429 handling — stops processing immediately on rate limit.
  */
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, timezone, preferred_send_hour, consent_terms, consent_emails")
+          .select("display_name, timezone, preferred_send_hour, consent_terms, consent_emails, reminder_days_before")
           .eq("id", user.id)
           .single();
 
@@ -130,8 +130,8 @@ export async function GET(request: NextRequest) {
           const eventDate = nextOccurrence(event.month, event.day, now);
           const daysUntil = daysBetween(now, eventDate);
 
-          // ── Range-based window matching ────────────────────────────────
-          const window = matchReminderWindow(daysUntil, event.high_importance);
+          // ── Range-based window matching (respects user's reminder_days_before) ─
+          const window = matchReminderWindow(daysUntil, event.high_importance, profile.reminder_days_before);
           if (!window) continue;
 
           // Use the year from nextOccurrence, not now.getFullYear() —

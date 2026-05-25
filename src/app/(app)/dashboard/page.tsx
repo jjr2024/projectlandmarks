@@ -12,6 +12,7 @@ import {
   getInitials,
   daysUntilEvent,
 } from "@/lib/utils";
+import { DEFAULT_REMINDER_DAYS } from "@/lib/email-config";
 interface Contact {
   id: string;
   first_name: string;
@@ -44,6 +45,8 @@ interface UpcomingReminder {
 export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [reminderDays, setReminderDays] = useState<number[]>([...DEFAULT_REMINDER_DAYS]);
+  const [showReminderInfo, setShowReminderInfo] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState(false);
   const [filterDays, setFilterDays] = useState<30 | 90>(30);
@@ -76,18 +79,25 @@ export default function DashboardPage() {
           }
         }
 
-        const [contactsRes, eventsRes] = await Promise.all([
+        const [contactsRes, eventsRes, profileRes] = await Promise.all([
           supabase
             .from("contacts")
             .select("*")
             .eq("user_id", user.id)
             .is("deleted_at", null),
           supabase.from("events").select("*").eq("user_id", user.id).is("deleted_at", null),
+          supabase
+            .from("profiles")
+            .select("reminder_days_before")
+            .eq("id", user.id)
+            .single(),
         ]);
 
         loadedRef.current = true;
         setContacts(contactsRes.data || []);
         setEvents(eventsRes.data || []);
+        const days = profileRes.data?.reminder_days_before;
+        if (days && days.length > 0) setReminderDays(days);
         setLoading(false);
         setLoadingError(false);
       } catch {
@@ -223,6 +233,38 @@ export default function DashboardPage() {
           <p className="text-3xl font-bold text-gray-900">{thisMonthCount}</p>
         </div>
       </div>
+
+      {/* Reminder timing info (dismissible per session) */}
+      {showReminderInfo && (
+        <div className="flex items-center gap-1.5 -mt-4 mb-4">
+          <svg className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <p className="text-xs text-gray-400 flex-1">
+            Reminder emails will be sent{" "}
+            {(() => {
+              const sorted = [...reminderDays].sort((a, b) => b - a);
+              if (sorted.length === 0) return "on your selected days";
+              if (sorted.length === 1) return `${sorted[0]} day${sorted[0] !== 1 ? "s" : ""}`;
+              if (sorted.length === 2) return `${sorted[0]} and ${sorted[1]} days`;
+              return sorted.slice(0, -1).join(", ") + ", and " + sorted[sorted.length - 1] + " days";
+            })()}{" "}
+            before an event.{" "}
+            <Link href="/settings" className="text-brand-600 hover:underline">
+              Update preferences
+            </Link>
+          </p>
+          <button
+            onClick={() => setShowReminderInfo(false)}
+            className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 p-0.5"
+            aria-label="Dismiss reminder info"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Upcoming reminders */}
       <div className="bg-white rounded-xl border border-gray-200">

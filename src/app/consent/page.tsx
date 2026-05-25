@@ -38,17 +38,41 @@ export default function ConsentPage() {
         return;
       }
 
-      const { error: updateError } = await supabase
+      const consentPayload = {
+        consent_terms: true,
+        consent_emails: true,
+        consent_at: new Date().toISOString(),
+      };
+
+      const { data: updated, error: updateError } = await supabase
         .from("profiles")
-        .update({
-          consent_terms: true,
-          consent_emails: true,
-          consent_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+        .update(consentPayload)
+        .eq("id", user.id)
+        .select();
 
       if (updateError) {
         throw updateError;
+      }
+
+      // If update matched zero rows, the profile row is missing (trigger failed at signup).
+      // Self-heal by upserting a new profile, recovering display_name from auth metadata.
+      if (!updated || updated.length === 0) {
+        const displayName =
+          user.user_metadata?.display_name ||
+          user.email?.split("@")[0] ||
+          "";
+
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: user.id,
+            display_name: displayName,
+            ...consentPayload,
+          });
+
+        if (upsertError) {
+          throw upsertError;
+        }
       }
 
       // Full navigation to bypass Next.js Router Cache — router.push()

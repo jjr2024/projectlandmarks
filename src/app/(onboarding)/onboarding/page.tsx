@@ -140,7 +140,8 @@ function OnboardingContent() {
       (e) =>
         e.month > 0 &&
         e.day > 0 &&
-        (e.event_type !== "custom" || e.event_label.trim())
+        (e.event_type !== "custom" || e.event_label.trim()) &&
+        (!e.one_time || e.event_year)
     );
 
   const toggleGift = (val: string) => {
@@ -689,18 +690,28 @@ function OnboardingContent() {
                                     <input
                                       type="checkbox"
                                       checked={event.one_time || false}
-                                      onChange={(e) => updateEvent(idx, { one_time: e.target.checked })}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        updateEvent(idx, {
+                                          one_time: checked,
+                                          event_year: checked && !event.event_year ? new Date().getFullYear() : checked ? event.event_year : undefined,
+                                        });
+                                        // Keep collapsible open so the required year field stays visible
+                                        if (checked) {
+                                          setAdvancedOpenIndexes((prev) => new Set(prev).add(idx));
+                                        }
+                                      }}
                                       className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
                                     />
                                     <span className="text-xs text-gray-600">One-time event (don&apos;t repeat annually)</span>
                                   </label>
                                 </div>
 
-                                {/* Event year (shown when one-time) */}
+                                {/* Event year (required when one-time) */}
                                 {event.one_time && (
                                   <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
-                                      Event year
+                                      Event year <span className="text-red-400">*</span>
                                     </label>
                                     <input
                                       type="number"
@@ -709,8 +720,13 @@ function OnboardingContent() {
                                       placeholder={String(new Date().getFullYear())}
                                       min={new Date().getFullYear()}
                                       max="2100"
-                                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                                      className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 ${
+                                        !event.event_year ? "border-red-300" : "border-gray-200"
+                                      }`}
                                     />
+                                    {!event.event_year && (
+                                      <p className="text-xs text-red-500 mt-1">Year is required for one-time events</p>
+                                    )}
                                   </div>
                                 )}
                               </div>

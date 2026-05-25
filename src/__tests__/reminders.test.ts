@@ -23,6 +23,8 @@ import {
   MAX_EMAILS_PER_USER_PER_DAY,
   emptyCronResults,
   REMINDER_WINDOWS,
+  REMINDER_DAY_OPTIONS,
+  DEFAULT_REMINDER_DAYS,
 } from "@/lib/reminders";
 import {
   scoreGift,
@@ -162,92 +164,227 @@ describe("formatEventDate(month, day)", () => {
   });
 });
 
-describe("matchReminderWindow(daysUntil, highImportance)", () => {
-  test("daysUntil=7 (standard) → canonical 7, not last-minute", () => {
-    const result = matchReminderWindow(7, false);
+describe("matchReminderWindow(daysUntil, highImportance, userDays)", () => {
+  // ── Default fallback (null/empty userDays → DEFAULT_REMINDER_DAYS [7, 3]) ──
+
+  test("null userDays falls back to defaults: daysUntil=7 → canonical 7", () => {
+    const result = matchReminderWindow(7, false, null);
     assert.ok(result);
     assert.strictEqual(result.canonicalDaysBefore, 7);
     assert.strictEqual(result.isLastMinute, false);
   });
 
-  test("daysUntil=5 (range 5-7) → canonical 7", () => {
-    const result = matchReminderWindow(5, false);
+  test("empty userDays falls back to defaults: daysUntil=3 → canonical 3", () => {
+    const result = matchReminderWindow(3, false, []);
     assert.ok(result);
-    assert.strictEqual(result.canonicalDaysBefore, 7);
+    assert.strictEqual(result.canonicalDaysBefore, 3);
   });
 
-  test("daysUntil=6 (range 5-7) → canonical 7", () => {
+  test("undefined userDays falls back to defaults", () => {
     const result = matchReminderWindow(6, false);
     assert.ok(result);
     assert.strictEqual(result.canonicalDaysBefore, 7);
   });
 
-  test("daysUntil=3 (urgent) → canonical 3, not last-minute", () => {
-    const result = matchReminderWindow(3, false);
+  // ── User-selected day: exact hit ─────────────────────────────────────────
+
+  test("user selects [7]: daysUntil=7 → canonical 7", () => {
+    const result = matchReminderWindow(7, false, [7]);
     assert.ok(result);
-    assert.strictEqual(result.canonicalDaysBefore, 3);
-    assert.strictEqual(result.isLastMinute, false);
+    assert.strictEqual(result.canonicalDaysBefore, 7);
   });
 
-  test("daysUntil=1 (range 1-3) → canonical 3", () => {
-    const result = matchReminderWindow(1, false);
+  test("user selects [14]: daysUntil=14 → canonical 14", () => {
+    const result = matchReminderWindow(14, false, [14]);
     assert.ok(result);
-    assert.strictEqual(result.canonicalDaysBefore, 3);
+    assert.strictEqual(result.canonicalDaysBefore, 14);
   });
 
-  test("daysUntil=2 (range 1-3, last-minute) → canonical 3, isLastMinute=true", () => {
-    const result = matchReminderWindow(2, false);
+  test("user selects [1]: daysUntil=1 → canonical 1", () => {
+    const result = matchReminderWindow(1, false, [1]);
     assert.ok(result);
-    assert.strictEqual(result.canonicalDaysBefore, 3);
-    assert.strictEqual(result.isLastMinute, true); // <= LAST_MINUTE (2)
+    assert.strictEqual(result.canonicalDaysBefore, 1);
   });
 
-  test("daysUntil=21 with highImportance=true → canonical 21", () => {
-    const result = matchReminderWindow(21, true);
-    assert.ok(result);
-    assert.strictEqual(result.canonicalDaysBefore, 21);
-    assert.strictEqual(result.isLastMinute, false);
-  });
-
-  test("daysUntil=19 with highImportance=true (range 19-21) → canonical 21", () => {
-    const result = matchReminderWindow(19, true);
+  test("user selects [21]: daysUntil=21, not high_importance → canonical 21", () => {
+    const result = matchReminderWindow(21, false, [21]);
     assert.ok(result);
     assert.strictEqual(result.canonicalDaysBefore, 21);
   });
 
-  test("daysUntil=20 with highImportance=true (range 19-21) → canonical 21", () => {
-    const result = matchReminderWindow(20, true);
+  // ── Late-side tolerance (self-healing) ────────────────────────────────────
+
+  test("user selects [7]: daysUntil=5 (late by 2) → canonical 7", () => {
+    const result = matchReminderWindow(5, false, [7]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 7);
+  });
+
+  test("user selects [7]: daysUntil=6 (late by 1) → canonical 7", () => {
+    const result = matchReminderWindow(6, false, [7]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 7);
+  });
+
+  test("user selects [14]: daysUntil=12 (late by 2) → canonical 14", () => {
+    const result = matchReminderWindow(12, false, [14]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 14);
+  });
+
+  test("user selects [21]: daysUntil=19 (late by 2) → canonical 21", () => {
+    const result = matchReminderWindow(19, false, [21]);
     assert.ok(result);
     assert.strictEqual(result.canonicalDaysBefore, 21);
   });
 
-  test("daysUntil=21 with highImportance=false → null (high-importance window skipped)", () => {
-    const result = matchReminderWindow(21, false);
+  test("user selects [3]: daysUntil=2 (late by 1) → canonical 3", () => {
+    const result = matchReminderWindow(2, false, [3]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 3);
+  });
+
+  test("user selects [1]: daysUntil=0 (late by 1) → canonical 1", () => {
+    const result = matchReminderWindow(0, false, [1]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 1);
+  });
+
+  // ── Never fires early ─────────────────────────────────────────────────────
+
+  test("user selects [7]: daysUntil=8 (early) → null", () => {
+    const result = matchReminderWindow(8, false, [7]);
     assert.strictEqual(result, null);
   });
 
-  test("daysUntil=10 → null (outside all windows)", () => {
-    const result = matchReminderWindow(10, false);
+  test("user selects [14]: daysUntil=15 (early) → null", () => {
+    const result = matchReminderWindow(15, false, [14]);
     assert.strictEqual(result, null);
   });
 
-  test("daysUntil=0 → null (same-day not covered)", () => {
-    const result = matchReminderWindow(0, false);
+  test("user selects [21]: daysUntil=22 (early) → null", () => {
+    const result = matchReminderWindow(22, false, [21]);
     assert.strictEqual(result, null);
   });
 
-  test("daysUntil=4 → null (gap between URGENT and STANDARD windows)", () => {
-    const result = matchReminderWindow(4, false);
+  test("user selects [3]: daysUntil=4 (early) → null", () => {
+    const result = matchReminderWindow(4, false, [3]);
     assert.strictEqual(result, null);
   });
 
-  test("daysUntil=8 → null (outside range)", () => {
-    const result = matchReminderWindow(8, false);
+  test("user selects [1]: daysUntil=2 (early) → null", () => {
+    const result = matchReminderWindow(2, false, [1]);
+    assert.strictEqual(result, null);
+  });
+
+  // ── Outside all windows ───────────────────────────────────────────────────
+
+  test("user selects [7, 3]: daysUntil=10 → null", () => {
+    const result = matchReminderWindow(10, false, [7, 3]);
+    assert.strictEqual(result, null);
+  });
+
+  test("user selects [7, 3]: daysUntil=4 (gap) → null", () => {
+    const result = matchReminderWindow(4, false, [7, 3]);
     assert.strictEqual(result, null);
   });
 
   test("negative daysUntil → null", () => {
-    const result = matchReminderWindow(-1, false);
+    const result = matchReminderWindow(-1, false, [1, 3, 7]);
+    assert.strictEqual(result, null);
+  });
+
+  // ── high_importance injects 21 ────────────────────────────────────────────
+
+  test("high_importance + user has [7, 3]: daysUntil=21 → canonical 21 (injected)", () => {
+    const result = matchReminderWindow(21, true, [7, 3]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 21);
+  });
+
+  test("high_importance + user has [7, 3]: daysUntil=19 → canonical 21 (injected, tolerance)", () => {
+    const result = matchReminderWindow(19, true, [7, 3]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 21);
+  });
+
+  test("high_importance + user already has [21, 7]: daysUntil=21 → canonical 21 (no duplicate)", () => {
+    const result = matchReminderWindow(21, true, [21, 7]);
+    assert.ok(result);
+    assert.strictEqual(result.canonicalDaysBefore, 21);
+  });
+
+  test("NOT high_importance + user lacks 21: daysUntil=21 → null", () => {
+    const result = matchReminderWindow(21, false, [7, 3]);
+    assert.strictEqual(result, null);
+  });
+
+  // ── All 5 days selected ───────────────────────────────────────────────────
+
+  test("all days [1,3,7,14,21]: each canonical hits correctly", () => {
+    const all = [1, 3, 7, 14, 21];
+    assert.strictEqual(matchReminderWindow(21, false, all)?.canonicalDaysBefore, 21);
+    assert.strictEqual(matchReminderWindow(14, false, all)?.canonicalDaysBefore, 14);
+    assert.strictEqual(matchReminderWindow(7, false, all)?.canonicalDaysBefore, 7);
+    assert.strictEqual(matchReminderWindow(3, false, all)?.canonicalDaysBefore, 3);
+    assert.strictEqual(matchReminderWindow(1, false, all)?.canonicalDaysBefore, 1);
+  });
+
+  test("all days: tolerance boundaries", () => {
+    const all = [1, 3, 7, 14, 21];
+    assert.strictEqual(matchReminderWindow(19, false, all)?.canonicalDaysBefore, 21);
+    assert.strictEqual(matchReminderWindow(12, false, all)?.canonicalDaysBefore, 14);
+    assert.strictEqual(matchReminderWindow(5, false, all)?.canonicalDaysBefore, 7);
+    assert.strictEqual(matchReminderWindow(2, false, all)?.canonicalDaysBefore, 3);
+    assert.strictEqual(matchReminderWindow(0, false, all)?.canonicalDaysBefore, 1);
+  });
+
+  // ── isLastMinute flag ─────────────────────────────────────────────────────
+
+  test("daysUntil=2 with user [3] → isLastMinute=true", () => {
+    const result = matchReminderWindow(2, false, [3]);
+    assert.ok(result);
+    assert.strictEqual(result.isLastMinute, true);
+  });
+
+  test("daysUntil=1 with user [1] → isLastMinute=true", () => {
+    const result = matchReminderWindow(1, false, [1]);
+    assert.ok(result);
+    assert.strictEqual(result.isLastMinute, true);
+  });
+
+  test("daysUntil=0 with user [1] → isLastMinute=true", () => {
+    const result = matchReminderWindow(0, false, [1]);
+    assert.ok(result);
+    assert.strictEqual(result.isLastMinute, true);
+  });
+
+  test("daysUntil=3 with user [3] → isLastMinute=false (3 > LAST_MINUTE)", () => {
+    const result = matchReminderWindow(3, false, [3]);
+    assert.ok(result);
+    assert.strictEqual(result.isLastMinute, false);
+  });
+
+  test("daysUntil=7 with user [7] → isLastMinute=false", () => {
+    const result = matchReminderWindow(7, false, [7]);
+    assert.ok(result);
+    assert.strictEqual(result.isLastMinute, false);
+  });
+
+  // ── Only user-selected days fire ──────────────────────────────────────────
+
+  test("user selects only [14]: daysUntil=7 → null (7 not selected)", () => {
+    const result = matchReminderWindow(7, false, [14]);
+    assert.strictEqual(result, null);
+  });
+
+  test("user selects only [1]: daysUntil=3 → null (3 not selected)", () => {
+    const result = matchReminderWindow(3, false, [1]);
+    assert.strictEqual(result, null);
+  });
+
+  test("user deselects all standard, keeps [21]: daysUntil=7 → null", () => {
+    const result = matchReminderWindow(7, false, [21]);
     assert.strictEqual(result, null);
   });
 });
@@ -360,12 +497,22 @@ describe("emptyCronResults()", () => {
   });
 });
 
-describe("REMINDER_WINDOWS constant", () => {
-  test("exports expected values", () => {
+describe("REMINDER_WINDOWS constant (deprecated)", () => {
+  test("still exports expected values for backward compat", () => {
     assert.strictEqual(REMINDER_WINDOWS.HIGH_IMPORTANCE, 21);
     assert.strictEqual(REMINDER_WINDOWS.STANDARD, 7);
     assert.strictEqual(REMINDER_WINDOWS.URGENT, 3);
     assert.strictEqual(REMINDER_WINDOWS.LAST_MINUTE, 2);
+  });
+});
+
+describe("REMINDER_DAY_OPTIONS and DEFAULT_REMINDER_DAYS", () => {
+  test("REMINDER_DAY_OPTIONS has all 5 user-selectable days", () => {
+    assert.deepStrictEqual([...REMINDER_DAY_OPTIONS], [1, 3, 7, 14, 21]);
+  });
+
+  test("DEFAULT_REMINDER_DAYS is [7, 3]", () => {
+    assert.deepStrictEqual(DEFAULT_REMINDER_DAYS, [7, 3]);
   });
 });
 

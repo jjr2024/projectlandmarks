@@ -12,10 +12,16 @@
  *   5. 429 handling:       stop processing on rate limit, defer remaining
  */
 
-import { REMINDER_WINDOWS } from "@/lib/email-config";
+import {
+  REMINDER_WINDOWS,
+  REMINDER_DAY_OPTIONS,
+  REMINDER_TOLERANCE,
+  DEFAULT_REMINDER_DAYS,
+  type ReminderDay,
+} from "@/lib/email-config";
 
-// Re-export so cron routes can import everything from one module
-export { REMINDER_WINDOWS };
+// Re-export so cron routes and UI can import from one module
+export { REMINDER_WINDOWS, REMINDER_DAY_OPTIONS, DEFAULT_REMINDER_DAYS, type ReminderDay };
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 
@@ -62,20 +68,15 @@ export function buildEventDateStr(year: number, month: number, day: number): str
 
 // ── Range-based window matching ─────────────────────────────────────────────
 //
-// Old logic: exact match (daysUntil === 7). If cron missed that day, reminder lost.
-// New logic: daysUntil falls within a range AND no log entry exists for that window.
-// The dedup check still happens in the route (DB query), but this function determines
-// which window a given daysUntil value maps to — returning the canonical days_before
-// value to log, or null if no window applies.
+// Matches daysUntil against the user's selected reminder days using late-side-only
+// tolerance windows (see REMINDER_TOLERANCE in email-config.ts). Each window
+// extends backward only — e.g. canonical 7 covers [5, 7], never fires early.
 //
-// Ranges (inclusive):
-//   HIGH_IMPORTANCE: 19–21 days → logs as 21
-//   STANDARD:         5–7  days → logs as 7
-//   URGENT:           1–3  days → logs as 3
+// If the event is high_importance, day 21 is injected into the effective days
+// list even if the user hasn't selected it — so important events always get
+// an early heads-up.
 //
-// This means if cron misses the exact day, the next run (up to 2 days late) still
-// catches it. The logged days_before is always the canonical value (21/7/3) so
-// dedup works correctly across the range.
+// Falls back to DEFAULT_REMINDER_DAYS if userDays is null/empty.
 
 interface WindowMatch {
   canonicalDaysBefore: number;
@@ -84,18 +85,38 @@ interface WindowMatch {
 
 export function matchReminderWindow(
   daysUntil: number,
-  highImportance: boolean
+  highImportance: boolean,
+  userDays?: number[] | null
 ): WindowMatch | null {
-  // Order matters: check narrowest windows first so a day=3 event matches URGENT, not STANDARD
-  if (daysUntil >= 1 && daysUntil <= REMINDER_WINDOWS.URGENT) {
-    return { canonicalDaysBefore: REMINDER_WINDOWS.URGENT, isLastMinute: daysUntil <= REMINDER_WINDOWS.LAST_MINUTE };
+  // Resolve effective days: user preference → fallback to defaults
+  let effectiveDays: number[] =
+    userDays && userDays.length > 0
+      ? [...userDays]
+      : [...DEFAULT_REMINDER_DAYS];
+
+  // High-importance events always get a 21-day reminder
+  if (highImportance && !effectiveDays.includes(21)) {
+    effectiveDays.push(21);
   }
-  if (daysUntil >= 5 && daysUntil <= REMINDER_WINDOWS.STANDARD) {
-    return { canonicalDaysBefore: REMINDER_WINDOWS.STANDARD, isLastMinute: false };
+
+  // Check each of the user's selected days against tolerance windows.
+  // Process from smallest to largest so the narrowest match wins when
+  // tolerance ranges could theoretically overlap (they don't with current
+  // config, but this is defensive).
+  const sorted = effectiveDays
+    .filter((d): d is ReminderDay => REMINDER_DAY_OPTIONS.includes(d as ReminderDay))
+    .sort((a, b) => a - b);
+
+  for (const day of sorted) {
+    const [lo, hi] = REMINDER_TOLERANCE[day as ReminderDay];
+    if (daysUntil >= lo && daysUntil <= hi) {
+      return {
+        canonicalDaysBefore: day,
+        isLastMinute: daysUntil <= REMINDER_WINDOWS.LAST_MINUTE,
+      };
+    }
   }
-  if (highImportance && daysUntil >= 19 && daysUntil <= REMINDER_WINDOWS.HIGH_IMPORTANCE) {
-    return { canonicalDaysBefore: REMINDER_WINDOWS.HIGH_IMPORTANCE, isLastMinute: false };
-  }
+
   return null;
 }
 

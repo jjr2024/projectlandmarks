@@ -66,10 +66,10 @@ src/
 ├── emails/                    reminder, digest, reengagement (React Email templates)
 ├── lib/
 │   ├── supabase/              admin.ts (service_role), client.ts (browser), server.ts (SSR cookies)
-│   ├── email-config.ts        From/replyTo, reminder windows
+│   ├── email-config.ts        From/replyTo, REMINDER_DAY_OPTIONS, REMINDER_TOLERANCE, defaults
 │   ├── env.ts                 Server env validation
 │   ├── gift-engine.ts         Weighted scoring: scoreGift() + selectGiftsScored()
-│   ├── reminders.ts           Date math, window matching, idempotency, send caps, rate-limit detection
+│   ├── reminders.ts           Date math, per-user window matching, idempotency, send caps, rate-limit detection
 │   ├── resend.ts              Resend client
 │   ├── tokens.ts              HMAC token gen/verify (unsubscribe, calendar)
 │   ├── utils.ts               compareTokens (timing-safe), misc
@@ -95,7 +95,7 @@ supabase/migrations/
 
 **Route groups:** `(app)` = auth'd sidebar layout. `(onboarding)` = isolated layout. `(admin)` = admin sidebar, gated on `profiles.is_admin`.
 
-**Onboarding:** 4-step flow (Welcome → Contact+Events → Gift prefs → Done). Always starts at step 1 — **URL-based step initialization (`?step=`) was intentionally removed** because it allowed users to jump to step 3/4 with blank form state, causing garbage contact inserts or RLS errors. Do not re-add it; the flow is short enough that starting from step 1 is fine. Page shows a loading spinner until profile fetch resolves (prevents "Welcome, !" flash). `savedRef` prevents double-submission if the user navigates Back from step 4. Error messages use `friendlyError()`. Collects full contact fields including notes. Events include "Other options" expandable (year_started, one_time, event_year) — collapsed by default to keep the happy path clean. Icons use inline SVGs (no emojis). "Skip gifts" is a toggle button, not a checkbox.
+**Onboarding:** 4-step flow (Welcome → Contact+Events → Gift prefs → Done). Always starts at step 1 — **URL-based step initialization (`?step=`) was intentionally removed** because it allowed users to jump to step 3/4 with blank form state, causing garbage contact inserts or RLS errors. Do not re-add it; the flow is short enough that starting from step 1 is fine. Page shows a loading spinner until profile fetch resolves (prevents "Welcome, !" flash). `savedRef` prevents double-submission if the user navigates Back from step 4. Error messages use `friendlyError()`. Collects full contact fields including notes. Events include "Other options" expandable (year_started, one_time, event_year) — collapsed by default to keep the happy path clean. If `one_time` is checked, `event_year` becomes required (red border + inline error if empty, blocks save). Checking `one_time` auto-populates `event_year` with the current year and keeps the collapsible expanded. Unchecking clears `event_year`. The contact detail event modal (`contacts/[id]`) has the same validation. Icons use inline SVGs (no emojis). "Skip gifts" is a toggle button, not a checkbox.
 
 **Public pages:** Contact page is a simple static page with a mailto link to info@daysight.xyz (no form, no API route). Privacy policy has no disclaimer banner. Terms and privacy both reference email-only contact.
 
@@ -103,7 +103,7 @@ supabase/migrations/
 
 **Auth:** Supabase Auth with PKCE flow (`@supabase/ssr` default). Email verification required — no emails sent to unverified addresses (GDPR/CAN-SPAM: emails contain affiliate links). Password changes use `reauthenticate()` (nonce-based, no duplicate session). Post-signup success screen and in-app `EmailVerificationBanner` both offer resend-verification with 60-second cooldown (persisted to `sessionStorage`). **PKCE caveat:** `supabase.auth.resend()` does NOT regenerate the PKCE `code_verifier`/`code_challenge` pair, so re-sent verification links fail at `exchangeCodeForSession()`. Three mitigations: (1) the post-signup screen prefers `signUp()` when the password is still in component state, which generates a fresh PKCE pair; (2) if the password is gone (user refreshed/reopened the tab), the post-signup screen falls back to `resend()` — the link's code exchange may fail, but the auth callback's session-based fallback handles this gracefully; (3) the in-app banner uses `resend()` (no password available), and the same callback fallback applies — if code exchange fails and the user already has an active session, it redirects to `/dashboard` instead of showing an error (email is verified server-side by Supabase before the redirect regardless of PKCE outcome).
 
-**Consent gating:** Two mandatory signup checkboxes (Terms+Privacy, affiliate emails). Stored in `profiles` via `handle_new_user()` trigger. Both `(app)/layout.tsx` and `(onboarding)/layout.tsx` check `consent_terms` — users without terms acceptance are redirected to `/consent`. `consent_emails` is handled separately: unsubscribed users (terms=true, emails=false) stay in the app but see a persistent `EmailUnsubscribedBanner` directing them to Settings to re-enable. The Settings page has a re-subscribe block that sets `consent_emails` back to true. Cron routes independently gate on both `consent_terms` and `consent_emails`.
+**Consent gating:** Two mandatory signup checkboxes (Terms+Privacy, affiliate emails). Stored in `profiles` via `handle_new_user()` trigger. Both `(app)/layout.tsx` and `(onboarding)/layout.tsx` check `consent_terms` — users without terms acceptance are redirected to `/consent`. The consent page uses `.update().select()` to detect zero-row updates (missing profile row — trigger failed at signup). If no rows are updated, it self-heals via upsert, recovering `display_name` from `auth.users.raw_user_meta_data`. This prevents an infinite redirect loop between `/consent` and `/dashboard`. `consent_emails` is handled separately: unsubscribed users (terms=true, emails=false) stay in the app but see a persistent `EmailUnsubscribedBanner` directing them to Settings to re-enable. The Settings page has a re-subscribe block that sets `consent_emails` back to true. Cron routes independently gate on both `consent_terms` and `consent_emails`.
 
 **Security:**
 - Timing-safe token comparison (`compareTokens()`) on all cron/webhook auth
@@ -117,7 +117,7 @@ supabase/migrations/
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
 
-**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
+**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. Reminders respect the user's `reminder_days_before` preference (selectable: 1, 3, 7, 14, 21 days — stored in `profiles`, default `{7, 3}`). The cron route fetches this per user, passes it to `matchReminderWindow()`, which checks each selected day against late-side-only tolerance windows (see Email Resilience). Events with `high_importance` always inject a 21-day reminder even if the user hasn't selected it. After matching, the cron selects gifts, sends, and logs to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
 
 **Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
 
@@ -133,17 +133,17 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 
 1. **Pre-send logging:** Insert `reminder_log` with `status='pending'` before Resend call. Update to sent/failed/deferred after. Unique index on `(user_id, event_id, days_before, event_date)` guards against race conditions (catch Postgres 23505 = already handled).
 2. **Idempotency keys:** `ds-{userId}-{eventId}-{canonicalDays}-{date}` header on every Resend call.
-3. **Range-based windows:** ±2 day tolerance (5–7→canonical 7, 1–3→canonical 3, 19–21→canonical 21). Self-healing for outages up to 2 days. Function: `matchReminderWindow()`.
+3. **Range-based windows:** Per-user selectable reminder days (1, 3, 7, 14, 21) with late-side-only tolerance for cron outage recovery. Windows never fire early — only extend backward: 21→[19–21], 14→[12–14], 7→[5–7], 3→[2–3], 1→[0–1]. `high_importance` events inject day 21 regardless of user preference. Falls back to `DEFAULT_REMINDER_DAYS` [7, 3] if user preference is null/empty. Config in `REMINDER_DAY_OPTIONS` and `REMINDER_TOLERANCE` (`email-config.ts`); matching in `matchReminderWindow(daysUntil, highImportance, userDays)` (`reminders.ts`).
 4. **Per-user send cap:** Max 3 emails/user/day. Checked before and during event loop. Excess deferred to next run.
 5. **429 handling:** On rate limit, mark deferred, break user loop immediately. Retry on next cron run.
 
-**Not covered:** Digest and re-engagement lack pre-send dedup (acceptable). Outages >2 days permanently miss events outside all ranges.
+**Not covered:** Digest and re-engagement lack pre-send dedup (acceptable). Outages >2 days permanently miss events outside tolerance ranges. The 1-day window has only 1-day tolerance (range [0–1]) so a 2-day outage misses it.
 
 ## Supabase Schema
 
 | Table | Key columns |
 |---|---|
-| `profiles` | display_name, timezone, preferred_send_hour, drips_sent, consent_terms, consent_emails |
+| `profiles` | display_name, timezone, preferred_send_hour, reminder_days_before, drips_sent, consent_terms, consent_emails |
 | `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, has_pets, deleted_at |
 | `events` | event_type, month, day, high_importance, suppress_gifts, one_time, event_year, contact_id FK, user_id, deleted_at |
 | `reminder_log` | user_id, event_id, contact_id, days_before, event_date, resend_id, status, gift_ids |
@@ -158,7 +158,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 
 | Route | Method | Auth | Purpose |
 |---|---|---|---|
-| `/api/cron/reminders` | GET | `Bearer CRON_SECRET` | Daily 12:00 UTC — send reminders |
+| `/api/cron/reminders` | GET | `Bearer CRON_SECRET` | Daily 12:00 UTC — send reminders (per-user day prefs) |
 | `/api/cron/digest` | GET | `Bearer CRON_SECRET` | 1st of month 14:00 UTC — monthly digest |
 | `/api/cron/reengagement` | GET | `Bearer CRON_SECRET` | Daily 13:00 UTC — D+3/D+10/D+30 drip |
 | `/api/cron/purge` | GET | `Bearer CRON_SECRET` | Daily 04:00 UTC — hard-delete expired trash |
@@ -175,7 +175,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 1. This file
 2. `src/app/api/cron/reminders/route.ts` — core business logic
 3. `src/emails/reminder.tsx` — what users receive
-4. `src/lib/email-config.ts` — email config + reminder windows
+4. `src/lib/email-config.ts` — email config, REMINDER_DAY_OPTIONS, tolerance windows
 5. `src/middleware.ts` — auth routing
 6. `supabase/migrations/001_initial_schema.sql` — data model
 

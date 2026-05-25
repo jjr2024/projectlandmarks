@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { getInitials, formatDate } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
+import { REMINDER_DAY_OPTIONS } from "@/lib/email-config";
 
 interface Profile {
   id: string;
@@ -65,7 +66,7 @@ const TABS = [
   { key: "bin", label: "Recycling Bin" },
 ];
 
-const REMINDER_OPTIONS = [1, 3, 7, 14, 21];
+const REMINDER_OPTIONS = [...REMINDER_DAY_OPTIONS];
 
 const GIFT_OPTIONS = [
   { value: "flowers", label: "Flowers" },
