@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function AuthPage() {
+const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
+  auth_callback_failed:
+    "Your sign-in link has expired or is invalid. Please try again.",
+};
+
+function AuthPageContent() {
+  const searchParams = useSearchParams();
+  const callbackError = searchParams.get("error");
+
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    callbackError ? CALLBACK_ERROR_MESSAGES[callbackError] || "Something went wrong. Please try again." : ""
+  );
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -308,5 +318,13 @@ export default function AuthPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>}>
+      <AuthPageContent />
+    </Suspense>
   );
 }

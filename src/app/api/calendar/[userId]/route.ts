@@ -140,10 +140,22 @@ export async function GET(
         }
 
         // Format date as YYYYMMDD.
-        // One-time events use their stored event_year (or current year as fallback)
-        // and do NOT get an RRULE. Recurring events use the current year with RRULE:FREQ=YEARLY.
-        const currentYear = new Date().getFullYear();
-        const eventYear = evt.one_time && evt.event_year ? evt.event_year : currentYear;
+        // One-time events use their stored event_year, or infer the next occurrence
+        // if no year was set. Recurring events use the current year with RRULE:FREQ=YEARLY.
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const currentDay = now.getDate();
+        let eventYear: number;
+        if (evt.one_time && evt.event_year) {
+          eventYear = evt.event_year;
+        } else if (evt.one_time) {
+          // Infer next occurrence: if the date has already passed this year, use next year
+          const hasPassed = evt.month < currentMonth || (evt.month === currentMonth && evt.day < currentDay);
+          eventYear = hasPassed ? currentYear + 1 : currentYear;
+        } else {
+          eventYear = currentYear;
+        }
         const monthStr = String(evt.month).padStart(2, "0");
         const dayStr = String(evt.day).padStart(2, "0");
         const startDate = `${eventYear}${monthStr}${dayStr}`;

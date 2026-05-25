@@ -216,22 +216,45 @@ export default function SettingsPage() {
           summary += "'s Event";
         }
 
-        // Format date as YYYYMMDD — use current year so calendar apps show upcoming events
+        // Format date as YYYYMMDD.
+        // One-time events use stored event_year or infer the next occurrence;
+        // recurring events use the current year with RRULE:FREQ=YEARLY.
         const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+        const currentDay = new Date().getDate();
+        let eventYear: number;
+        if (evt.one_time && evt.event_year) {
+          eventYear = evt.event_year;
+        } else if (evt.one_time) {
+          // Infer next occurrence: if the date has already passed this year, use next year
+          const hasPassed = evt.month < currentMonth || (evt.month === currentMonth && evt.day < currentDay);
+          eventYear = hasPassed ? currentYear + 1 : currentYear;
+        } else {
+          eventYear = currentYear;
+        }
         const dateStr = String(evt.month).padStart(2, "0") + String(evt.day).padStart(2, "0");
-        const startDate = `${currentYear}${dateStr}`;
+        const startDate = `${eventYear}${dateStr}`;
 
         // Unique identifier
         const uid = `event-${evt.id}@daysight.xyz`;
 
-        icsLines.push(
+        const veventLines = [
           "BEGIN:VEVENT",
           `DTSTART;VALUE=DATE:${startDate}`,
           `SUMMARY:${escapeICSText(summary)}`,
-          "RRULE:FREQ=YEARLY",
+        ];
+
+        // Only add yearly recurrence for non-one-time events
+        if (!evt.one_time) {
+          veventLines.push("RRULE:FREQ=YEARLY");
+        }
+
+        veventLines.push(
           `UID:${uid}`,
           "END:VEVENT"
         );
+
+        icsLines.push(...veventLines);
       }
 
       icsLines.push("END:VCALENDAR");
@@ -459,6 +482,10 @@ export default function SettingsPage() {
     setPasswordError("");
     setPasswordSuccess("");
 
+    if (!currentPassword) {
+      setPasswordError("Please enter your current password.");
+      return;
+    }
     if (newPassword.length < 8) {
       setPasswordError("New password must be at least 8 characters.");
       return;
@@ -470,28 +497,28 @@ export default function SettingsPage() {
 
     setChangingPassword(true);
 
-    // Verify current password via reauthenticate (nonce-based, no new session)
-    const { error: reauthError } = await supabase.auth.reauthenticate();
+    try {
+      // Server-side verification of current password + update
+      const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
 
-    if (reauthError) {
-      // reauthenticate() sends a nonce to the user's email; if it fails, the session
-      // is invalid or the user can't be verified. Fall back to a clear message.
-      setPasswordError("Unable to verify your identity. Please sign out and sign back in, then try again.");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPasswordError(data.error || "Unable to update your password.");
+      } else {
+        setPasswordSuccess("Password updated successfully.");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch {
+      setPasswordError("Something went wrong. Please try again.");
+    } finally {
       setChangingPassword(false);
-      return;
-    }
-
-    // Update password with verified session
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    setChangingPassword(false);
-    if (error) {
-      setPasswordError(friendlyError(error, "update your password"));
-    } else {
-      setPasswordSuccess("Password updated successfully.");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
     }
   };
 

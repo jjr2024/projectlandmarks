@@ -1,0 +1,586 @@
+[
+  {
+    "name": "Owala Stainless Steel Water Bottle",
+    "filename": "owala-stainless-steel-water-bottle.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/owala-stainless-steel-water-bottle.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Alpha Grillers Meat Thermometer",
+    "filename": "alpha-grillers-meat-thermometer.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/alpha-grillers-meat-thermometer.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Elon Musk by Walter Isaacson",
+    "filename": "elon-musk-by-walter-isaacson.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/elon-musk-by-walter-isaacson.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Den of Thieves by James B. Stewart",
+    "filename": "den-of-thieves-by-james-b-stewart.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/den-of-thieves-by-james-b-stewart.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Apple AirPods 4 Wireless Earbuds",
+    "filename": "apple-airpods-4-wireless-earbuds.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/apple-airpods-4-wireless-earbuds.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Innisfree Volcanic Clay Face Mask",
+    "filename": "innisfree-volcanic-clay-face-mask.jpg",
+    "partner": "amazon",
+    "category": "beauty",
+    "url": "/gifts/innisfree-volcanic-clay-face-mask.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Dog Squeak Toy Plush, 5-Pack",
+    "filename": "dog-squeak-toy-plush-5-pack.jpg",
+    "partner": "amazon",
+    "category": "pet",
+    "url": "/gifts/dog-squeak-toy-plush-5-pack.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "ZELUS Weighted Vest for Workout",
+    "filename": "zelus-weighted-vest-for-workout.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/zelus-weighted-vest-for-workout.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Titleist Pro V1 Golf Balls",
+    "filename": "titleist-pro-v1-golf-balls.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/titleist-pro-v1-golf-balls.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Wilson US Open Tennis Balls",
+    "filename": "wilson-us-open-tennis-balls.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/wilson-us-open-tennis-balls.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Jade Leaf Matcha Barista Blend, Ceremonial Grade Matcha Green Tea Powder",
+    "filename": "jade-leaf-matcha-barista-blend-ceremonial-grade-matcha-green.jpg",
+    "partner": "amazon",
+    "category": "food_snacks",
+    "url": "/gifts/jade-leaf-matcha-barista-blend-ceremonial-grade-matcha-green.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Apple Air Tag (2nd Generation)",
+    "filename": "apple-air-tag-2nd-generation.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/apple-air-tag-2nd-generation.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Upstarts by Brad Stone",
+    "filename": "the-upstarts-by-brad-stone.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/the-upstarts-by-brad-stone.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Everything Store by Brad Stone",
+    "filename": "the-everything-store-by-brad-stone.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/the-everything-store-by-brad-stone.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Hobbit by J.R.R. Tolkien",
+    "filename": "the-hobbit-by-j-r-r-tolkien.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/the-hobbit-by-j-r-r-tolkien.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Fellowship of the Ring by J.R.R. Tolkien",
+    "filename": "the-fellowship-of-the-ring-by-j-r-r-tolkien.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/the-fellowship-of-the-ring-by-j-r-r-tolkien.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Atomic Habits by James Clear",
+    "filename": "atomic-habits-by-james-clear.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/atomic-habits-by-james-clear.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Crocs Classic Clog",
+    "filename": "crocs-classic-clog.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/crocs-classic-clog.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Nike Unisex Adult Crew Socks",
+    "filename": "nike-unisex-adult-crew-socks.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/nike-unisex-adult-crew-socks.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "FBSPORT Ping Pong Paddle Set",
+    "filename": "fbsport-ping-pong-paddle-set.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/fbsport-ping-pong-paddle-set.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "LEGO Botanical Happy Plants",
+    "filename": "lego-botanical-happy-plants.jpg",
+    "partner": "amazon",
+    "category": "games_toys",
+    "url": "/gifts/lego-botanical-happy-plants.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Sorbet Flower Bouquet",
+    "filename": "the-sorbet-flower-bouquet.jpg",
+    "partner": "urbanstems",
+    "category": "flowers",
+    "url": "/gifts/the-sorbet-flower-bouquet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Firecracker Flower Bouquet",
+    "filename": "the-firecracker-flower-bouquet.jpg",
+    "partner": "urbanstems",
+    "category": "flowers",
+    "url": "/gifts/the-firecracker-flower-bouquet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Peony Flower Bouquet",
+    "filename": "the-peony-flower-bouquet.jpg",
+    "partner": "urbanstems",
+    "category": "flowers",
+    "url": "/gifts/the-peony-flower-bouquet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Ferrero Collection, Premium Assorted Treats",
+    "filename": "ferrero-collection-premium-assorted-treats.jpg",
+    "partner": "amazon",
+    "category": "food_snacks",
+    "url": "/gifts/ferrero-collection-premium-assorted-treats.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Lovetta Dubai Chocolate Bar",
+    "filename": "lovetta-dubai-chocolate-bar.jpg",
+    "partner": "amazon",
+    "category": "food_snacks",
+    "url": "/gifts/lovetta-dubai-chocolate-bar.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Rubik's Cube Original",
+    "filename": "rubik-s-cube-original.jpg",
+    "partner": "amazon",
+    "category": "games_toys",
+    "url": "/gifts/rubik-s-cube-original.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Stanley Quencher H2.0 Tumbler",
+    "filename": "stanley-quencher-h2-0-tumbler.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/stanley-quencher-h2-0-tumbler.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Laurent-Perrier La Cuvee Brut Champagne",
+    "filename": "laurent-perrier-la-cuvee-brut-champagne.jpg",
+    "partner": "wine.com",
+    "category": "wine",
+    "url": "/gifts/laurent-perrier-la-cuvee-brut-champagne.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Chateau Bourdieu No.1 2018 Red Wine",
+    "filename": "chateau-bourdieu-no-1-2018-red-wine.jpg",
+    "partner": "wine.com",
+    "category": "wine",
+    "url": "/gifts/chateau-bourdieu-no-1-2018-red-wine.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Grand Napa Vineyards Los Carneros Chardonnay 2024",
+    "filename": "grand-napa-vineyards-los-carneros-chardonnay-2024.jpg",
+    "partner": "wine.com",
+    "category": "wine",
+    "url": "/gifts/grand-napa-vineyards-los-carneros-chardonnay-2024.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "RXBAR Protein Bars, Coconut Chocolate",
+    "filename": "rxbar-protein-bars-coconut-chocolate.jpg",
+    "partner": "amazon",
+    "category": "food_snacks",
+    "url": "/gifts/rxbar-protein-bars-coconut-chocolate.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Lindt LINDOR Milk Chocolate Candy Truffles, 60 Count Box ",
+    "filename": "lindt-lindor-milk-chocolate-candy-truffles-60-count-box.jpg",
+    "partner": "amazon",
+    "category": "food_snacks",
+    "url": "/gifts/lindt-lindor-milk-chocolate-candy-truffles-60-count-box.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Cocorrína Reed Diffuser Set, Scented Diffuser with Sticks",
+    "filename": "cocorr-na-reed-diffuser-set-scented-diffuser-with-sticks.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/cocorr-na-reed-diffuser-set-scented-diffuser-with-sticks.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Owala Stainless Steel Coffee Tumbler",
+    "filename": "owala-stainless-steel-coffee-tumbler.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/owala-stainless-steel-coffee-tumbler.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "BIODANCE Bio-Collagen Hydrating Overnight Hydrogel Face Mask",
+    "filename": "biodance-bio-collagen-hydrating-overnight-hydrogel-face-mask.jpg",
+    "partner": "amazon",
+    "category": "beauty",
+    "url": "/gifts/biodance-bio-collagen-hydrating-overnight-hydrogel-face-mask.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Etekcity Food Kitchen Scale",
+    "filename": "etekcity-food-kitchen-scale.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/etekcity-food-kitchen-scale.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "INIU Wireless Charger, 15W Fast Wireless Charging Station",
+    "filename": "iniu-wireless-charger-15w-fast-wireless-charging-station.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/iniu-wireless-charger-15w-fast-wireless-charging-station.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Apple Watch SE 3 Smartwatch",
+    "filename": "apple-watch-se-3-smartwatch.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/apple-watch-se-3-smartwatch.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Sony WH-CH520 Wireless Headphones",
+    "filename": "sony-wh-ch520-wireless-headphones.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/sony-wh-ch520-wireless-headphones.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Optimum Nutrition Gold Standard 100% Whey Protein Powder",
+    "filename": "optimum-nutrition-gold-standard-100-whey-protein-powder.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/optimum-nutrition-gold-standard-100-whey-protein-powder.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Swarovski Mesmera Collection Necklaces",
+    "filename": "swarovski-mesmera-collection-necklaces.jpg",
+    "partner": "amazon",
+    "category": "jewelry",
+    "url": "/gifts/swarovski-mesmera-collection-necklaces.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Vitamin D-5,000 - Vitamin D3 Supplement",
+    "filename": "vitamin-d-5-000-vitamin-d3-supplement.jpg",
+    "partner": "amazon",
+    "category": "wellness",
+    "url": "/gifts/vitamin-d-5-000-vitamin-d3-supplement.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Emergen-C 1000mg Vitamin C Powder",
+    "filename": "emergen-c-1000mg-vitamin-c-powder.jpg",
+    "partner": "amazon",
+    "category": "wellness",
+    "url": "/gifts/emergen-c-1000mg-vitamin-c-powder.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Magnesium Glycinate ",
+    "filename": "magnesium-glycinate.jpg",
+    "partner": "amazon",
+    "category": "wellness",
+    "url": "/gifts/magnesium-glycinate.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Adidas Unisex Adult Samba Indoor Shoe",
+    "filename": "adidas-unisex-adult-samba-indoor-shoe.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/adidas-unisex-adult-samba-indoor-shoe.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Swarovski Stone Crystal Pierced Hoop Earring Jewelry Collection ",
+    "filename": "swarovski-stone-crystal-pierced-hoop-earring-jewelry-collect.jpg",
+    "partner": "amazon",
+    "category": "jewelry",
+    "url": "/gifts/swarovski-stone-crystal-pierced-hoop-earring-jewelry-collect.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "RYZE SUPERFOODS Mushroom Coffee with 6 Adaptogenic Mushrooms",
+    "filename": "ryze-superfoods-mushroom-coffee-with-6-adaptogenic-mushrooms.jpg",
+    "partner": "amazon",
+    "category": "wellness",
+    "url": "/gifts/ryze-superfoods-mushroom-coffee-with-6-adaptogenic-mushrooms.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "ILLY CAFFE Medium Roast Espresso Classico Ground Coffee",
+    "filename": "illy-caffe-medium-roast-espresso-classico-ground-coffee.jpg",
+    "partner": "amazon",
+    "category": "food_snacks",
+    "url": "/gifts/illy-caffe-medium-roast-espresso-classico-ground-coffee.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "BLACK+DECKER Pet Hair Remover",
+    "filename": "black-decker-pet-hair-remover.jpg",
+    "partner": "amazon",
+    "category": "pet",
+    "url": "/gifts/black-decker-pet-hair-remover.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Under Armour Men's Tech Golf Polo",
+    "filename": "under-armour-men-s-tech-golf-polo.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/under-armour-men-s-tech-golf-polo.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "luvamia Wide Leg Jeans for Women",
+    "filename": "luvamia-wide-leg-jeans-for-women.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/luvamia-wide-leg-jeans-for-women.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "AUTOMET Women's Oversized Jeans Jacket",
+    "filename": "automet-women-s-oversized-jeans-jacket.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/automet-women-s-oversized-jeans-jacket.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Jenga Wood Block Game",
+    "filename": "jenga-wood-block-game.jpg",
+    "partner": "amazon",
+    "category": "games_toys",
+    "url": "/gifts/jenga-wood-block-game.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Giant UNO Card Game",
+    "filename": "giant-uno-card-game.jpg",
+    "partner": "amazon",
+    "category": "games_toys",
+    "url": "/gifts/giant-uno-card-game.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Heir Apparent Stags Leap District Cabernet Sauvignon 2022",
+    "filename": "heir-apparent-stags-leap-district-cabernet-sauvignon-2022.jpg",
+    "partner": "wine.com",
+    "category": "wine",
+    "url": "/gifts/heir-apparent-stags-leap-district-cabernet-sauvignon-2022.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Grand Napa Vineyards Los Carneros Pinot Noir 2023",
+    "filename": "grand-napa-vineyards-los-carneros-pinot-noir-2023.jpg",
+    "partner": "wine.com",
+    "category": "wine",
+    "url": "/gifts/grand-napa-vineyards-los-carneros-pinot-noir-2023.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "A Man Called Ove: A Novel by Fredrik Backman",
+    "filename": "a-man-called-ove-a-novel-by-fredrik-backman.jpg",
+    "partner": "amazon",
+    "category": "books",
+    "url": "/gifts/a-man-called-ove-a-novel-by-fredrik-backman.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Good Vibes Flower Bouquet",
+    "filename": "the-good-vibes-flower-bouquet.jpg",
+    "partner": "urbanstems",
+    "category": "flowers",
+    "url": "/gifts/the-good-vibes-flower-bouquet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Coquette Flower Bouquet",
+    "filename": "the-coquette-flower-bouquet.jpg",
+    "partner": "urbanstems",
+    "category": "flowers",
+    "url": "/gifts/the-coquette-flower-bouquet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "The Unicorn Flower Bouquet",
+    "filename": "the-unicorn-flower-bouquet.jpg",
+    "partner": "urbanstems",
+    "category": "flowers",
+    "url": "/gifts/the-unicorn-flower-bouquet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Anker Soundcore 2 Portable Bluetooth Speaker",
+    "filename": "anker-soundcore-2-portable-bluetooth-speaker.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/anker-soundcore-2-portable-bluetooth-speaker.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Beats Solo 4",
+    "filename": "beats-solo-4.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/beats-solo-4.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Life360 Tile - Bluetooth Tracker, Keys Finder and Item Locator",
+    "filename": "life360-tile-bluetooth-tracker-keys-finder-and-item-locator.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/life360-tile-bluetooth-tracker-keys-finder-and-item-locator.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Satya Incense Gift Set",
+    "filename": "satya-incense-gift-set.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/satya-incense-gift-set.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Loop Experience 2 Ear Plugs for Hearing Protection",
+    "filename": "loop-experience-2-ear-plugs-for-hearing-protection.jpg",
+    "partner": "amazon",
+    "category": "electronics",
+    "url": "/gifts/loop-experience-2-ear-plugs-for-hearing-protection.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Veuve Clicquot Yellow Label Brut",
+    "filename": "veuve-clicquot-yellow-label-brut.jpg",
+    "partner": "wine.com",
+    "category": "wine",
+    "url": "/gifts/veuve-clicquot-yellow-label-brut.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Muso Wood Book Ends",
+    "filename": "muso-wood-book-ends.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/muso-wood-book-ends.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Tramontina Professional 10-Inch Non Stick Frying Pan",
+    "filename": "tramontina-professional-10-inch-non-stick-frying-pan.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/tramontina-professional-10-inch-non-stick-frying-pan.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Under Armour Men's Tech Golf Polo",
+    "filename": "under-armour-men-s-tech-golf-polo.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/under-armour-men-s-tech-golf-polo.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "SMITH Signal Cycling Helmet",
+    "filename": "smith-signal-cycling-helmet.jpg",
+    "partner": "amazon",
+    "category": "sports",
+    "url": "/gifts/smith-signal-cycling-helmet.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Repel Windproof Travel Umbrella",
+    "filename": "repel-windproof-travel-umbrella.jpg",
+    "partner": "amazon",
+    "category": "apparel",
+    "url": "/gifts/repel-windproof-travel-umbrella.jpg",
+    "status": "ok"
+  },
+  {
+    "name": "Ukulele (Mahogany), Adults Kit for Beginners",
+    "filename": "ukulele-mahogany-adults-kit-for-beginners.jpg",
+    "partner": "amazon",
+    "category": "home",
+    "url": "/gifts/ukulele-mahogany-adults-kit-for-beginners.jpg",
+    "status": "ok"
+  }
+]

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 
 const RELATIONSHIPS = [
@@ -58,11 +58,14 @@ interface EventData {
   suppress_gifts: boolean;
 }
 
-export default function OnboardingPage() {
-  const [step, setStep] = useState(1);
+function OnboardingContent() {
+  const searchParams = useSearchParams();
+  const initialStep = Math.min(Math.max(Number(searchParams.get("step")) || 1, 1), TOTAL_STEPS);
+  const [step, setStepRaw] = useState(initialStep);
   const [firstName, setFirstName] = useState("");
   const [userId, setUserId] = useState("");
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   // Step 2: Contact + events
   const [contact, setContact] = useState({
@@ -91,7 +94,11 @@ export default function OnboardingPage() {
   const [budgetTier, setBudgetTier] = useState("");
   const [hasPets, setHasPets] = useState(false);
 
-  const router = useRouter();
+  const setStep = useCallback((newStep: number) => {
+    setStepRaw(newStep);
+    router.push(`/onboarding?step=${newStep}`, { scroll: false });
+  }, [router]);
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -783,19 +790,6 @@ export default function OnboardingPage() {
                 ))}
               </div>
 
-              {/* Shortcut button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setGiftCategories(["flowers", "home"]);
-                  handleSaveAndFinish();
-                }}
-                disabled={saving}
-                className="w-full border-2 border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-700 font-medium py-3 rounded-xl text-sm transition-colors mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Not sure? Skip categories and continue
-              </button>
-
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Anything else they like?
@@ -893,5 +887,13 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>}>
+      <OnboardingContent />
+    </Suspense>
   );
 }

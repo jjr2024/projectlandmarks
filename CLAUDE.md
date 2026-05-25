@@ -83,6 +83,8 @@ supabase/migrations/
 ├── 009 event soft delete    010 RLS deny writes    011 fix email cap index    012 anonymize conversion_events
 ├── 013 add pronoun→gender    014 rename pronoun to gender (Male/Female/Other/N/A)
 ├── 015 add has_pets boolean    016 remap gift categories, reseed catalog, add gender_tags, update defaults
+├── 017 seed 5 new gift catalog items (XLS v3.0)
+├── 018 populate image_url with self-hosted paths
 ```
 
 ## Architecture
@@ -191,7 +193,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 
 - No Google OAuth (disabled with "coming soon" in prototype)
 - Affiliate links use clean `/dp/ASIN?tag=` format for Amazon; UrbanStems/Wine.com use original URLs
-- Gift catalog XLS v2.0 has `clean_affiliate_url` column (use this for DB seeding, not `affiliate_url`). XLS also contains internal-reference columns not used by the webapp: `is_active`, `image_url`, `asin`, `current_price`, `star_rating`, `review_count`, `last_updated`, `affiliate`. `image_url` is intentionally unused — reminder emails are text-only (no product images) and the contact page links by gift name. XLS descriptions are the source of truth for product copy.
+- Gift catalog XLS v3.0 (72 items) has `clean_affiliate_url` column (use this for DB seeding, not `affiliate_url`). XLS also contains internal-reference columns not used by the webapp: `is_active`, `asin`, `current_price`, `star_rating`, `review_count`, `last_updated`, `affiliate`. XLS `image_url` is the Amazon CDN source URL (used by the download script only — never hotlinked in emails). DB `image_url` stores self-hosted paths (`https://daysight.xyz/gifts/{slug}.jpg`). XLS descriptions are the source of truth for product copy.
 - `relationship_affinities` and `event_affinities` default to "all" in catalog — scoring weights (+15 each) are unused until populated
 - `is_last_minute` is over-tagged (97% = yes) — needs audit to flag only truly instant-delivery items
 - No contact import (CSV, Google Contacts, vCard)
@@ -209,8 +211,8 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - `useSearchParams()` needs `<Suspense>` boundary in Next.js 14 production builds
 - Use individual `@react-email/*` packages, not the unified `react-email` (heavy CLI)
 - `Precedence: bulk` header removed — was causing Gmail Promotions classification
-- Emails: pixels only (no rem/em/%), stacked layout for gift cards (text-only — title/description/price/CTA, no product images). CTA buttons use `display: "block"` + `width: "100%"` for mobile tap targets; secondary buttons use `inline-block`
-- Email images must be hosted at absolute HTTPS URLs (Gmail strips `data:` URIs). Logo lives at `public/email/logo-daysight.png` → `https://daysight.xyz/email/logo-daysight.png`. Header wordmark uses an explicit inline `<span style="color:#ffffff">` — raw `<td>` color is stripped by some clients
+- Emails: pixels only (no rem/em/%), stacked layout for gift cards (product image + title/description/price/CTA). Images rendered at 200px with 8px border-radius for soft corners; source files are 400px (retina 2×). CTA buttons use `display: "block"` + `width: "100%"` for mobile tap targets; secondary buttons use `inline-block`
+- Email images must be self-hosted at absolute HTTPS URLs on `daysight.xyz`. Amazon CDN URLs cannot be hotlinked in emails (blocked by Amazon in non-browser contexts); UrbanStems/Wine.com URLs expire. All product images live in `public/gifts/{slug}.jpg` → `https://daysight.xyz/gifts/...` via Vercel CDN. Gmail strips `data:` URIs entirely. Logo lives at `public/email/logo-daysight.png` → `https://daysight.xyz/email/logo-daysight.png`. Header wordmark uses an explicit inline `<span style="color:#ffffff">` — raw `<td>` color is stripped by some clients
 - Resend idempotency keys are deterministic — always include one when adding email-sending code
 - `nextOccurrence()` and `formatEventDate()` are in `src/lib/reminders.ts` — never re-duplicate
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)

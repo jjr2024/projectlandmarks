@@ -128,6 +128,7 @@ function ContactDetailContent() {
   const [events, setEvents] = useState<Event[]>([]);
   const [shownGifts, setShownGifts] = useState<ShownGift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [userId, setUserId] = useState("");
 
   // Contact edit modal state
@@ -159,31 +160,37 @@ function ContactDetailContent() {
   const supabase = createClient();
 
   const load = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    setUserId(user.id);
+    try {
+      setLoadError("");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
 
-    const [contactRes, eventsRes, giftsRes] = await Promise.all([
-      supabase.from("contacts").select("*").eq("id", contactId).is("deleted_at", null).single(),
-      supabase.from("events").select("*").eq("contact_id", contactId).is("deleted_at", null).order("month", { ascending: true }),
-      supabase
-        .from("shown_gifts")
-        .select("*, gift_catalog(affiliate_url)")
-        .eq("contact_id", contactId)
-        .order("year", { ascending: false }),
-    ]);
+      const [contactRes, eventsRes, giftsRes] = await Promise.all([
+        supabase.from("contacts").select("*").eq("id", contactId).is("deleted_at", null).single(),
+        supabase.from("events").select("*").eq("contact_id", contactId).is("deleted_at", null).order("month", { ascending: true }),
+        supabase
+          .from("shown_gifts")
+          .select("*, gift_catalog(affiliate_url)")
+          .eq("contact_id", contactId)
+          .order("year", { ascending: false }),
+      ]);
 
-    if (!contactRes.data) {
-      router.push("/contacts");
-      return;
+      if (!contactRes.data) {
+        router.push("/contacts");
+        return;
+      }
+
+      setContact(contactRes.data);
+      setEvents(eventsRes.data || []);
+      setShownGifts(giftsRes.data || []);
+    } catch {
+      setLoadError("Unable to load contact details. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setContact(contactRes.data);
-    setEvents(eventsRes.data || []);
-    setShownGifts(giftsRes.data || []);
-    setLoading(false);
   }, [contactId]);
 
   useEffect(() => {
@@ -355,10 +362,32 @@ function ContactDetailContent() {
     await load();
   };
 
-  if (loading || !contact) {
+  if (loading || (!contact && !loadError)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-gray-400">Loading contact...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-red-600 text-sm">{loadError}</p>
+        <button
+          onClick={() => { setLoading(true); load(); }}
+          className="text-sm text-brand-600 hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!contact) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-gray-400">Contact not found.</p>
       </div>
     );
   }
@@ -448,9 +477,11 @@ function ContactDetailContent() {
 
               return (
                 <li key={evt.id}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openEditEvent(evt)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditEvent(evt); } }}
                     className="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                   >
                     <div className="flex-1">
@@ -498,7 +529,7 @@ function ContactDetailContent() {
                         Delete
                       </button>
                     </div>
-                  </button>
+                  </div>
                 </li>
               );
             })}

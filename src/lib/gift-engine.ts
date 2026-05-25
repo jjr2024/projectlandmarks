@@ -31,6 +31,7 @@ import { REMINDER_WINDOWS } from "@/lib/email-config";
 export interface GiftRow {
   id: string;
   name: string;
+  description: string | null;
   partner: string;
   affiliate_url: string;
   image_url: string | null;

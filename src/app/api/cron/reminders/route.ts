@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
 
           // ── 2. Send via Resend with idempotency key ────────────────────
           const idempotencyKey = buildIdempotencyKey(user.id, event.id, window.canonicalDaysBefore, eventDateStr);
-          const subject = reminderSubject(contactFirstName, event.event_type, window.canonicalDaysBefore);
+          const subject = reminderSubject(contactFirstName, event.event_type, window.canonicalDaysBefore, event.event_label);
 
           const { data: emailResult, error: emailError } = await resend().emails.send({
             from: EMAIL_CONFIG.from,
@@ -214,13 +214,14 @@ export async function GET(request: NextRequest) {
               eventLabel: event.event_label,
               daysBefore: window.canonicalDaysBefore,
               eventDateFormatted,
-              gifts: gifts.map((g: any) => ({
+              gifts: gifts.map((g) => ({
                 name: g.name,
                 partner: g.partner,
                 description: g.description || g.tags?.join(", ") || "",
                 price: g.price_tier === "low" ? "<$50" : g.price_tier === "mid" ? "$50–$100" : ">$100",
                 affiliate_url: g.affiliate_url || "#",
                 category: g.category,
+                image_url: g.image_url || undefined,
               })),
               suppressGifts: event.suppress_gifts,
               lastYearLine,

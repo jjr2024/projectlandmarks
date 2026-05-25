@@ -7,7 +7,6 @@ import { Text } from "@react-email/text";
 import { Link } from "@react-email/link";
 import { Hr } from "@react-email/hr";
 import * as React from "react";
-import { GiftCategoryIcon } from "@/components/gift-icons";
 
 interface GiftItem {
   name: string;
@@ -16,6 +15,7 @@ interface GiftItem {
   price: string;
   affiliate_url: string;
   category: string;
+  image_url?: string;
 }
 
 interface ReminderEmailProps {
@@ -42,30 +42,12 @@ function eventTypeLabel(eventType: string): string {
   return { birthday: "birthday", anniversary: "anniversary", custom: "event" }[eventType] || "event";
 }
 
-function categoryLabel(category: string): string {
-  return (
-    {
-      flowers: "Flowers",
-      wine: "Wine",
-      food_snacks: "Food & Snacks",
-      home: "Home",
-      books: "Books",
-      electronics: "Electronics",
-      sports: "Sports",
-      apparel: "Apparel",
-      beauty: "Beauty",
-      jewelry: "Jewelry",
-      wellness: "Wellness",
-      games_toys: "Games & Toys",
-      pet: "Pet",
-    }[category] || category
-  );
-}
 
 export default function ReminderEmail({
   firstName = "there",
   contactFirstName = "Someone",
   eventType = "birthday",
+  eventLabel,
   daysBefore = 7,
   eventDateFormatted = "May 15",
   gifts = [],
@@ -77,7 +59,7 @@ export default function ReminderEmail({
   unsubscribeUrl,
 }: ReminderEmailProps) {
   const unsubLink = unsubscribeUrl || `https://daysight.xyz/settings`;
-  const typeLabel = eventTypeLabel(eventType);
+  const typeLabel = eventLabel || eventTypeLabel(eventType);
   const isLastMinute = daysBefore <= 2;
 
   const headline =
@@ -174,28 +156,28 @@ export default function ReminderEmail({
                 {/* Gift Ideas header */}
                 <Text style={{ color: "#111827", fontSize: "12px", fontWeight: 600, margin: "0 0 10px 0", textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Gift Ideas</Text>
 
-                {/* Gift items — text-only cards (no product images) */}
+                {/* Gift items — product image + text cards */}
                 {gifts.map((gift, i) => (
                   <Section key={i} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "14px 16px", marginBottom: "8px", background: "#fafafa" }}>
-                    {/* Category badge — soft-edge chip with SVG icon + label */}
-                    {gift.category && (
-                      <table cellPadding="0" cellSpacing="0" style={{ marginBottom: "8px" }}>
+                    {/* Product image — self-hosted from daysight.xyz/gifts/ */}
+                    {gift.image_url && (
+                      <table cellPadding="0" cellSpacing="0" width="100%" style={{ marginBottom: "12px" }}>
                         <tbody>
                           <tr>
-                            <td style={{ background: "#fff6f1", border: "1px solid #f5e6d3", borderRadius: "8px", padding: "4px 10px" }}>
+                            <td align="center">
+                              {/* Outer td with overflow:hidden handles border-radius for Outlook */}
                               <table cellPadding="0" cellSpacing="0">
                                 <tbody>
                                   <tr>
-                                    <td style={{ verticalAlign: "middle", paddingRight: "6px", color: brandOrange, lineHeight: 0 }}>
-                                      <GiftCategoryIcon
-                                        category={gift.category}
-                                        className=""
-                                        strokeWidth={1.75}
-                                        style={{ width: "14px", height: "14px", display: "block" }}
+                                    <td style={{ borderRadius: "8px", overflow: "hidden" }}>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={gift.image_url}
+                                        alt={gift.name}
+                                        width="200"
+                                        height="200"
+                                        style={{ display: "block", border: "none", borderRadius: "8px", width: "200px", height: "200px", objectFit: "cover" }}
                                       />
-                                    </td>
-                                    <td style={{ verticalAlign: "middle", color: brandOrange, fontSize: "11px", fontWeight: 600, letterSpacing: "0.03em", textTransform: "uppercase" as const }}>
-                                      {categoryLabel(gift.category)}
                                     </td>
                                   </tr>
                                 </tbody>
@@ -274,8 +256,8 @@ export default function ReminderEmail({
 }
 
 /** Helper to generate the subject line (used by the cron route). */
-export function reminderSubject(contactFirstName: string, eventType: string, daysBefore: number): string {
-  const label = eventTypeLabel(eventType);
+export function reminderSubject(contactFirstName: string, eventType: string, daysBefore: number, eventLabel?: string): string {
+  const label = eventLabel || eventTypeLabel(eventType);
   if (daysBefore === 1) return `Last chance — ${contactFirstName}'s ${label} is tomorrow`;
   return `${contactFirstName}'s ${label} is in ${daysBefore} days — here's what to get`;
 }

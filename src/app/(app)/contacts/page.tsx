@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import Link from "next/link";
 import { getInitials, relationshipLabel, giftLabel } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
 
@@ -70,10 +70,12 @@ const EMPTY_FORM = {
   notes: "",
 };
 
-export default function ContactsPage() {
+function ContactsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filterRel, setFilterRel] = useState("all");
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -87,26 +89,42 @@ export default function ContactsPage() {
   const supabase = createClient();
 
   const loadContacts = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    setUserId(user.id);
+    try {
+      setLoadError("");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
 
-    const { data } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("user_id", user.id)
-      .is("deleted_at", null)
-      .order("first_name");
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", user.id)
+        .is("deleted_at", null)
+        .order("first_name");
 
-    setContacts(data || []);
-    setLoading(false);
+      if (error) throw error;
+      setContacts(data || []);
+    } catch {
+      setLoadError("Unable to load contacts. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     loadContacts();
   }, [loadContacts]);
+
+  // Auto-open Add Contact modal when ?add=1 is present (linked from dashboard)
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      openAdd();
+      // Clean up URL so refresh doesn't re-open
+      router.replace("/contacts", { scroll: false });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter + search
   const filtered = contacts.filter((c) => {
@@ -226,6 +244,20 @@ export default function ContactsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-gray-400">Loading contacts...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-red-600 text-sm">{loadError}</p>
+        <button
+          onClick={() => { setLoading(true); loadContacts(); }}
+          className="text-sm text-brand-600 hover:underline"
+        >
+          Try again
+        </button>
       </div>
     );
   }
@@ -545,5 +577,13 @@ export default function ContactsPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function ContactsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><p className="text-gray-400">Loading contacts...</p></div>}>
+      <ContactsPageContent />
+    </Suspense>
   );
 }

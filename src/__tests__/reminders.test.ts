@@ -377,6 +377,7 @@ describe("scoreGift(gift, ctx)", () => {
   const mockGift = (overrides?: Partial<GiftRow>): GiftRow => ({
     id: "gift-1",
     name: "Coffee Maker",
+    description: null,
     partner: "amazon",
     affiliate_url: "https://example.com",
     image_url: null,
@@ -673,6 +674,7 @@ describe("scoreGift — gender scoring", () => {
   const giftWith = (overrides?: Partial<GiftRow>): GiftRow => ({
     id: "gift-g1",
     name: "Test Gift",
+    description: null,
     partner: "amazon",
     affiliate_url: "https://example.com",
     image_url: null,
