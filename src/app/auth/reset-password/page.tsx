@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -18,13 +18,38 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  // PKCE flow: if a ?code= param is present (mobile in-app browser),
-  // exchange it client-side. Otherwise fall back to checking existing session
+  // Guard: prevent double code exchange when the effect re-runs
+  // before router.replace has updated searchParams (race condition).
+  const codeExchangedRef = useRef(false);
+
+  // Listen for PASSWORD_RECOVERY event as a fallback — Supabase fires
+  // this when a recovery session is detected, which can catch cases
+  // where the PKCE code exchange fails but the session is established
+  // through other means (e.g. hash fragments in some configurations).
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setSessionReady(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  // PKCE flow: if a ?code= param is present, exchange it client-side.
+  // Otherwise fall back to checking existing cookie-based session
   // (desktop flow where callback already set cookies).
   useEffect(() => {
     const code = searchParams.get("code");
 
     if (code) {
+      // Prevent double exchange — the effect can re-run if the
+      // component re-renders before router.replace updates the URL.
+      // The second exchange would fail (code already consumed) and
+      // incorrectly set noSession=true, hiding the password form.
+      if (codeExchangedRef.current) return;
+      codeExchangedRef.current = true;
+
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
           console.error("[reset-password] Code exchange failed:", error.message);
@@ -40,7 +65,10 @@ function ResetPasswordForm() {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           setSessionReady(true);
-        } else {
+        } else if (!codeExchangedRef.current) {
+          // Only show "expired" if we never attempted a code exchange.
+          // If we did exchange (and it succeeded), the URL was cleaned
+          // and this branch runs on the follow-up render — that's fine.
           setNoSession(true);
         }
       });

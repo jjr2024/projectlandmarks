@@ -101,7 +101,7 @@ supabase/migrations/
 
 **Middleware:** Supabase SSR cookies. Protects app routes → redirects unauth'd to `/auth`. Redirects auth'd away from `/auth` (except reset-password).
 
-**Auth:** Supabase Auth. Email verification required — no emails sent to unverified addresses (GDPR/CAN-SPAM: emails contain affiliate links). Password changes use `reauthenticate()` (nonce-based, no duplicate session).
+**Auth:** Supabase Auth with PKCE flow (`@supabase/ssr` default). Email verification required — no emails sent to unverified addresses (GDPR/CAN-SPAM: emails contain affiliate links). Password changes use `reauthenticate()` (nonce-based, no duplicate session). Post-signup success screen and in-app `EmailVerificationBanner` both offer resend-verification with 60-second cooldown (persisted to `sessionStorage`). **PKCE caveat:** `supabase.auth.resend()` does NOT regenerate the PKCE `code_verifier`/`code_challenge` pair, so re-sent verification links fail at `exchangeCodeForSession()`. Two mitigations: (1) the post-signup screen uses `signUp()` again instead of `resend()`, which generates a fresh PKCE pair (works because `email`/`password` are still in component state); (2) the in-app banner still uses `resend()` (no password available), but the auth callback has a fallback — if code exchange fails and the user already has an active session, it redirects to `/dashboard` instead of showing an error (email is verified server-side by Supabase before the redirect regardless of PKCE outcome).
 
 **Consent gating:** Two mandatory signup checkboxes (Terms+Privacy, affiliate emails). Stored in `profiles` via `handle_new_user()` trigger. Layout gate (`(app)/layout.tsx`) only checks `consent_terms` — users without terms acceptance are redirected to `/consent`. `consent_emails` is handled separately: unsubscribed users (terms=true, emails=false) stay in the app but see a persistent `EmailUnsubscribedBanner` directing them to Settings to re-enable. The Settings page has a re-subscribe block that sets `consent_emails` back to true. Cron routes independently gate on both `consent_terms` and `consent_emails`.
 
@@ -167,7 +167,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 | `/api/calendar/[userId]` | GET | HMAC token | .ics feed |
 | `/api/calendar-url` | GET | Session cookie | Signed calendar URL |
 | `/api/unsubscribe` | POST | HMAC uid+token | Set consent_emails=false |
-| `/auth/callback` | GET | — | OAuth/magic-link → session |
+| `/auth/callback` | GET | — | OAuth/magic-link/verification → session (PKCE fallback: redirects to app if exchange fails but session exists) |
 
 ## Key Files (Read First)
 
@@ -220,3 +220,5 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Year rollover: `buildEventDateStr()` uses `eventDate.getFullYear()` (from `nextOccurrence()`), NOT `now.getFullYear()` — fixes Dec cron runs for Jan events
 - Vercel deployment protection blocks API requests on previews — use `npx vercel curl` or test locally
 - PostgREST `.or()` with `.in()` has quoting issues — use parallel queries instead (see gift-engine.ts)
+- **Never use `supabase.auth.resend()` for verification emails when PKCE is active** — it doesn't regenerate the PKCE pair, so the link's code exchange fails. Use `signUp()` again (if you have the password) or rely on the auth callback's session-based fallback (if the user is already signed in). See `handleResendVerification` in `auth/page.tsx` and the fallback in `auth/callback/route.ts`.
+- **Reset-password code exchange needs a ref guard** — `exchangeCodeForSession` in `reset-password/page.tsx` runs inside a `useEffect` whose dependencies (`searchParams`) can change when `router.replace` cleans the URL. Without a ref guard (`codeExchangedRef`), the effect re-runs, tries to exchange the already-consumed code, fails, and shows "Reset link expired" even though the session was established. Always use a ref to prevent double exchange.
