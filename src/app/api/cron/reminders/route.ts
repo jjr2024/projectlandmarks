@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
           .from("events")
           .select(`
             id, event_type, event_label, month, day, high_importance, suppress_gifts,
-            contact_id, user_id,
-            contacts!inner ( id, first_name, last_name, gift_categories, gift_other, budget_tier, deleted_at )
+            one_time, event_year, contact_id, user_id,
+            contacts!inner ( id, first_name, last_name, relationship, gender, has_pets, gift_categories, gift_other, budget_tier, deleted_at )
           `)
           .eq("user_id", user.id)
           .is("deleted_at", null)
@@ -127,6 +127,20 @@ export async function GET(request: NextRequest) {
           }
 
           const contact = event.contacts as any;
+
+          // ── Skip past one-time events ─────────────────────────────────
+          // One-time events with a known year should only fire in that year.
+          // If the event date has already passed, skip it. One-time events
+          // with null event_year (legacy data) are treated as recurring to
+          // avoid silently dropping reminders.
+          if (event.one_time && event.event_year) {
+            const oneTimeDate = new Date(event.event_year, event.month - 1, event.day);
+            if (oneTimeDate < now) {
+              results.skipped++;
+              continue;
+            }
+          }
+
           const eventDate = nextOccurrence(event.month, event.day, now);
           const daysUntil = daysBetween(now, eventDate);
 
@@ -155,11 +169,11 @@ export async function GET(request: NextRequest) {
           }
 
           // ── Select gifts (scored engine — Phase 6) ────────────────────
-          const gifts = await selectGiftsScored(supabase, contact, event, daysUntil, now.getFullYear());
+          const gifts = await selectGiftsScored(supabase, contact, event, daysUntil, eventDate.getFullYear());
 
           const contactFirstName = contact.first_name || "Someone";
           const eventDateFormatted = formatEventDate(event.month, event.day);
-          const lastYearLine = await getLastYearLine(supabase, contact.id, event.month, event.day, now.getFullYear());
+          const lastYearLine = await getLastYearLine(supabase, contact.id, event.month, event.day, eventDate.getFullYear());
 
           // ── Check for admin custom message override ────────────────────
           const { data: override } = await supabase
@@ -168,7 +182,7 @@ export async function GET(request: NextRequest) {
             .eq("user_id", user.id)
             .eq("event_id", event.id)
             .eq("days_before", window.canonicalDaysBefore)
-            .eq("event_year", now.getFullYear())
+            .eq("event_year", eventDate.getFullYear())
             .maybeSingle();
 
           const customMessage = override?.custom_message || null;
@@ -282,7 +296,7 @@ export async function GET(request: NextRequest) {
               gift_id: gift.id,
               event_month: event.month,
               event_day: event.day,
-              year: now.getFullYear(),
+              year: eventDate.getFullYear(),
               gift_name: gift.name,
               gift_category: gift.category,
               gift_partner: gift.partner,

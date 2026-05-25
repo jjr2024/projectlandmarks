@@ -18,6 +18,7 @@ import {
 } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
+import { GIFT_OPTIONS } from "@/lib/constants";
 
 interface Contact {
   id: string;
@@ -95,21 +96,6 @@ const GENDER_OPTIONS = [
   { value: "Female", label: "Female" },
   { value: "Other", label: "Other" },
   { value: "N/A", label: "N/A" },
-];
-
-const GIFT_OPTIONS = [
-  { value: "flowers", label: "Flowers" },
-  { value: "wine", label: "Wine" },
-  { value: "food_snacks", label: "Food & Snacks" },
-  { value: "home", label: "Home" },
-  { value: "books", label: "Books" },
-  { value: "electronics", label: "Electronics" },
-  { value: "sports", label: "Sports" },
-  { value: "apparel", label: "Apparel" },
-  { value: "beauty", label: "Beauty" },
-  { value: "jewelry", label: "Jewelry" },
-  { value: "wellness", label: "Wellness" },
-  { value: "games_toys", label: "Games & Toys" },
 ];
 
 const URGENCY_STYLES = {

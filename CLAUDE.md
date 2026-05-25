@@ -74,7 +74,7 @@ src/
 │   ├── tokens.ts              HMAC token gen/verify (unsubscribe, calendar)
 │   ├── utils.ts               compareTokens (timing-safe), misc
 │   ├── errors.ts              friendlyError() — sanitizes Supabase errors for UI
-│   └── constants.ts           GIFT_CATEGORIES
+│   └── constants.ts           GIFT_CATEGORIES, GIFT_OPTIONS (single source for UI category labels)
 ├── __tests__/reminders.test.ts  80 unit tests
 └── middleware.ts              Auth guard for /dashboard, /contacts, /settings, /onboarding, /admin, /consent
 supabase/migrations/
@@ -91,7 +91,7 @@ supabase/migrations/
 
 **Data:** Supabase Postgres + RLS. Admin client (`lib/supabase/admin.ts`) uses service_role to bypass RLS for cron jobs.
 
-**Soft-delete:** `deleted_at` on contacts and events. Purge cron hard-deletes after 7 days (cascades to events, reminder_log, shown_gifts).
+**Soft-delete:** `deleted_at` on contacts and events. Purge cron hard-deletes after 7 days (cascades to events, reminder_log, shown_gifts). **One-time events:** The reminder cron skips one-time events whose date has passed (`event.one_time && event.event_year && oneTimeDate < now`). One-time events with `event_year: null` (legacy) are treated as recurring to avoid silently dropping reminders.
 
 **Route groups:** `(app)` = auth'd sidebar layout. `(onboarding)` = isolated layout. `(admin)` = admin sidebar, gated on `profiles.is_admin`.
 
@@ -121,7 +121,7 @@ supabase/migrations/
 
 **Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
 
-**Gift engine (`lib/gift-engine.ts`):** Deterministic weighted scoring. Weights: category (+40), budget tier (+20), gender match (+20) / gender mismatch (−10), relationship affinity (+15), event affinity (+15), tag overlap (+3/tag), last-minute bonus/penalty (±10–20), repeat penalty (−25/prior showing), PET_BONUS (+30 when contact.has_pets and gift category is "pet"), seeded shuffle (0–9). Returns top 3. No LLM. Fallback default categories: `["flowers", "home"]`. "pet" is engine-only (not user-selectable) — dynamically injected into query when `contact.has_pets` is true. Gender scoring uses `gender_tags` on `gift_catalog` (values: "woman", "man", "unisex", or empty for neutral). Contacts with gender "Other", "N/A", or null skip gender scoring entirely. `mapGenderToTag()` maps contact gender → gift tag. Last-minute broadening uses two parallel queries (category match + is_last_minute=true) then deduplicates — do NOT use PostgREST `.or()` with `.in()` (quoting issues).
+**Gift engine (`lib/gift-engine.ts`):** Deterministic weighted scoring. Weights: category (+40), budget tier (+20), gender match (+20) / gender mismatch (−10), relationship affinity (+15), event affinity (+15), tag overlap (+3/tag), last-minute bonus/penalty (±10–20), repeat penalty (−25/prior showing), PET_BONUS (+30 when contact.has_pets and gift category is "pet"), seeded shuffle (0–9). Returns top 3. No LLM. Fallback default categories: `["flowers", "home"]`. "pet" is engine-only (not user-selectable) — dynamically injected into query when `contact.has_pets` is true. Gender scoring uses `gender_tags` on `gift_catalog` (values: "woman", "man", "unisex", or empty for neutral). Contacts with gender "Other", "N/A", or null skip gender scoring entirely. `mapGenderToTag()` maps contact gender → gift tag. `relationship_affinities` and `event_affinities` support `"all"` as a wildcard — the scoring code checks `.includes("all")` as a universal match. When catalog values are populated with specific entries (e.g., `["family", "friend"]`), exact matching applies. Last-minute broadening uses two parallel queries (category match + is_last_minute=true) then deduplicates — do NOT use PostgREST `.or()` with `.in()` (quoting issues).
 
 **Admin panel:** Analytics dashboard (KPIs, conversion funnel, breakdowns from `conversion_events`), email queue (per-slot custom message editor via `email_overrides`), gift catalog CRUD. Custom messages rendered as "A note from Daysight" in reminder emails.
 
@@ -187,7 +187,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Urgency: 0–3 days = red, 4–7 = orange, 8+ = green
 - Auth errors: always generic "Invalid email or password" on sign-in (no email enumeration). Duplicate email detected via empty `identities` array.
 - Domain: `daysight.xyz`
-- Gift categories (12 user-selectable): flowers, wine, food_snacks, home, books, electronics, sports, apparel, beauty, jewelry, wellness, games_toys. Plus `pet` (engine-only, not user-selectable — triggered by `has_pets` toggle on contacts)
+- Gift categories (12 user-selectable): flowers, wine, food_snacks, home, books, electronics, sports, apparel, beauty, jewelry, wellness, games_toys. Plus `pet` (engine-only, not user-selectable — triggered by `has_pets` toggle on contacts). Category values and UI labels defined once in `lib/constants.ts` (`GIFT_CATEGORIES` + `GIFT_OPTIONS`) — all UI surfaces import from there
 - Gender tags on gifts: `"woman"`, `"man"`, `"unisex"`, or empty (gender-neutral). Stored in `gift_catalog.gender_tags` text[]. Admin UI exposes a multi-select. Contacts with gender Other/N/A/null skip gender scoring.
 
 ## Known Limitations
@@ -195,7 +195,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - No Google OAuth (disabled with "coming soon" in prototype)
 - Affiliate links use clean `/dp/ASIN?tag=` format for Amazon; UrbanStems/Wine.com use original URLs
 - Gift catalog XLS v3.0 (72 items) has `clean_affiliate_url` column (use this for DB seeding, not `affiliate_url`). XLS also contains internal-reference columns not used by the webapp: `is_active`, `asin`, `current_price`, `star_rating`, `review_count`, `last_updated`, `affiliate`. XLS `image_url` is the Amazon CDN source URL (used by the download script only — never hotlinked in emails). DB `image_url` stores self-hosted paths (`https://daysight.xyz/gifts/{slug}.jpg`). XLS descriptions are the source of truth for product copy.
-- `relationship_affinities` and `event_affinities` default to "all" in catalog — scoring weights (+15 each) are unused until populated
+- `relationship_affinities` and `event_affinities` default to `["all"]` in catalog — `"all"` is treated as a universal wildcard (+15 each always awarded). When specific values are populated, exact matching applies
 - `is_last_minute` is over-tagged (97% = yes) — needs audit to flag only truly instant-delivery items
 - No contact import (CSV, Google Contacts, vCard)
 - Privacy Policy and Terms have mismatched retention timelines
@@ -218,7 +218,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Resend idempotency keys are deterministic — always include one when adding email-sending code
 - `nextOccurrence()` and `formatEventDate()` are in `src/lib/reminders.ts` — never re-duplicate
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)
-- Year rollover: `buildEventDateStr()` uses `eventDate.getFullYear()` (from `nextOccurrence()`), NOT `now.getFullYear()` — fixes Dec cron runs for Jan events
+- Year rollover: `buildEventDateStr()`, `shown_gifts.year`, `email_overrides` lookup, `getLastYearLine()`, and `selectGiftsScored()` all use `eventDate.getFullYear()` (from `nextOccurrence()`), NOT `now.getFullYear()` — fixes Dec cron runs for Jan events
 - Vercel deployment protection blocks API requests on previews — use `npx vercel curl` or test locally
 - PostgREST `.or()` with `.in()` has quoting issues — use parallel queries instead (see gift-engine.ts)
 - **Never use `supabase.auth.resend()` for verification emails when PKCE is active** — it doesn't regenerate the PKCE pair, so the link's code exchange fails. Use `signUp()` again (if you have the password) or rely on the auth callback's session-based fallback (if the user is already signed in). See `handleResendVerification` in `auth/page.tsx` and the fallback in `auth/callback/route.ts`.

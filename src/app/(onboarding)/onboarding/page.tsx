@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { friendlyError } from "@/lib/errors";
+import { GIFT_OPTIONS } from "@/lib/constants";
 
 const RELATIONSHIPS = [
   { value: "family", label: "Family" },
@@ -18,21 +19,6 @@ const GENDER_OPTIONS = [
   { value: "Female", label: "Female" },
   { value: "Other", label: "Other" },
   { value: "N/A", label: "N/A" },
-];
-
-const GIFT_OPTIONS = [
-  { value: "flowers", label: "Flowers", description: "Bouquets & arrangements" },
-  { value: "wine", label: "Wine", description: "Bottles & subscriptions" },
-  { value: "food_snacks", label: "Food & Snacks", description: "Chocolates, treats & gourmet" },
-  { value: "home", label: "Home", description: "Decor, kitchen & lifestyle" },
-  { value: "books", label: "Books", description: "Fiction & non-fiction" },
-  { value: "electronics", label: "Electronics", description: "Tech & gadgets" },
-  { value: "sports", label: "Sports", description: "Gear & active lifestyle" },
-  { value: "apparel", label: "Apparel", description: "Clothing & shoes" },
-  { value: "beauty", label: "Beauty", description: "Skincare & self-care" },
-  { value: "jewelry", label: "Jewelry", description: "Rings, necklaces & watches" },
-  { value: "wellness", label: "Wellness", description: "Health & fitness" },
-  { value: "games_toys", label: "Games & Toys", description: "Fun for all ages" },
 ];
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({

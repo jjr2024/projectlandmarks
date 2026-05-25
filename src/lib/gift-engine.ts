@@ -125,13 +125,13 @@ export function scoreGift(gift: GiftRow, ctx: ScoringContext): number {
     }
   }
 
-  // Relationship affinity
-  if (gift.relationship_affinities.includes(ctx.relationship)) {
+  // Relationship affinity ("all" = universal match)
+  if (gift.relationship_affinities.includes(ctx.relationship) || gift.relationship_affinities.includes("all")) {
     score += W.RELATIONSHIP_MATCH;
   }
 
-  // Event type affinity
-  if (gift.event_affinities.includes(ctx.eventType)) {
+  // Event type affinity ("all" = universal match)
+  if (gift.event_affinities.includes(ctx.eventType) || gift.event_affinities.includes("all")) {
     score += W.EVENT_MATCH;
   }
 

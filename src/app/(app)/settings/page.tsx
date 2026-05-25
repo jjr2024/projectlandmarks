@@ -8,6 +8,7 @@ import { getInitials, formatDate } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
 import { REMINDER_DAY_OPTIONS } from "@/lib/email-config";
+import { GIFT_OPTIONS } from "@/lib/constants";
 
 interface Profile {
   id: string;
@@ -67,21 +68,6 @@ const TABS = [
 ];
 
 const REMINDER_OPTIONS = [...REMINDER_DAY_OPTIONS];
-
-const GIFT_OPTIONS = [
-  { value: "flowers", label: "Flowers" },
-  { value: "wine", label: "Wine" },
-  { value: "food_snacks", label: "Food & Snacks" },
-  { value: "home", label: "Home" },
-  { value: "books", label: "Books" },
-  { value: "electronics", label: "Electronics" },
-  { value: "sports", label: "Sports" },
-  { value: "apparel", label: "Apparel" },
-  { value: "beauty", label: "Beauty" },
-  { value: "jewelry", label: "Jewelry" },
-  { value: "wellness", label: "Wellness" },
-  { value: "games_toys", label: "Games & Toys" },
-];
 
 const SEND_HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM – 9 PM
 
