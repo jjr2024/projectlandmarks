@@ -13,7 +13,6 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [noSession, setNoSession] = useState(false);
-  const [debugInfo, setDebugInfo] = useState("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -94,7 +93,6 @@ function ResetPasswordForm() {
           setSessionReady(true);
           router.replace("/auth/reset-password", { scroll: false });
         } else {
-          setDebugInfo(`exchange: ${error.message} (status=${error.status ?? "?"})`);
           setNoSession(true);
         }
       });
@@ -106,7 +104,6 @@ function ResetPasswordForm() {
         if (hasSession) {
           setSessionReady(true);
         } else if (!codeExchangedRef.current) {
-          setDebugInfo("no_code_no_session");
           setNoSession(true);
         }
       });
@@ -162,11 +159,6 @@ function ResetPasswordForm() {
               Request new reset link
             </Link>
           </div>
-          {debugInfo && (
-            <p className="mt-4 text-[10px] text-red-300 font-mono select-all">
-              dbg: {debugInfo}
-            </p>
-          )}
         </div>
       </main>
     );
