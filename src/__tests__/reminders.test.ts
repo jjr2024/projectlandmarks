@@ -69,14 +69,13 @@ describe("nextOccurrence(month, day, from)", () => {
     assert.strictEqual(result.getDate(), 20);
   });
 
-  test("Feb 29 in non-leap year → Date constructor handles gracefully", () => {
-    // 2027 is not a leap year; Feb 29 doesn't exist
+  test("Feb 29 in non-leap year → adjusts to Feb 28", () => {
+    // 2027 is not a leap year; Feb 29 doesn't exist.
+    // For birthdays, Feb 28 is the correct fallback (not Mar 1).
     const from = new Date(2027, 0, 1); // Jan 1, 2027
-    const result = nextOccurrence(2, 29, from); // Feb 29
-    // JavaScript Date constructor with invalid day (29 in non-leap year)
-    // rolls to next valid month. Behavior: Feb 29, 2027 becomes Mar 1, 2027
-    assert.strictEqual(result.getMonth(), 2); // March (constructor rolls over)
-    assert.strictEqual(result.getDate(), 1);
+    const result = nextOccurrence(2, 29, from);
+    assert.strictEqual(result.getMonth(), 1); // February
+    assert.strictEqual(result.getDate(), 28);
   });
 
   test("Dec 31 with from = Jan 1 (same year) → returns Dec 31 same year", () => {

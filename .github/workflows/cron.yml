@@ -1,0 +1,77 @@
+name: Cron triggers
+
+on:
+  schedule:
+    # Reminders — every hour (replaces Vercel Hobby's once-per-day limit)
+    - cron: "0 * * * *"
+    # Digest — 1st of month at 14:00 UTC
+    - cron: "0 14 1 * *"
+    # Re-engagement — daily at 13:00 UTC
+    - cron: "0 13 * * *"
+    # Purge — daily at 04:00 UTC
+    - cron: "0 4 * * *"
+  workflow_dispatch: # Allow manual runs for testing
+
+jobs:
+  trigger-cron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Determine which cron to run
+        id: route
+        run: |
+          HOUR=$(date -u +%H)
+          DAY=$(date -u +%d)
+          MINUTE=$(date -u +%M)
+
+          # Always run reminders (hourly)
+          echo "run_reminders=true" >> "$GITHUB_OUTPUT"
+
+          # Digest: 1st of month, 14:00 UTC
+          if [ "$DAY" = "01" ] && [ "$HOUR" = "14" ]; then
+            echo "run_digest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_digest=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Re-engagement: daily at 13:00 UTC
+          if [ "$HOUR" = "13" ]; then
+            echo "run_reengagement=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_reengagement=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Purge: daily at 04:00 UTC
+          if [ "$HOUR" = "04" ]; then
+            echo "run_purge=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_purge=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger reminders
+        if: steps.route.outputs.run_reminders == 'true'
+        run: |
+          curl -fsS -m 30 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/cron/reminders"
+
+      - name: Trigger digest
+        if: steps.route.outputs.run_digest == 'true'
+        run: |
+          curl -fsS -m 30 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/cron/digest"
+
+      - name: Trigger re-engagement
+        if: steps.route.outputs.run_reengagement == 'true'
+        run: |
+          curl -fsS -m 30 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/cron/reengagement"
+
+      - name: Trigger purge
+        if: steps.route.outputs.run_purge == 'true'
+        run: |
+          curl -fsS -m 30 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/cron/purge"

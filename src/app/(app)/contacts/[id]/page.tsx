@@ -562,6 +562,9 @@ function ContactDetailContent() {
               );
             })}
           </ul>
+          <p className="px-5 py-3 text-[11px] text-gray-300 leading-normal">
+            As an Amazon Associate we earn from qualifying purchases.
+          </p>
         </div>
       )}
 
