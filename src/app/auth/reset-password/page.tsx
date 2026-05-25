@@ -13,6 +13,7 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [noSession, setNoSession] = useState(false);
+  const [debugInfo, setDebugInfo] = useState("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,6 +54,7 @@ function ResetPasswordForm() {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
           console.error("[reset-password] Code exchange failed:", error.message);
+          setDebugInfo(`exchange: ${error.message} (status=${error.status ?? "?"})`);
           setNoSession(true);
         } else {
           setSessionReady(true);
@@ -69,6 +71,7 @@ function ResetPasswordForm() {
           // Only show "expired" if we never attempted a code exchange.
           // If we did exchange (and it succeeded), the URL was cleaned
           // and this branch runs on the follow-up render — that's fine.
+          setDebugInfo("no_code_no_session");
           setNoSession(true);
         }
       });
@@ -123,6 +126,11 @@ function ResetPasswordForm() {
               Request new reset link
             </Link>
           </div>
+          {debugInfo && (
+            <p className="mt-4 text-[10px] text-red-300 font-mono select-all">
+              dbg: {debugInfo}
+            </p>
+          )}
         </div>
       </main>
     );
