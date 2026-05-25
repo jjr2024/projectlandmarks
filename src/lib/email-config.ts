@@ -48,6 +48,20 @@ export const REMINDER_TOLERANCE: Record<ReminderDay, [number, number]> = {
 };
 
 /**
+ * User-selectable send hours (every hour from 6am to 9pm local time).
+ * Cron runs hourly; each run only processes users whose local hour matches.
+ * Hours are in the user's local timezone (from profiles.timezone).
+ */
+export const SEND_HOUR_OPTIONS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] as const;
+export type SendHour = (typeof SEND_HOUR_OPTIONS)[number];
+
+/** Default send hour for new users or profiles with null preference. */
+export const DEFAULT_SEND_HOUR: SendHour = 8;
+
+/** Default timezone when user hasn't set one. */
+export const DEFAULT_TIMEZONE = "America/New_York";
+
+/**
  * @deprecated Use REMINDER_DAY_OPTIONS and REMINDER_TOLERANCE instead.
  * Kept temporarily for any code that still references these constants.
  */

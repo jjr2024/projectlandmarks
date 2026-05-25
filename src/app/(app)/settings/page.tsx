@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { getInitials, formatDate } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
-import { REMINDER_DAY_OPTIONS } from "@/lib/email-config";
+import { REMINDER_DAY_OPTIONS, SEND_HOUR_OPTIONS } from "@/lib/email-config";
 import { GIFT_OPTIONS } from "@/lib/constants";
 
 interface Profile {
@@ -69,7 +69,7 @@ const TABS = [
 
 const REMINDER_OPTIONS = [...REMINDER_DAY_OPTIONS];
 
-const SEND_HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM – 9 PM
+const SEND_HOURS = [...SEND_HOUR_OPTIONS]; // 6am–9pm local time
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },

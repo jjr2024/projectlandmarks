@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
-import { EMAIL_CONFIG } from "@/lib/email-config";
+import { EMAIL_CONFIG, DEFAULT_SEND_HOUR, DEFAULT_TIMEZONE } from "@/lib/email-config";
 import ReminderEmail, { reminderSubject } from "@/emails/reminder";
 import {
-  nextOccurrence,
   formatEventDate,
-  daysBetween,
+  calendarDaysUntil,
+  localHour,
   buildEventDateStr,
   matchReminderWindow,
   buildIdempotencyKey,
@@ -23,8 +23,17 @@ import { buildSignedUrl } from "@/lib/tokens";
 /**
  * GET /api/cron/reminders
  *
- * Daily via Vercel Cron. For each verified user, finds events within reminder
- * windows, sends emails via Resend, logs to reminder_log + shown_gifts.
+ * Hourly via Vercel Cron. For each verified user whose current local hour
+ * matches their preferred_send_hour, finds events within reminder windows,
+ * sends emails via Resend, logs to reminder_log + shown_gifts.
+ *
+ * SEND-HOUR GATING: Cron runs every hour. Each run only processes users
+ * whose local hour (in their timezone) matches their preferred_send_hour.
+ * This ensures emails arrive at the user's chosen time regardless of timezone.
+ *
+ * TIMEZONE-AWARE DAY MATH: daysUntil is computed as calendar days in the
+ * user's local timezone (May 25 → May 27 = 2, regardless of hour). This
+ * prevents off-by-one errors for users far from UTC.
  *
  * RESILIENCE (see CLAUDE.md § Email Resilience):
  *  1. Pre-send logging — 'pending' row before Resend call; updated to 'sent'/'failed' after.
@@ -81,6 +90,16 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
+        // ── Send-hour gating ────────────────────────────────────────────
+        // Only process users whose current local hour matches their preferred hour.
+        const userTimezone: string = profile.timezone || DEFAULT_TIMEZONE;
+        const userSendHour: number = profile.preferred_send_hour ?? DEFAULT_SEND_HOUR;
+        const currentLocalHour = localHour(now, userTimezone);
+        if (currentLocalHour !== userSendHour) {
+          // Not this user's send hour — skip silently (not an error or deferral)
+          continue;
+        }
+
         const firstName = profile?.display_name?.split(" ")[0] || "there";
         const userEmail = user.email;
         if (!userEmail) continue;
@@ -95,8 +114,6 @@ export async function GET(request: NextRequest) {
           .gte("created_at", twentyFourHoursAgo.toISOString());
 
         let userSendsThisRun = 0;
-        // Pre-loop check: skip users already at cap from prior cron runs (DB count only).
-        // In-loop check at line ~122 adds userSendsThisRun for mid-run cap enforcement.
         const userAtCap = (recentSendCount || 0) >= MAX_EMAILS_PER_USER_PER_DAY;
         if (userAtCap) {
           results.deferred++;
@@ -120,7 +137,7 @@ export async function GET(request: NextRequest) {
         for (const event of events) {
           if (results.rateLimited) break;
 
-          // Check per-user cap mid-loop (may have sent some already this iteration)
+          // Check per-user cap mid-loop
           if ((recentSendCount || 0) + userSendsThisRun >= MAX_EMAILS_PER_USER_PER_DAY) {
             results.deferred++;
             continue;
@@ -129,10 +146,6 @@ export async function GET(request: NextRequest) {
           const contact = event.contacts as any;
 
           // ── Skip past one-time events ─────────────────────────────────
-          // One-time events with a known year should only fire in that year.
-          // If the event date has already passed, skip it. One-time events
-          // with null event_year (legacy data) are treated as recurring to
-          // avoid silently dropping reminders.
           if (event.one_time && event.event_year) {
             const oneTimeDate = new Date(event.event_year, event.month - 1, event.day);
             if (oneTimeDate < now) {
@@ -141,19 +154,18 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          const eventDate = nextOccurrence(event.month, event.day, now);
-          const daysUntil = daysBetween(now, eventDate);
+          // ── Timezone-aware calendar day math ──────────────────────────
+          // daysUntil is pure calendar days in the user's timezone.
+          // eventYear comes from the next occurrence (year-rollover safe).
+          const { daysUntil, eventYear } = calendarDaysUntil(now, event.month, event.day, userTimezone);
 
           // ── Range-based window matching (respects user's reminder_days_before) ─
           const window = matchReminderWindow(daysUntil, event.high_importance, profile.reminder_days_before);
           if (!window) continue;
 
-          // Use the year from nextOccurrence, not now.getFullYear() —
-          // fixes year-rollover bug when cron runs in Dec for a Jan event.
-          const eventDateStr = buildEventDateStr(eventDate.getFullYear(), event.month, event.day);
+          const eventDateStr = buildEventDateStr(eventYear, event.month, event.day);
 
           // ── Dedup: check reminder_log for existing entry ───────────────
-          // Matches on canonical days_before (21/7/3), not actual daysUntil.
           const { data: existing } = await supabase
             .from("reminder_log")
             .select("id")
@@ -169,11 +181,11 @@ export async function GET(request: NextRequest) {
           }
 
           // ── Select gifts (scored engine — Phase 6) ────────────────────
-          const gifts = await selectGiftsScored(supabase, contact, event, daysUntil, eventDate.getFullYear());
+          const gifts = await selectGiftsScored(supabase, contact, event, daysUntil, eventYear);
 
           const contactFirstName = contact.first_name || "Someone";
           const eventDateFormatted = formatEventDate(event.month, event.day);
-          const lastYearLine = await getLastYearLine(supabase, contact.id, event.month, event.day, eventDate.getFullYear());
+          const lastYearLine = await getLastYearLine(supabase, contact.id, event.month, event.day, eventYear);
 
           // ── Check for admin custom message override ────────────────────
           const { data: override } = await supabase
@@ -182,10 +194,13 @@ export async function GET(request: NextRequest) {
             .eq("user_id", user.id)
             .eq("event_id", event.id)
             .eq("days_before", window.canonicalDaysBefore)
-            .eq("event_year", eventDate.getFullYear())
+            .eq("event_year", eventYear)
             .maybeSingle();
 
           const customMessage = override?.custom_message || null;
+
+          // ── Detect late send (actual days !== canonical) ───────────────
+          const isLateSend = daysUntil !== window.canonicalDaysBefore;
 
           // ── 1. Pre-send: write 'pending' row ───────────────────────────
           const { data: pendingRow, error: pendingError } = await supabase
@@ -203,7 +218,6 @@ export async function GET(request: NextRequest) {
             .single();
 
           if (pendingError) {
-            // Unique constraint violation = already logged (race condition or retry). Skip.
             if (pendingError.code === "23505") {
               results.skipped++;
               continue;
@@ -214,7 +228,7 @@ export async function GET(request: NextRequest) {
 
           // ── 2. Send via Resend with idempotency key ────────────────────
           const idempotencyKey = buildIdempotencyKey(user.id, event.id, window.canonicalDaysBefore, eventDateStr);
-          const subject = reminderSubject(contactFirstName, event.event_type, window.canonicalDaysBefore, event.event_label);
+          const subject = reminderSubject(contactFirstName, event.event_type, daysUntil, event.event_label);
 
           const { data: emailResult, error: emailError } = await resend().emails.send({
             from: EMAIL_CONFIG.from,
@@ -226,8 +240,9 @@ export async function GET(request: NextRequest) {
               contactFirstName,
               eventType: event.event_type as "birthday" | "anniversary" | "custom",
               eventLabel: event.event_label,
-              daysBefore: window.canonicalDaysBefore,
+              daysBefore: daysUntil,
               eventDateFormatted,
+              isLateSend,
               gifts: gifts.map((g) => ({
                 name: g.name,
                 partner: g.partner,
@@ -257,7 +272,6 @@ export async function GET(request: NextRequest) {
 
           // ── 3. Update pending row based on outcome ─────────────────────
           if (emailError) {
-            // Check for rate limit — stop all processing
             if (isRateLimitError(emailError)) {
               await supabase
                 .from("reminder_log")
@@ -268,7 +282,6 @@ export async function GET(request: NextRequest) {
               break;
             }
 
-            // Other send failure — mark as failed
             await supabase
               .from("reminder_log")
               .update({ status: "failed" })
@@ -296,7 +309,7 @@ export async function GET(request: NextRequest) {
               gift_id: gift.id,
               event_month: event.month,
               event_day: event.day,
-              year: eventDate.getFullYear(),
+              year: eventYear,
               gift_name: gift.name,
               gift_category: gift.category,
               gift_partner: gift.partner,

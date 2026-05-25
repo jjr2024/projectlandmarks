@@ -23,8 +23,11 @@ interface ReminderEmailProps {
   contactFirstName: string;
   eventType: "birthday" | "anniversary" | "custom";
   eventLabel?: string;
+  /** Actual calendar days until event (timezone-aware). Used for display. */
   daysBefore: number;
   eventDateFormatted: string;
+  /** True when the email sent later than the canonical window (e.g., 2 days for a 3-day reminder). */
+  isLateSend?: boolean;
   gifts: GiftItem[];
   suppressGifts: boolean;
   lastYearLine?: string | null;
@@ -50,6 +53,7 @@ export default function ReminderEmail({
   eventLabel,
   daysBefore = 7,
   eventDateFormatted = "May 15",
+  isLateSend = false,
   gifts = [],
   suppressGifts = false,
   lastYearLine = null,
@@ -63,12 +67,16 @@ export default function ReminderEmail({
   const isLastMinute = daysBefore <= 2;
 
   const headline =
-    daysBefore === 1
+    daysBefore === 0
+      ? `${contactFirstName}'s ${typeLabel} is today`
+      : daysBefore === 1
       ? `${contactFirstName}'s ${typeLabel} is tomorrow`
       : `${contactFirstName}'s ${typeLabel} is in ${daysBefore} days`;
 
   const intro =
-    daysBefore === 1
+    daysBefore === 0
+      ? `It's today — ${contactFirstName}'s ${typeLabel} is ${eventDateFormatted}. Here are some last-minute options.`
+      : daysBefore === 1
       ? `Last chance — ${contactFirstName}'s ${typeLabel} is tomorrow, ${eventDateFormatted}. We've put together your best same-day options below.`
       : `${contactFirstName}'s ${typeLabel} is coming up on ${eventDateFormatted} — ${daysBefore} days from now. Here are a few gift ideas they'd love, ready to order in one click.`;
 
@@ -231,6 +239,13 @@ export default function ReminderEmail({
               </Text>
             )}
 
+            {/* Late-send note — shown when email sent later than scheduled window */}
+            {isLateSend && (
+              <Text style={{ color: "#9ca3af", fontSize: "11px", lineHeight: "1.5", margin: "16px 0 0 0", textAlign: "center" as const }}>
+                This email sent a bit later than usual. This may be because you added the event close to the event date or because of busy servers on our end.
+              </Text>
+            )}
+
             {/* Footer */}
             <Hr style={{ borderColor: "#f3f4f6", margin: "14px 0" }} />
             <Section style={{ textAlign: "center" as const }}>
@@ -255,9 +270,10 @@ export default function ReminderEmail({
   );
 }
 
-/** Helper to generate the subject line (used by the cron route). */
+/** Helper to generate the subject line (used by the cron route). daysBefore = actual calendar days. */
 export function reminderSubject(contactFirstName: string, eventType: string, daysBefore: number, eventLabel?: string): string {
   const label = eventLabel || eventTypeLabel(eventType);
+  if (daysBefore === 0) return `It's today — ${contactFirstName}'s ${label}!`;
   if (daysBefore === 1) return `Last chance — ${contactFirstName}'s ${label} is tomorrow`;
   return `${contactFirstName}'s ${label} is in ${daysBefore} days — here's what to get`;
 }

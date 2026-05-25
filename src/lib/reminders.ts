@@ -17,11 +17,24 @@ import {
   REMINDER_DAY_OPTIONS,
   REMINDER_TOLERANCE,
   DEFAULT_REMINDER_DAYS,
+  SEND_HOUR_OPTIONS,
+  DEFAULT_SEND_HOUR,
+  DEFAULT_TIMEZONE,
   type ReminderDay,
+  type SendHour,
 } from "@/lib/email-config";
 
 // Re-export so cron routes and UI can import from one module
-export { REMINDER_WINDOWS, REMINDER_DAY_OPTIONS, DEFAULT_REMINDER_DAYS, type ReminderDay };
+export {
+  REMINDER_WINDOWS,
+  REMINDER_DAY_OPTIONS,
+  DEFAULT_REMINDER_DAYS,
+  SEND_HOUR_OPTIONS,
+  DEFAULT_SEND_HOUR,
+  DEFAULT_TIMEZONE,
+  type ReminderDay,
+  type SendHour,
+};
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 
@@ -30,21 +43,20 @@ function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
+/** Adjust Feb 29 to Feb 28 in non-leap years. */
+function adjustLeapDay(month: number, day: number, year: number): number {
+  if (month === 2 && day === 29 && !isLeapYear(year)) return 28;
+  return day;
+}
+
 /** Next occurrence of month/day on or after `from`. Shared by reminders + digest. */
 export function nextOccurrence(month: number, day: number, from: Date): Date {
   const thisYear = from.getFullYear();
-  // Handle Feb 29: if not a leap year, use Feb 28 instead
-  let adjustedDay = day;
-  if (month === 2 && day === 29 && !isLeapYear(thisYear)) {
-    adjustedDay = 28;
-  }
+  let adjustedDay = adjustLeapDay(month, day, thisYear);
   let d = new Date(thisYear, month - 1, adjustedDay);
   if (d < from) {
     const nextYear = thisYear + 1;
-    adjustedDay = day;
-    if (month === 2 && day === 29 && !isLeapYear(nextYear)) {
-      adjustedDay = 28;
-    }
+    adjustedDay = adjustLeapDay(month, day, nextYear);
     d = new Date(nextYear, month - 1, adjustedDay);
   }
   return d;
@@ -56,9 +68,86 @@ export function formatEventDate(month: number, day: number): string {
   return date.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 }
 
-/** Days between two dates (ceil). `from` should be start-of-day or current time. */
+/**
+ * @deprecated Use calendarDaysUntil() for timezone-aware day math.
+ * Days between two dates (ceil). Timezone-naive — result depends on
+ * the relationship between UTC timestamps, not calendar days.
+ */
 export function daysBetween(from: Date, to: Date): number {
   return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// ── Timezone-aware calendar day math ────────────────────────────────────────
+//
+// Computes daysUntil as pure calendar days in the user's local timezone.
+// May 25 → May 27 = 2, regardless of what hour it is.
+// Uses Intl.DateTimeFormat for timezone conversion (V8 has full IANA tz data).
+
+/** Extract { year, month (1-indexed), day } from a Date in the given IANA timezone. */
+export function localDateParts(date: Date, timezone: string): { year: number; month: number; day: number } {
+  const tz = timezone || DEFAULT_TIMEZONE;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+
+  return {
+    year: parseInt(parts.find((p) => p.type === "year")!.value, 10),
+    month: parseInt(parts.find((p) => p.type === "month")!.value, 10),
+    day: parseInt(parts.find((p) => p.type === "day")!.value, 10),
+  };
+}
+
+/**
+ * Calendar days from `now` to the next occurrence of month/day, computed
+ * entirely in the user's local timezone. Returns { daysUntil, eventYear }.
+ *
+ * eventYear is the year of the next occurrence — use it for dedup keys,
+ * shown_gifts logging, and email_overrides lookups (year-rollover safe).
+ */
+export function calendarDaysUntil(
+  now: Date,
+  eventMonth: number,
+  eventDay: number,
+  timezone: string
+): { daysUntil: number; eventYear: number } {
+  const tz = timezone || DEFAULT_TIMEZONE;
+  const local = localDateParts(now, tz);
+
+  // Build "today" as UTC midnight for clean day-only subtraction
+  const todayUTC = Date.UTC(local.year, local.month - 1, local.day);
+
+  // Next occurrence: try this year first, fall back to next year
+  const adjDayThisYear = adjustLeapDay(eventMonth, eventDay, local.year);
+  let eventUTC = Date.UTC(local.year, eventMonth - 1, adjDayThisYear);
+  let eventYear = local.year;
+
+  if (eventUTC < todayUTC) {
+    const nextYear = local.year + 1;
+    const adjDayNextYear = adjustLeapDay(eventMonth, eventDay, nextYear);
+    eventUTC = Date.UTC(nextYear, eventMonth - 1, adjDayNextYear);
+    eventYear = nextYear;
+  }
+
+  const daysUntil = Math.round((eventUTC - todayUTC) / (1000 * 60 * 60 * 24));
+  return { daysUntil, eventYear };
+}
+
+/**
+ * Get the current hour (0–23) in the user's local timezone.
+ * Used by the cron route to gate processing on preferred_send_hour.
+ */
+export function localHour(date: Date, timezone: string): number {
+  const tz = timezone || DEFAULT_TIMEZONE;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(date);
+
+  return parseInt(parts.find((p) => p.type === "hour")!.value, 10);
 }
 
 /** YYYY-MM-DD string for dedup key. Zero-pads month and day. */

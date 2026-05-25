@@ -15,6 +15,9 @@ import {
   nextOccurrence,
   formatEventDate,
   daysBetween,
+  calendarDaysUntil,
+  localDateParts,
+  localHour,
   buildEventDateStr,
   matchReminderWindow,
   buildIdempotencyKey,
@@ -25,6 +28,8 @@ import {
   REMINDER_WINDOWS,
   REMINDER_DAY_OPTIONS,
   DEFAULT_REMINDER_DAYS,
+  SEND_HOUR_OPTIONS,
+  DEFAULT_SEND_HOUR,
 } from "@/lib/reminders";
 import {
   scoreGift,
@@ -133,6 +138,159 @@ describe("daysBetween(from, to)", () => {
     const from = new Date(2026, 4, 20, 0, 0, 0);
     const to = new Date(2026, 4, 15, 0, 0, 0);
     assert.strictEqual(daysBetween(from, to), -5);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─ TIMEZONE-AWARE DATE MATH ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("localDateParts(date, timezone)", () => {
+  test("UTC midnight → same date in UTC", () => {
+    const d = new Date("2026-06-15T00:00:00Z");
+    const parts = localDateParts(d, "UTC");
+    assert.strictEqual(parts.year, 2026);
+    assert.strictEqual(parts.month, 6);
+    assert.strictEqual(parts.day, 15);
+  });
+
+  test("UTC midnight → previous date in US Pacific (UTC-7 in summer)", () => {
+    const d = new Date("2026-06-15T00:00:00Z"); // Jun 14 5pm Pacific
+    const parts = localDateParts(d, "America/Los_Angeles");
+    assert.strictEqual(parts.month, 6);
+    assert.strictEqual(parts.day, 14); // Still June 14 in Pacific
+  });
+
+  test("UTC midnight → next date in Auckland (UTC+12)", () => {
+    const d = new Date("2026-06-15T00:00:00Z"); // Jun 15 12pm NZST
+    const parts = localDateParts(d, "Pacific/Auckland");
+    assert.strictEqual(parts.month, 6);
+    assert.strictEqual(parts.day, 15);
+  });
+
+  test("late evening UTC → next date in far-east timezone", () => {
+    const d = new Date("2026-06-15T23:00:00Z"); // Jun 16 11am NZST
+    const parts = localDateParts(d, "Pacific/Auckland");
+    assert.strictEqual(parts.day, 16);
+  });
+
+  test("null/empty timezone falls back to America/New_York", () => {
+    const d = new Date("2026-06-15T12:00:00Z"); // 8am ET in EDT
+    const parts = localDateParts(d, "");
+    assert.strictEqual(parts.month, 6);
+    assert.strictEqual(parts.day, 15);
+  });
+});
+
+describe("calendarDaysUntil(now, eventMonth, eventDay, timezone)", () => {
+  test("same day → 0 regardless of hour", () => {
+    const morning = new Date("2026-06-15T12:00:00Z"); // 8am ET
+    const evening = new Date("2026-06-15T23:00:00Z"); // 7pm ET
+    assert.strictEqual(calendarDaysUntil(morning, 6, 15, "America/New_York").daysUntil, 0);
+    assert.strictEqual(calendarDaysUntil(evening, 6, 15, "America/New_York").daysUntil, 0);
+  });
+
+  test("pure calendar day difference: May 25 → May 27 = 2 at any hour", () => {
+    const at8am = new Date("2026-05-25T12:00:00Z"); // 8am ET
+    const at8pm = new Date("2026-05-26T00:00:00Z"); // 8pm ET on May 25
+    assert.strictEqual(calendarDaysUntil(at8am, 5, 27, "America/New_York").daysUntil, 2);
+    assert.strictEqual(calendarDaysUntil(at8pm, 5, 27, "America/New_York").daysUntil, 2);
+  });
+
+  test("same UTC time gives different daysUntil in different timezones", () => {
+    // Jun 1 at 23:00 UTC = Jun 1 in NY (7pm ET) but Jun 2 in Auckland (11am)
+    const d = new Date("2026-06-01T23:00:00Z");
+    const ny = calendarDaysUntil(d, 6, 5, "America/New_York");
+    const auck = calendarDaysUntil(d, 6, 5, "Pacific/Auckland");
+    assert.strictEqual(ny.daysUntil, 4);   // Jun 1 → Jun 5 = 4
+    assert.strictEqual(auck.daysUntil, 3); // Jun 2 → Jun 5 = 3
+  });
+
+  test("year rollover: Dec 30 → Jan 2 next year = correct days + eventYear", () => {
+    const d = new Date("2026-12-30T12:00:00Z");
+    const result = calendarDaysUntil(d, 1, 2, "UTC");
+    assert.strictEqual(result.daysUntil, 3);
+    assert.strictEqual(result.eventYear, 2027);
+  });
+
+  test("eventYear is current year when event is in the future", () => {
+    const d = new Date("2026-03-15T12:00:00Z");
+    const result = calendarDaysUntil(d, 6, 20, "UTC");
+    assert.strictEqual(result.eventYear, 2026);
+  });
+
+  test("eventYear rolls to next year when event has passed", () => {
+    const d = new Date("2026-08-15T12:00:00Z");
+    const result = calendarDaysUntil(d, 3, 10, "UTC");
+    assert.strictEqual(result.eventYear, 2027);
+  });
+
+  test("Feb 29 in non-leap year adjusts to Feb 28", () => {
+    // 2027 is not a leap year
+    const d = new Date("2027-01-15T12:00:00Z");
+    const result = calendarDaysUntil(d, 2, 29, "UTC");
+    // Should compute days to Feb 28
+    assert.strictEqual(result.daysUntil, 44); // Jan 15 → Feb 28 = 44
+    assert.strictEqual(result.eventYear, 2027);
+  });
+
+  test("DST spring-forward doesn't affect calendar days", () => {
+    // US EDT starts 2nd Sunday of March. In 2026 that's Mar 8.
+    // Mar 7 at noon UTC = Mar 7 7am EST. Event is Mar 10.
+    const preDST = new Date("2026-03-07T12:00:00Z");
+    const result = calendarDaysUntil(preDST, 3, 10, "America/New_York");
+    assert.strictEqual(result.daysUntil, 3); // Mar 7 → Mar 10 = 3
+  });
+
+  test("8pm ET user: May 26 → May 28 = 2 (not affected by late hour)", () => {
+    // 8pm ET on May 26 = May 27 00:00 UTC
+    const d = new Date("2026-05-27T00:00:00Z");
+    const result = calendarDaysUntil(d, 5, 28, "America/New_York");
+    assert.strictEqual(result.daysUntil, 2); // May 26 → May 28 in ET
+  });
+});
+
+describe("localHour(date, timezone)", () => {
+  test("UTC noon → 8am in America/New_York (EDT, UTC-4)", () => {
+    const d = new Date("2026-06-15T12:00:00Z");
+    assert.strictEqual(localHour(d, "America/New_York"), 8);
+  });
+
+  test("UTC midnight → 8pm previous day in America/New_York (EDT)", () => {
+    const d = new Date("2026-06-15T00:00:00Z");
+    assert.strictEqual(localHour(d, "America/New_York"), 20);
+  });
+
+  test("UTC 6am → 6am in UTC", () => {
+    const d = new Date("2026-06-15T06:00:00Z");
+    assert.strictEqual(localHour(d, "UTC"), 6);
+  });
+
+  test("handles far-east timezone correctly", () => {
+    // UTC 14:00 = midnight in UTC+10 (next day 00:00)
+    const d = new Date("2026-06-15T14:00:00Z");
+    assert.strictEqual(localHour(d, "Pacific/Port_Moresby"), 0); // UTC+10
+  });
+
+  test("null/empty timezone falls back to America/New_York", () => {
+    const d = new Date("2026-06-15T12:00:00Z");
+    assert.strictEqual(localHour(d, ""), 8);
+  });
+});
+
+describe("SEND_HOUR_OPTIONS and DEFAULT_SEND_HOUR", () => {
+  test("SEND_HOUR_OPTIONS has every hour 6-21", () => {
+    assert.deepStrictEqual([...SEND_HOUR_OPTIONS], [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+  });
+
+  test("DEFAULT_SEND_HOUR is 8", () => {
+    assert.strictEqual(DEFAULT_SEND_HOUR, 8);
+  });
+
+  test("all options are within 6-21 range", () => {
+    for (const h of SEND_HOUR_OPTIONS) {
+      assert.ok(h >= 6 && h <= 21, `${h} is outside 6-21 range`);
+    }
   });
 });
 

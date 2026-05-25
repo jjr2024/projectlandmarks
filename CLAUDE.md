@@ -66,16 +66,16 @@ src/
 ├── emails/                    reminder, digest, reengagement (React Email templates)
 ├── lib/
 │   ├── supabase/              admin.ts (service_role), client.ts (browser), server.ts (SSR cookies)
-│   ├── email-config.ts        From/replyTo, REMINDER_DAY_OPTIONS, REMINDER_TOLERANCE, defaults
+│   ├── email-config.ts        From/replyTo, REMINDER_DAY_OPTIONS, REMINDER_TOLERANCE, SEND_HOUR_OPTIONS, defaults
 │   ├── env.ts                 Server env validation
 │   ├── gift-engine.ts         Weighted scoring: scoreGift() + selectGiftsScored()
-│   ├── reminders.ts           Date math, per-user window matching, idempotency, send caps, rate-limit detection
+│   ├── reminders.ts           Timezone-aware date math, per-user window matching, send-hour gating, idempotency, send caps
 │   ├── resend.ts              Resend client
 │   ├── tokens.ts              HMAC token gen/verify (unsubscribe, calendar)
 │   ├── utils.ts               compareTokens (timing-safe), misc
 │   ├── errors.ts              friendlyError() — sanitizes Supabase errors for UI
 │   └── constants.ts           GIFT_CATEGORIES, GIFT_OPTIONS (single source for UI category labels)
-├── __tests__/reminders.test.ts  80 unit tests
+├── __tests__/reminders.test.ts  142 unit tests
 └── middleware.ts              Auth guard for /dashboard, /contacts, /settings, /onboarding, /admin, /consent
 supabase/migrations/
 ├── 001 Core tables    002 drips_sent JSONB    003 email resilience    004 gift catalog seed
@@ -117,7 +117,7 @@ supabase/migrations/
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
 
-**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. Reminders respect the user's `reminder_days_before` preference (selectable: 1, 3, 7, 14, 21 days — stored in `profiles`, default `{7, 3}`). The cron route fetches this per user, passes it to `matchReminderWindow()`, which checks each selected day against late-side-only tolerance windows (see Email Resilience). Events with `high_importance` always inject a 21-day reminder even if the user hasn't selected it. After matching, the cron selects gifts, sends, and logs to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
+**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. The reminder cron runs **hourly** (`0 * * * *`). Each run only processes users whose current local hour (derived from `profiles.timezone` via `Intl.DateTimeFormat`) matches their `preferred_send_hour` (hourly options: 6am–9pm, i.e. 6–21 — stored in `profiles`, default 8). This ensures emails arrive at the user's chosen time regardless of timezone. **Day math is timezone-aware:** `calendarDaysUntil()` computes pure calendar days in the user's local timezone (May 25 → May 27 = 2, regardless of hour or UTC offset). No `Math.ceil`, no fractional days. Reminders respect the user's `reminder_days_before` preference (selectable: 1, 3, 7, 14, 21 days — stored in `profiles`, default `{7, 3}`). The cron passes the user's timezone to `calendarDaysUntil()`, then `matchReminderWindow()` checks against late-side-only tolerance windows (see Email Resilience). Events with `high_importance` always inject a 21-day reminder even if the user hasn't selected it. Email subject/body show **actual calendar days**, not the canonical window — e.g., "2 days" if the late-tolerance caught a 3-day reminder. When actual days !== canonical days, a small late-send note appears above the footer. After matching, the cron selects gifts, sends, and logs to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
 
 **Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
 
@@ -158,7 +158,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 
 | Route | Method | Auth | Purpose |
 |---|---|---|---|
-| `/api/cron/reminders` | GET | `Bearer CRON_SECRET` | Daily 12:00 UTC — send reminders (per-user day prefs) |
+| `/api/cron/reminders` | GET | `Bearer CRON_SECRET` | Hourly — send reminders (per-user send hour + day prefs, timezone-aware) |
 | `/api/cron/digest` | GET | `Bearer CRON_SECRET` | 1st of month 14:00 UTC — monthly digest |
 | `/api/cron/reengagement` | GET | `Bearer CRON_SECRET` | Daily 13:00 UTC — D+3/D+10/D+30 drip |
 | `/api/cron/purge` | GET | `Bearer CRON_SECRET` | Daily 04:00 UTC — hard-delete expired trash |
@@ -175,7 +175,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 1. This file
 2. `src/app/api/cron/reminders/route.ts` — core business logic
 3. `src/emails/reminder.tsx` — what users receive
-4. `src/lib/email-config.ts` — email config, REMINDER_DAY_OPTIONS, tolerance windows
+4. `src/lib/email-config.ts` — email config, REMINDER_DAY_OPTIONS, SEND_HOUR_OPTIONS, tolerance windows
 5. `src/middleware.ts` — auth routing
 6. `supabase/migrations/001_initial_schema.sql` — data model
 
@@ -218,7 +218,9 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Resend idempotency keys are deterministic — always include one when adding email-sending code
 - `nextOccurrence()` and `formatEventDate()` are in `src/lib/reminders.ts` — never re-duplicate
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)
-- Year rollover: `buildEventDateStr()`, `shown_gifts.year`, `email_overrides` lookup, `getLastYearLine()`, and `selectGiftsScored()` all use `eventDate.getFullYear()` (from `nextOccurrence()`), NOT `now.getFullYear()` — fixes Dec cron runs for Jan events
+- Year rollover: the cron uses `eventYear` from `calendarDaysUntil()` for all year-dependent operations (`buildEventDateStr`, `shown_gifts.year`, `email_overrides`, `getLastYearLine`, `selectGiftsScored`). Never use `now.getFullYear()` — it breaks Dec cron runs for Jan events
+- **Timezone-aware day math is mandatory** — `calendarDaysUntil()` uses `Intl.DateTimeFormat` to compute calendar days in the user's local timezone. Never use `daysBetween()` (deprecated, timestamp-based) for reminder logic — it produces off-by-one errors for users far from UTC. The old `nextOccurrence()` + `daysBetween()` pattern is replaced by `calendarDaysUntil()` which returns both `daysUntil` and `eventYear`
+- **Send-hour gating** — the reminder cron runs hourly but only processes users whose `localHour(now, timezone) === preferred_send_hour`. Users without a timezone default to `America/New_York`; users without a send hour default to 8 (8am). Send hours are every hour from 6am to 9pm (6–21) per `SEND_HOUR_OPTIONS`
 - Vercel deployment protection blocks API requests on previews — use `npx vercel curl` or test locally
 - PostgREST `.or()` with `.in()` has quoting issues — use parallel queries instead (see gift-engine.ts)
 - **Never use `supabase.auth.resend()` for verification emails when PKCE is active** — it doesn't regenerate the PKCE pair, so the link's code exchange fails. Use `signUp()` again (if you have the password) or rely on the auth callback's session-based fallback (if the user is already signed in). See `handleResendVerification` in `auth/page.tsx` and the fallback in `auth/callback/route.ts`.
