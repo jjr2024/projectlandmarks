@@ -62,7 +62,7 @@ src/
 │       ├── calendar/[userId]  .ics feed (HMAC-signed, RFC 5545 line folding)
 │       ├── calendar-url/      Signed calendar URL
 │       └── unsubscribe/       HMAC-verified unsubscribe
-├── components/                sidebar, admin-sidebar, marketing-nav, marketing-footer, email-verification-banner, gift-icons
+├── components/                sidebar, admin-sidebar, marketing-nav, marketing-footer, email-verification-banner, email-unsubscribed-banner, gift-icons
 ├── emails/                    reminder, digest, reengagement (React Email templates)
 ├── lib/
 │   ├── supabase/              admin.ts (service_role), client.ts (browser), server.ts (SSR cookies)
@@ -103,7 +103,7 @@ supabase/migrations/
 
 **Auth:** Supabase Auth. Email verification required — no emails sent to unverified addresses (GDPR/CAN-SPAM: emails contain affiliate links). Password changes use `reauthenticate()` (nonce-based, no duplicate session).
 
-**Consent gating:** Two mandatory signup checkboxes (Terms+Privacy, affiliate emails). Stored in `profiles` via `handle_new_user()` trigger. Existing users without consent redirected to `/consent`. Cron routes also gate on consent.
+**Consent gating:** Two mandatory signup checkboxes (Terms+Privacy, affiliate emails). Stored in `profiles` via `handle_new_user()` trigger. Layout gate (`(app)/layout.tsx`) only checks `consent_terms` — users without terms acceptance are redirected to `/consent`. `consent_emails` is handled separately: unsubscribed users (terms=true, emails=false) stay in the app but see a persistent `EmailUnsubscribedBanner` directing them to Settings to re-enable. The Settings page has a re-subscribe block that sets `consent_emails` back to true. Cron routes independently gate on both `consent_terms` and `consent_emails`.
 
 **Security:**
 - Timing-safe token comparison (`compareTokens()`) on all cron/webhook auth
@@ -117,7 +117,7 @@ supabase/migrations/
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
 
-**Email system:** Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = monthly summary. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
+**Email system:** Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
 
 **Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
 
@@ -213,6 +213,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - `Precedence: bulk` header removed — was causing Gmail Promotions classification
 - Emails: pixels only (no rem/em/%), stacked layout for gift cards (product image + title/description/price/CTA). Images rendered at 200px with 8px border-radius for soft corners; source files are 400px (retina 2×). CTA buttons use `display: "block"` + `width: "100%"` for mobile tap targets; secondary buttons use `inline-block`
 - Email images must be self-hosted at absolute HTTPS URLs on `daysight.xyz`. Amazon CDN URLs cannot be hotlinked in emails (blocked by Amazon in non-browser contexts); UrbanStems/Wine.com URLs expire. All product images live in `public/gifts/{slug}.jpg` → `https://daysight.xyz/gifts/...` via Vercel CDN. Gmail strips `data:` URIs entirely. Logo lives at `public/email/logo-daysight.png` → `https://daysight.xyz/email/logo-daysight.png`. Header wordmark uses an explicit inline `<span style="color:#ffffff">` — raw `<td>` color is stripped by some clients
+- SVG icons do not render in email clients (Gmail, Outlook, Apple Mail all strip `<svg>` tags). Digest email uses hosted PNG icons at `public/email/icon-{birthday,anniversary,custom}.png` → `https://daysight.xyz/email/icon-*.png` instead of the `EventTypeIcon` component. Any future email templates must also use hosted `<img>` tags, never inline SVGs.
 - Resend idempotency keys are deterministic — always include one when adding email-sending code
 - `nextOccurrence()` and `formatEventDate()` are in `src/lib/reminders.ts` — never re-duplicate
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)

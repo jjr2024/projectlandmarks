@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import EmailVerificationBanner from "@/components/email-verification-banner";
+import EmailUnsubscribedBanner from "@/components/email-unsubscribed-banner";
 
 export default async function AppLayout({
   children,
@@ -25,8 +26,10 @@ export default async function AppLayout({
     .eq("id", user.id)
     .single();
 
-  // Gate on consent — redirect to /consent if not both consented
-  if (!profile?.consent_terms || !profile?.consent_emails) {
+  // Gate on consent — redirect to /consent if terms not accepted
+  // (consent_emails is checked separately — unsubscribed users stay in the app
+  // but see a persistent banner instead of being locked out)
+  if (!profile?.consent_terms) {
     redirect("/consent");
   }
 
@@ -42,6 +45,7 @@ export default async function AppLayout({
       <main className="md:ml-64 min-h-screen">
         <div className="p-6 md:p-8 max-w-6xl mx-auto">
           {!emailVerified && <EmailVerificationBanner />}
+          {emailVerified && !profile?.consent_emails && <EmailUnsubscribedBanner />}
           {children}
         </div>
       </main>

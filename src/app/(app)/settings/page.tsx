@@ -18,6 +18,7 @@ interface Profile {
   monthly_digest_enabled: boolean;
   email_reminders_enabled: boolean;
   product_updates_enabled: boolean;
+  consent_emails: boolean;
 }
 
 interface Contact {
@@ -446,6 +447,7 @@ export default function SettingsPage() {
         monthly_digest_enabled: profile.monthly_digest_enabled,
         email_reminders_enabled: profile.email_reminders_enabled,
         product_updates_enabled: profile.product_updates_enabled,
+        consent_emails: profile.consent_emails,
       })
       .eq("id", userId);
 
@@ -719,6 +721,23 @@ export default function SettingsPage() {
           {/* Email preferences */}
           <section className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Preferences</h2>
+
+            {/* Re-subscribe prompt when consent_emails is false */}
+            {!profile.consent_emails && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-red-800 mb-3">
+                  <span className="font-semibold">You&apos;ve unsubscribed from emails.</span>{" "}
+                  Daysight can&apos;t send you any reminders, digests, or updates. Re-enable emails below to start receiving them again.
+                </p>
+                <button
+                  onClick={() => setProfile({ ...profile, consent_emails: true })}
+                  className="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors"
+                >
+                  Re-enable emails
+                </button>
+              </div>
+            )}
+
             <div className="space-y-3">
               {[
                 { key: "email_reminders_enabled" as const, label: "Event reminders" },
