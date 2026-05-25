@@ -23,13 +23,29 @@ function ResetPasswordForm() {
   // before router.replace has updated searchParams (race condition).
   const codeExchangedRef = useRef(false);
 
-  // Listen for PASSWORD_RECOVERY event as a fallback — Supabase fires
-  // this when a recovery session is detected, which can catch cases
-  // where the PKCE code exchange fails but the session is established
-  // through other means (e.g. hash fragments in some configurations).
+  // Helper: check for an existing session (with retry). Supabase may
+  // establish a session asynchronously from URL hash-fragment tokens
+  // (implicit flow fallback) even when the PKCE code exchange fails.
+  // A short delay + retry gives the auth client time to process them.
+  const checkSessionWithRetry = async (retries = 3, delayMs = 500): Promise<boolean> => {
+    for (let i = 0; i < retries; i++) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) return true;
+      if (i < retries - 1) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+    return false;
+  };
+
+  // Listen for PASSWORD_RECOVERY event — Supabase fires this when a
+  // recovery session is detected, including from hash-fragment tokens.
+  // This overrides any prior "noSession" state from a failed PKCE
+  // exchange, since the session is now valid regardless.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
+        setNoSession(false);
         setSessionReady(true);
       }
     });
@@ -37,46 +53,66 @@ function ResetPasswordForm() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // PKCE flow: if a ?code= param is present, exchange it client-side.
-  // Otherwise fall back to checking existing cookie-based session
-  // (desktop flow where callback already set cookies).
+  // Session detection: three paths, tried in order.
+  //
+  // 1. ?code= present → PKCE exchange (standard SSR flow).
+  // 2. PKCE exchange fails → fallback: wait briefly and check for a
+  //    session established via URL hash-fragment tokens. Supabase
+  //    redirects with BOTH ?code= (PKCE) and #access_token= (implicit)
+  //    as a fallback. The hash-based session is detected asynchronously
+  //    by the Supabase browser client, so we retry a few times.
+  // 3. No ?code= at all → check existing cookie-based session (covers
+  //    the case where the user re-visits the page after a session was
+  //    already established, e.g. clicking an expired OTP link).
   useEffect(() => {
     const code = searchParams.get("code");
 
     if (code) {
       // Prevent double exchange — the effect can re-run if the
       // component re-renders before router.replace updates the URL.
-      // The second exchange would fail (code already consumed) and
-      // incorrectly set noSession=true, hiding the password form.
       if (codeExchangedRef.current) return;
       codeExchangedRef.current = true;
 
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          console.error("[reset-password] Code exchange failed:", error.message);
-          setDebugInfo(`exchange: ${error.message} (status=${error.status ?? "?"})`);
-          setNoSession(true);
-        } else {
+      supabase.auth.exchangeCodeForSession(code).then(async ({ error }) => {
+        if (!error) {
           setSessionReady(true);
           // Clean up URL so refreshing doesn't re-attempt the exchange
           router.replace("/auth/reset-password", { scroll: false });
+          return;
+        }
+
+        console.error("[reset-password] Code exchange failed:", error.message);
+
+        // Fallback: the PKCE exchange failed (most likely missing
+        // code_verifier — common when the reset link opens in a
+        // cross-site redirect chain from the email client). But
+        // Supabase also includes implicit-flow tokens in the URL
+        // hash, which the browser client processes asynchronously.
+        // Wait briefly and check if a session appeared.
+        const hasSession = await checkSessionWithRetry();
+        if (hasSession) {
+          setSessionReady(true);
+          router.replace("/auth/reset-password", { scroll: false });
+        } else {
+          setDebugInfo(`exchange: ${error.message} (status=${error.status ?? "?"})`);
+          setNoSession(true);
         }
       });
     } else {
-      // No code param — check for existing cookie-based session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
+      // No code param — check for existing cookie-based session.
+      // This handles: re-clicking an expired OTP link after a session
+      // was already established, or arriving after the URL was cleaned.
+      checkSessionWithRetry(2, 300).then((hasSession) => {
+        if (hasSession) {
           setSessionReady(true);
         } else if (!codeExchangedRef.current) {
-          // Only show "expired" if we never attempted a code exchange.
-          // If we did exchange (and it succeeded), the URL was cleaned
-          // and this branch runs on the follow-up render — that's fine.
           setDebugInfo("no_code_no_session");
           setNoSession(true);
         }
       });
     }
-  }, [supabase, searchParams, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
