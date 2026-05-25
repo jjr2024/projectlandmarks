@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
+import { friendlyError } from "@/lib/errors";
 
 const RELATIONSHIPS = [
   { value: "family", label: "Family" },
@@ -59,12 +60,16 @@ interface EventData {
 }
 
 function OnboardingContent() {
-  const searchParams = useSearchParams();
-  const initialStep = Math.min(Math.max(Number(searchParams.get("step")) || 1, 1), TOTAL_STEPS);
-  const [step, setStepRaw] = useState(initialStep);
+  // Always start at step 1 — URL-based step initialization was removed because
+  // it allowed users to jump to step 3/4 via ?step= with all form state blank,
+  // causing garbage contact inserts or RLS errors on save. The onboarding flow
+  // is short enough that restarting from step 1 is fine. See bug sweep C1.
+  const [step, setStepRaw] = useState(1);
   const [firstName, setFirstName] = useState("");
   const [userId, setUserId] = useState("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savedRef = useRef(false);
   const router = useRouter();
 
   // Step 2: Contact + events
@@ -96,8 +101,8 @@ function OnboardingContent() {
 
   const setStep = useCallback((newStep: number) => {
     setStepRaw(newStep);
-    router.push(`/onboarding?step=${newStep}`, { scroll: false });
-  }, [router]);
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const supabase = createClient();
 
@@ -106,7 +111,11 @@ function OnboardingContent() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        // No session — redirect to auth instead of rendering with empty state
+        router.push("/auth");
+        return;
+      }
       setUserId(user.id);
 
       const { data: profile } = await supabase
@@ -116,6 +125,7 @@ function OnboardingContent() {
         .single();
 
       setFirstName(profile?.display_name?.split(" ")[0] || "there");
+      setProfileLoaded(true);
     }
     load();
   }, []);
@@ -142,6 +152,8 @@ function OnboardingContent() {
   const [saveError, setSaveError] = useState("");
 
   const handleSaveAndFinish = async () => {
+    // Guard against double-submission (e.g. browser Back from step 4)
+    if (savedRef.current || saving) return;
     setSaving(true);
     setSaveError("");
 
@@ -188,9 +200,10 @@ function OnboardingContent() {
         if (eventError) throw eventError;
       }
 
+      savedRef.current = true;
       setStep(4);
     } catch (err: any) {
-      setSaveError(err.message || "Something went wrong. Please try again.");
+      setSaveError(friendlyError(err, "save your contact"));
     } finally {
       setSaving(false);
     }
@@ -235,6 +248,21 @@ function OnboardingContent() {
   };
 
   const progressWidth = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
+
+  // Wait for profile to load before rendering the flow (fixes C3: "Welcome, !" flash)
+  if (!profileLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <svg className="animate-spin h-6 w-6 text-brand-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <p className="text-sm text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -883,9 +911,5 @@ function OnboardingContent() {
 }
 
 export default function OnboardingPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>}>
-      <OnboardingContent />
-    </Suspense>
-  );
+  return <OnboardingContent />;
 }

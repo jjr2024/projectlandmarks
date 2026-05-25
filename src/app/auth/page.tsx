@@ -71,44 +71,71 @@ function AuthPageContent() {
     setResendingVerification(true);
     setVerificationError("");
 
-    // Use signUp() instead of resend() so that a fresh PKCE
-    // code_verifier / code_challenge pair is generated. resend()
-    // does NOT regenerate the PKCE pair, which causes the
-    // exchangeCodeForSession() call in /auth/callback to fail
-    // with "expired or invalid" on the new link.
-    // For an existing unverified user, signUp() re-sends the
-    // confirmation email and returns the user object normally.
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: displayName || email.split("@")[0],
-          consent_terms: consentTerms,
-          consent_emails: consentEmails,
-          consent_at: new Date().toISOString(),
+    // Two-tier approach:
+    // 1. If we still have the password in state (user never left the page),
+    //    use signUp() which generates a fresh PKCE code_verifier/code_challenge
+    //    pair. This is the ideal path — the verification link will work cleanly.
+    // 2. If the password is gone (user refreshed/reopened the tab), fall back
+    //    to resend(). resend() does NOT regenerate the PKCE pair, so the link's
+    //    code exchange may fail — but the auth callback has a fallback that
+    //    redirects to /dashboard if a session already exists (Supabase verifies
+    //    the email server-side regardless of PKCE outcome). See bug sweep C4.
+    if (password) {
+      // Preferred path: signUp() with fresh PKCE pair
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName || email.split("@")[0],
+            consent_terms: consentTerms,
+            consent_emails: consentEmails,
+            consent_at: new Date().toISOString(),
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+      });
 
-    setResendingVerification(false);
+      setResendingVerification(false);
 
-    if (error) {
-      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
-        setVerificationError("Too many attempts. Please wait a few minutes and try again.");
-      } else {
-        setVerificationError("Unable to resend. Please try again shortly.");
+      if (error) {
+        if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+          setVerificationError("Too many attempts. Please wait a few minutes and try again.");
+        } else {
+          setVerificationError("Unable to resend. Please try again shortly.");
+        }
+        return;
       }
-      return;
-    }
 
-    // If Supabase returns empty identities, the email was already
-    // confirmed (edge case — user verified in another tab). Direct
-    // them to sign in instead of waiting for another email.
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      setVerificationError("This email is already verified. Please sign in.");
-      return;
+      // If Supabase returns empty identities, the email was already
+      // confirmed (edge case — user verified in another tab). Direct
+      // them to sign in instead of waiting for another email.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setVerificationError("This email is already verified. Please sign in.");
+        return;
+      }
+    } else {
+      // Fallback path: password no longer in state (page was refreshed).
+      // resend() won't regenerate the PKCE pair, but the auth callback's
+      // session-based fallback handles this gracefully.
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      setResendingVerification(false);
+
+      if (error) {
+        if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+          setVerificationError("Too many attempts. Please wait a few minutes and try again.");
+        } else {
+          setVerificationError("Unable to resend. Please try again shortly.");
+        }
+        return;
+      }
     }
 
     sessionStorage.setItem("ds_verify_resend_at", Date.now().toString());
