@@ -7,7 +7,6 @@ import { Text } from "@react-email/text";
 import { Link } from "@react-email/link";
 import { Hr } from "@react-email/hr";
 import * as React from "react";
-import { EventTypeIcon } from "@/components/event-icons";
 
 interface DigestEvent {
   contactName: string;
@@ -32,6 +31,11 @@ const brandOrangeLight = "#e47243";
 
 function eventTypeLabel(eventType: string): string {
   return { birthday: "Birthday", anniversary: "Anniversary", custom: "Event" }[eventType] || "Event";
+}
+
+function eventIconUrl(eventType: string): string {
+  const slug = { birthday: "birthday", anniversary: "anniversary", custom: "custom" }[eventType] || "custom";
+  return `https://daysight.xyz/email/icon-${slug}.png`;
 }
 
 function eventBgColor(eventType: string): string {
@@ -93,7 +97,7 @@ export default function DigestEmail({
           <Section style={{ backgroundColor: "white", padding: "24px 32px", borderRadius: "0 0 12px 12px" }}>
             <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 12px 0" }}>Hi {firstName},</Text>
             <Text style={{ color: "#374151", fontSize: "14px", margin: "0 0 16px 0", lineHeight: "1.5" }}>
-              Here&apos;s a look at everyone who has something special coming up this month. You&apos;ve got plenty of time to order with standard shipping — no rush yet.
+              Here&apos;s a look at everyone who has something special coming up in the next 30 days. You&apos;ve got plenty of time to order with standard shipping — no rush yet.
             </Text>
 
             {/* Event list */}
@@ -113,16 +117,17 @@ export default function DigestEmail({
                                   height: "36px",
                                   borderRadius: "8px",
                                   background: eventBgColor(evt.eventType),
-                                  color: eventTextColor(evt.eventType),
                                   textAlign: "center" as const,
                                   verticalAlign: "middle",
                                 }}
                               >
-                                <EventTypeIcon
-                                  type={evt.eventType}
-                                  className=""
-                                  strokeWidth={1.75}
-                                  style={{ width: "18px", height: "18px", display: "inline-block", verticalAlign: "middle" }}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={eventIconUrl(evt.eventType)}
+                                  alt={eventTypeLabel(evt.eventType)}
+                                  width="18"
+                                  height="18"
+                                  style={{ display: "inline-block", verticalAlign: "middle", border: "none" }}
                                 />
                               </td>
                             </tr>
