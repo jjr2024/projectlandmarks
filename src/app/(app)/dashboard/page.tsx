@@ -224,11 +224,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Privacy note */}
-      <p className="text-xs text-gray-400 mb-4">
-        Your data is yours — export or delete anytime in Settings.
-      </p>
-
       {/* Upcoming reminders */}
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="px-5 py-4 border-b border-gray-100">

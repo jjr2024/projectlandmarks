@@ -254,7 +254,7 @@ export default function Home() {
             />
             <PrivacyCard
               title="Delete anytime, no questions asked"
-              description="You can export all your data or permanently delete your account whenever you want. No waiting period and no hoops."
+              description="You can permanently delete your account and all associated data whenever you want. No waiting period and no hoops."
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               }
