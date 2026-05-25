@@ -585,15 +585,20 @@ export default function SettingsPage() {
     }
   };
 
-  // Account deletion — uses RPC for atomic cascade across all tables
+  // Account deletion — calls server-side API route that:
+  // 1. Runs the delete_user_account RPC (cascade-deletes all app data)
+  // 2. Deletes the auth.users record via Admin API (removes login credentials)
+  // Without step 2, the user could log back in with the same email/password.
   const handleDeleteAccount = async () => {
     setDeleteError("");
     setDeletingAccount(true);
     try {
-      const { error } = await supabase.rpc("delete_user_account", {
-        target_user_id: userId,
-      });
-      if (error) throw error;
+      const res = await fetch("/api/delete-account", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error || "Account deletion failed.");
+      }
+      // Auth record is gone — sign out locally and redirect
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch (err: any) {

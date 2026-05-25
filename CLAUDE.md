@@ -112,7 +112,7 @@ supabase/migrations/
 - HMAC-signed unsubscribe + calendar URLs (no raw UUIDs)
 - Affiliate webhook validates user_id ownership against reminder_log
 - Generic forgot-password response (prevents email enumeration)
-- Atomic account deletion via RPC `delete_user_account()`
+- Atomic account deletion via `POST /api/delete-account` — runs `delete_user_account()` RPC (app data) then `auth.admin.deleteUser()` (auth record). **Both steps are required** — the RPC alone leaves `auth.users` intact, allowing re-login with the same credentials. The API route uses the service-role admin client; the settings page calls it via fetch.
 - All client-side update/delete queries include `.eq("user_id", userId)` alongside RLS
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
@@ -166,6 +166,7 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 | `/api/webhooks/affiliate` | POST | `Bearer AFFILIATE_WEBHOOK_SECRET` | Purchase postbacks → conversion_events |
 | `/api/calendar/[userId]` | GET | HMAC token | .ics feed |
 | `/api/calendar-url` | GET | Session cookie | Signed calendar URL |
+| `/api/delete-account` | POST | Session cookie | RPC cascade + auth.admin.deleteUser() |
 | `/api/unsubscribe` | POST | HMAC uid+token | Set consent_emails=false |
 | `/auth/callback` | GET | — | OAuth/magic-link/verification → session (PKCE fallback: redirects to app if exchange fails but session exists) |
 
