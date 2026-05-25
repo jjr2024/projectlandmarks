@@ -53,6 +53,18 @@ export async function GET(request: Request) {
       code: code.slice(0, 8) + "...",
       next,
     });
+
+    // PKCE fallback: resend() does not regenerate the PKCE
+    // code_verifier, so re-sent verification links may fail the
+    // exchange. However, Supabase verifies the email server-side
+    // before redirecting here. If the user already has an active
+    // session (e.g. they signed in unverified, then clicked a
+    // re-sent verification link), redirect them to the app
+    // instead of showing an error — their email is now verified.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
   }
 
   // If no code or exchange failed, redirect to auth with error

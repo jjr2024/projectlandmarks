@@ -242,17 +242,9 @@ function OnboardingContent() {
       <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-100 z-10">
         <div className="max-w-xl mx-auto px-6 py-4 flex items-center justify-between">
           <span className="font-bold text-brand-600 text-lg">Daysight</span>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-400">
-              Step {step} of {TOTAL_STEPS}
-            </span>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              Skip setup &rarr;
-            </button>
-          </div>
+          <span className="text-sm text-gray-400">
+            Step {step} of {TOTAL_STEPS}
+          </span>
         </div>
         <div className="h-0.5 bg-gray-100">
           <div

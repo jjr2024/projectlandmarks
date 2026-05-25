@@ -71,10 +71,23 @@ function AuthPageContent() {
     setResendingVerification(true);
     setVerificationError("");
 
-    const { error } = await supabase.auth.resend({
-      type: "signup",
+    // Use signUp() instead of resend() so that a fresh PKCE
+    // code_verifier / code_challenge pair is generated. resend()
+    // does NOT regenerate the PKCE pair, which causes the
+    // exchangeCodeForSession() call in /auth/callback to fail
+    // with "expired or invalid" on the new link.
+    // For an existing unverified user, signUp() re-sends the
+    // confirmation email and returns the user object normally.
+    const { data, error } = await supabase.auth.signUp({
       email,
+      password,
       options: {
+        data: {
+          display_name: displayName || email.split("@")[0],
+          consent_terms: consentTerms,
+          consent_emails: consentEmails,
+          consent_at: new Date().toISOString(),
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -87,6 +100,14 @@ function AuthPageContent() {
       } else {
         setVerificationError("Unable to resend. Please try again shortly.");
       }
+      return;
+    }
+
+    // If Supabase returns empty identities, the email was already
+    // confirmed (edge case — user verified in another tab). Direct
+    // them to sign in instead of waiting for another email.
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      setVerificationError("This email is already verified. Please sign in.");
       return;
     }
 
