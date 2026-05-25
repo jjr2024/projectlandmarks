@@ -7,14 +7,29 @@ export default function EmailVerificationBanner() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [error, setError] = useState("");
 
   const supabase = createClient();
 
-  // Reset sent state after 30 seconds
+  // Restore cooldown from sessionStorage on mount
+  useEffect(() => {
+    const lastSent = sessionStorage.getItem("ds_verify_resend_at");
+    if (lastSent) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastSent, 10)) / 1000);
+      const remaining = 60 - elapsed;
+      if (remaining > 0) {
+        setSent(true);
+        setCountdown(remaining);
+      } else {
+        sessionStorage.removeItem("ds_verify_resend_at");
+      }
+    }
+  }, []);
+
+  // Countdown timer for resend cooldown
   useEffect(() => {
     if (!sent) return;
 
-    setCountdown(30);
     const interval = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -31,20 +46,33 @@ export default function EmailVerificationBanner() {
 
   const handleResend = async () => {
     setSending(true);
+    setError("");
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (user?.email) {
-      await supabase.auth.resend({
+      const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: user.email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
+      if (resendError) {
+        setSending(false);
+        if (resendError.status === 429 || resendError.message?.toLowerCase().includes("rate limit")) {
+          setError("Too many attempts. Please wait a few minutes.");
+        } else {
+          setError("Unable to resend. Please try again shortly.");
+        }
+        return;
+      }
     }
     setSending(false);
     setSent(true);
+    setCountdown(60);
+    sessionStorage.setItem("ds_verify_resend_at", Date.now().toString());
   };
 
   return (
@@ -65,9 +93,11 @@ export default function EmailVerificationBanner() {
         </svg>
         <p className="text-sm text-amber-800">
           <span className="font-semibold">Verify your email</span> to start receiving reminders.
-          {sent ? (
+          {error ? (
+            <span className="ml-1 text-red-600">{error}</span>
+          ) : sent ? (
             <span className="ml-1 text-amber-600">
-              Verification email sent! You can resend in {countdown} seconds.
+              Verification email sent! You can resend in {countdown}s.
             </span>
           ) : (
             <button

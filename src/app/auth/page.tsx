@@ -26,9 +26,74 @@ function AuthPageContent() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [consentTerms, setConsentTerms] = useState(false);
   const [consentEmails, setConsentEmails] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationResent, setVerificationResent] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [resendCountdown, setResendCountdown] = useState(0);
 
   const router = useRouter();
   const supabase = createClient();
+
+  // Restore cooldown from sessionStorage on mount
+  useEffect(() => {
+    const lastSent = sessionStorage.getItem("ds_verify_resend_at");
+    if (lastSent) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastSent, 10)) / 1000);
+      const remaining = 60 - elapsed;
+      if (remaining > 0) {
+        setVerificationResent(true);
+        setResendCountdown(remaining);
+      } else {
+        sessionStorage.removeItem("ds_verify_resend_at");
+      }
+    }
+  }, []);
+
+  // Countdown timer for resend cooldown
+  useEffect(() => {
+    if (!verificationResent) return;
+
+    const interval = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setVerificationResent(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [verificationResent]);
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    setVerificationError("");
+
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    setResendingVerification(false);
+
+    if (error) {
+      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+        setVerificationError("Too many attempts. Please wait a few minutes and try again.");
+      } else {
+        setVerificationError("Unable to resend. Please try again shortly.");
+      }
+      return;
+    }
+
+    sessionStorage.setItem("ds_verify_resend_at", Date.now().toString());
+    setVerificationResent(true);
+    setResendCountdown(60);
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +194,27 @@ function AuthPageContent() {
               We sent a confirmation link to <strong>{email}</strong>. Click it to
               activate your account, then come back here to sign in.
             </p>
+            <p className="text-green-600 text-sm mt-3">
+              Didn&apos;t get it? Check your spam folder, or resend below.
+            </p>
+            <div className="mt-4">
+              {verificationError && (
+                <p className="text-red-600 text-sm mb-2">{verificationError}</p>
+              )}
+              {verificationResent ? (
+                <p className="text-green-600 text-sm">
+                  Verification email sent! You can resend in {resendCountdown}s.
+                </p>
+              ) : (
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  className="text-sm text-brand-600 font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendingVerification ? "Sending..." : "Resend verification email"}
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={() => {

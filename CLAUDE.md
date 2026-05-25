@@ -117,7 +117,7 @@ supabase/migrations/
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
 
-**Email system:** Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
+**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. Reminders match events to 21/7/3-day windows, select gifts, send, log to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
 
 **Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
 
