@@ -457,6 +457,7 @@ export default function SettingsPage() {
     } else {
       setSaveMsg("Saved!");
       setInitialProfile(profile); // Mark current state as saved
+      router.refresh(); // Re-render server layout (clears/shows banners like EmailUnsubscribedBanner)
     }
     setTimeout(() => setSaveMsg(""), 2000);
   };
@@ -610,7 +611,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div>
+    <div className="pb-20">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
 
       {/* Tab bar */}
@@ -856,22 +857,6 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* Save button */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSaveProfile}
-              disabled={saving}
-              className="bg-brand-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-700 transition-colors disabled:opacity-40"
-            >
-              {saving ? "Saving..." : "Save changes"}
-            </button>
-            {saveMsg && (
-              <span className="text-sm text-green-600 font-medium">{saveMsg}</span>
-            )}
-            {hasUnsavedChanges && !saveMsg && (
-              <span className="text-sm text-amber-600 font-medium">Unsaved changes</span>
-            )}
-          </div>
         </div>
       )}
 
@@ -1121,6 +1106,27 @@ export default function SettingsPage() {
               </div>
             )
           )}
+        </div>
+      )}
+
+      {/* Sticky save bar — visible on General tab when there are unsaved changes or a save message */}
+      {tab === "general" && (hasUnsavedChanges || saving || saveMsg) && (
+        <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-gray-200 px-6 py-3 z-40">
+          <div className="max-w-6xl mx-auto flex items-center gap-3">
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="bg-brand-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-700 transition-colors disabled:opacity-40"
+            >
+              {saving ? "Saving..." : "Save changes"}
+            </button>
+            {saveMsg && (
+              <span className={`text-sm font-medium ${saveMsg === "Saved!" ? "text-green-600" : "text-red-600"}`}>{saveMsg}</span>
+            )}
+            {hasUnsavedChanges && !saveMsg && (
+              <span className="text-sm text-amber-600 font-medium">You have unsaved changes</span>
+            )}
+          </div>
         </div>
       )}
 
