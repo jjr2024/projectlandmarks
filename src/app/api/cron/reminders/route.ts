@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
-import { EMAIL_CONFIG, DEFAULT_SEND_HOUR, DEFAULT_TIMEZONE } from "@/lib/email-config";
+import {
+  EMAIL_CONFIG,
+  DEFAULT_SEND_HOUR,
+  DEFAULT_TIMEZONE,
+  MAX_RETRY_ATTEMPTS,
+  FAILED_RETRY_INTERVAL_MS,
+} from "@/lib/email-config";
 import ReminderEmail, { reminderSubject } from "@/emails/reminder";
 import {
   formatEventDate,
@@ -175,9 +181,16 @@ export async function GET(request: NextRequest) {
           const eventDateStr = buildEventDateStr(eventYear, event.month, event.day);
 
           // ── Dedup: check reminder_log for existing entry ───────────────
-          // Only block on statuses that mean the email actually went out.
-          // Stale "pending" rows (>5 min old) are marked "expired" and retried.
-          // "failed" and "deferred" rows do not block retries.
+          // Block on statuses where the email actually reached Resend's
+          // pipeline (live + bounced). Stale "pending" rows (>5 min old)
+          // are marked "expired" and retried. "failed", "deferred", and
+          // "expired" rows do not block — they're picked up by Pass 2b
+          // for hourly retries (subject to MAX_RETRY_ATTEMPTS).
+          // "bounced" is terminal: the recipient address rejected delivery
+          // (bad address, suppression list, mailbox full, spam complaint),
+          // and retrying would just re-bounce and damage sender reputation.
+          // Predicate must stay aligned with idx_reminder_log_dedup
+          // partial index (migration 021).
           const { data: existing } = await supabase
             .from("reminder_log")
             .select("id, status, created_at")
@@ -185,7 +198,7 @@ export async function GET(request: NextRequest) {
             .eq("event_id", event.id)
             .eq("days_before", window.canonicalDaysBefore)
             .eq("event_date", eventDateStr)
-            .in("status", ["sent", "delivered", "opened", "clicked", "pending"])
+            .in("status", ["sent", "delivered", "opened", "clicked", "pending", "bounced"])
             .maybeSingle();
 
           if (existing) {
@@ -204,11 +217,11 @@ export async function GET(request: NextRequest) {
                   results.errors.push(
                     `User ${user.id}, event ${event.id}: failed to mark stale pending as expired — ${expireError.message}`
                   );
-                  // Don't proceed to insert a new pending row — the unique
-                  // index on (user_id, event_id, days_before, event_date)
-                  // is partial (live statuses only), so if the existing
-                  // row didn't transition out of 'pending', a fresh INSERT
-                  // would 23505 anyway.
+                  // Don't proceed to insert a new pending row — the partial
+                  // unique index covers (pending,sent,delivered,opened,
+                  // clicked,bounced), so if the existing row didn't
+                  // transition out of 'pending', a fresh INSERT would
+                  // 23505 anyway.
                   continue;
                 }
               } else {
@@ -217,22 +230,25 @@ export async function GET(request: NextRequest) {
                 continue;
               }
             } else {
-              // sent/delivered/opened/clicked — truly sent, skip
+              // sent/delivered/opened/clicked — successfully sent, skip.
+              // bounced — terminal failure (bad address etc.), do not retry.
               results.skipped++;
               continue;
             }
           }
 
-          // ── Retry cap: don't retry if 3+ failed/expired attempts exist ───
+          // ── Retry cap: don't retry past MAX_RETRY_ATTEMPTS ──────────────
+          // Counts failed + expired + deferred for this (user, event,
+          // event_date) tuple. See email-config.ts for tuning rationale.
           const { count: failedCount } = await supabase
             .from("reminder_log")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
             .eq("event_id", event.id)
             .eq("event_date", eventDateStr)
-            .in("status", ["failed", "expired"]);
+            .in("status", ["failed", "expired", "deferred"]);
 
-          if ((failedCount || 0) >= 3) {
+          if ((failedCount || 0) >= MAX_RETRY_ATTEMPTS) {
             results.skipped++;
             continue;
           }
@@ -382,213 +398,118 @@ export async function GET(request: NextRequest) {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // PASS 2: Retry stale/expired pending reminders regardless of send hour.
+    // PASS 2: Recovery phases — run regardless of send-hour gating.
     //
-    // If Pass 1 expired a stale "pending" row (or a previous run did), and the
-    // retry cap hasn't been reached, re-attempt the send now. This ensures a
-    // failed 6pm email doesn't have to wait until tomorrow's 6pm slot.
+    //   2a. Stale pending recovery: rows stuck at 'pending' for >5 minutes
+    //       (function killed mid-send, missed cron, etc.). Expire and retry.
+    //
+    //   2b. Hourly retry of failed/deferred: rows in terminal-but-recoverable
+    //       states older than FAILED_RETRY_INTERVAL_MS get re-attempted, up
+    //       to MAX_RETRY_ATTEMPTS total (counting failed + expired + deferred).
+    //       'bounced' rows are NOT retried — bounces indicate permanent
+    //       delivery failure (bad address, suppression list, mailbox full).
+    //
+    // Pass 2b dedupes by (user_id, event_id, days_before, event_date) tuple,
+    // processing the most recent failure per tuple. The MAX_RETRY_ATTEMPTS
+    // cap is enforced inside attemptRetry().
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ── Pass 2a — stale pending recovery ────────────────────────────────────
     if (!results.rateLimited) {
       const STALE_THRESHOLD = new Date(now.getTime() - 5 * 60 * 1000);
 
-      // Find rows that are stuck pending (stale) — these were missed by Pass 1
-      // if the user's send hour didn't match this run.
       const { data: staleRows } = await supabase
         .from("reminder_log")
-        .select("id, user_id, event_id, contact_id, days_before, event_date, gift_ids")
+        .select("id, user_id, event_id, contact_id, days_before, event_date")
         .eq("status", "pending")
         .lt("created_at", STALE_THRESHOLD.toISOString());
 
-      if (staleRows && staleRows.length > 0) {
-        for (const staleRow of staleRows) {
-          if (results.rateLimited) break;
+      for (const staleRow of staleRows ?? []) {
+        if (results.rateLimited) break;
 
-          try {
-            // Mark as expired before retrying.
-            // Surface any error: silent UPDATE failures here previously
-            // hid a check-constraint mismatch (status='expired' was not
-            // in the allowed set until migration 020). The partial dedup
-            // index added in migration 020 expects this transition out
-            // of 'pending' to succeed before the retry INSERT below.
-            const { error: expireError } = await supabase
-              .from("reminder_log")
-              .update({ status: "expired" })
-              .eq("id", staleRow.id);
-            if (expireError) {
-              results.errors.push(
-                `Retry stale row ${staleRow.id}: failed to mark as expired — ${expireError.message}`
-              );
-              continue;
-            }
-
-            // Check retry cap
-            const { count: failedCount } = await supabase
-              .from("reminder_log")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", staleRow.user_id)
-              .eq("event_id", staleRow.event_id)
-              .eq("event_date", staleRow.event_date)
-              .in("status", ["failed", "expired"]);
-
-            if ((failedCount || 0) >= 3) {
-              results.skipped++;
-              continue;
-            }
-
-            // Fetch user + profile + event data for this retry
-            const { data: retryUser } = await supabase.auth.admin.getUserById(staleRow.user_id);
-            if (!retryUser?.user?.email || !retryUser.user.email_confirmed_at) continue;
-
-            const { data: retryProfile } = await supabase
-              .from("profiles")
-              .select("display_name, timezone, consent_terms, consent_emails, email_reminders_enabled")
-              .eq("id", staleRow.user_id)
-              .single();
-
-            if (!retryProfile?.consent_terms || !retryProfile?.consent_emails) continue;
-            if (retryProfile.email_reminders_enabled === false) continue;
-
-            const { data: retryEvent } = await supabase
-              .from("events")
-              .select(`
-                id, event_type, event_label, month, day, high_importance, suppress_gifts,
-                one_time, event_year, contact_id, user_id,
-                contacts!inner ( id, first_name, last_name, relationship, gender, has_pets, gift_categories, gift_other, budget_tier, deleted_at )
-              `)
-              .eq("id", staleRow.event_id)
-              .is("deleted_at", null)
-              .is("contacts.deleted_at", null)
-              .single();
-
-            if (!retryEvent) continue;
-
-            const retryContact = retryEvent.contacts as any;
-            const retryTimezone = retryProfile.timezone || DEFAULT_TIMEZONE;
-            const { daysUntil, eventYear } = calendarDaysUntil(now, retryEvent.month, retryEvent.day, retryTimezone);
-
-            // Re-select gifts for the retry
-            const gifts = await selectGiftsScored(supabase, retryContact, retryEvent, daysUntil, eventYear);
-
-            const contactFirstName = retryContact.first_name || "Someone";
-            const eventDateFormatted = formatEventDate(retryEvent.month, retryEvent.day);
-            const firstName = retryProfile.display_name?.split(" ")[0] || "there";
-            const lastYearLine = await getLastYearLine(supabase, retryContact.id, retryEvent.month, retryEvent.day, eventYear);
-
-            const { data: override } = await supabase
-              .from("email_overrides")
-              .select("custom_message")
-              .eq("user_id", staleRow.user_id)
-              .eq("event_id", staleRow.event_id)
-              .eq("days_before", staleRow.days_before)
-              .eq("event_year", eventYear)
-              .maybeSingle();
-
-            const customMessage = override?.custom_message || null;
-            const isLateSend = daysUntil !== staleRow.days_before;
-            const eventDateStr = staleRow.event_date;
-
-            // Insert new pending row for the retry attempt
-            const { data: pendingRow, error: pendingError } = await supabase
-              .from("reminder_log")
-              .insert({
-                user_id: staleRow.user_id,
-                event_id: staleRow.event_id,
-                contact_id: staleRow.contact_id,
-                days_before: staleRow.days_before,
-                event_date: eventDateStr,
-                status: "pending",
-                gift_ids: gifts.map((g: any) => g.id),
-              })
-              .select("id")
-              .single();
-
-            if (pendingError) {
-              if (pendingError.code === "23505") { results.skipped++; continue; }
-              results.errors.push(`Retry user ${staleRow.user_id}, event ${staleRow.event_id}: pending insert failed — ${pendingError.message}`);
-              continue;
-            }
-
-            // Send via Resend
-            const idempotencyKey = buildIdempotencyKey(staleRow.user_id, staleRow.event_id, staleRow.days_before, eventDateStr) + `-retry-${Date.now()}`;
-            const subject = reminderSubject(contactFirstName, retryEvent.event_type, daysUntil, retryEvent.event_label);
-
-            const { data: emailResult, error: emailError } = await resend().emails.send({
-              from: EMAIL_CONFIG.from,
-              to: retryUser.user.email,
-              replyTo: EMAIL_CONFIG.replyTo,
-              subject,
-              react: ReminderEmail({
-                firstName,
-                contactFirstName,
-                eventType: retryEvent.event_type as "birthday" | "anniversary" | "custom",
-                eventLabel: retryEvent.event_label,
-                daysBefore: daysUntil,
-                eventDateFormatted,
-                isLateSend,
-                gifts: gifts.map((g) => ({
-                  name: g.name,
-                  partner: g.partner,
-                  description: g.description || g.tags?.join(", ") || "",
-                  price: g.price_tier === "low" ? "<$50" : g.price_tier === "mid" ? "$50–$100" : ">$100",
-                  affiliate_url: g.affiliate_url || "#",
-                  category: g.category,
-                  image_url: g.image_url || undefined,
-                })),
-                suppressGifts: retryEvent.suppress_gifts,
-                lastYearLine,
-                customMessage,
-                contactId: retryContact.id,
-                userId: staleRow.user_id,
-                unsubscribeUrl: buildSignedUrl(staleRow.user_id, "unsubscribe"),
-              }),
-              headers: {
-                ...EMAIL_CONFIG.headers({
-                  userId: staleRow.user_id,
-                  reminderType: retryEvent.event_type,
-                  partner: gifts[0]?.partner || "daysight",
-                  reminderId: retryEvent.id,
-                }),
-                "Idempotency-Key": idempotencyKey,
-              },
-            });
-
-            if (emailError) {
-              if (isRateLimitError(emailError)) {
-                await supabase.from("reminder_log").update({ status: "deferred" }).eq("id", pendingRow.id);
-                results.rateLimited = true;
-                results.deferred++;
-                break;
-              }
-              await supabase.from("reminder_log").update({ status: "failed" }).eq("id", pendingRow.id);
-              results.errors.push(`Retry user ${staleRow.user_id}, event ${staleRow.event_id}: ${emailError.message}`);
-              continue;
-            }
-
-            await supabase
-              .from("reminder_log")
-              .update({ status: "sent", resend_id: emailResult?.id || null, sent_at: new Date().toISOString() })
-              .eq("id", pendingRow.id);
-
-            for (const gift of gifts) {
-              await supabase.from("shown_gifts").insert({
-                user_id: staleRow.user_id,
-                contact_id: staleRow.contact_id,
-                event_id: staleRow.event_id,
-                gift_id: gift.id,
-                event_month: retryEvent.month,
-                event_day: retryEvent.day,
-                year: eventYear,
-                gift_name: gift.name,
-                gift_category: gift.category,
-                gift_partner: gift.partner,
-              });
-            }
-
-            results.sent++;
-          } catch (retryError: any) {
-            results.errors.push(`Retry stale row ${staleRow.id}: ${retryError.message}`);
+        try {
+          // Mark as expired before retrying. Surface any error: silent
+          // UPDATE failures here previously hid a check-constraint mismatch
+          // (status='expired' was not in the allowed set until migration
+          // 020). The partial dedup index added in migration 020 expects
+          // this transition out of 'pending' before the retry INSERT.
+          const { error: expireError } = await supabase
+            .from("reminder_log")
+            .update({ status: "expired" })
+            .eq("id", staleRow.id);
+          if (expireError) {
+            results.errors.push(
+              `Retry stale row ${staleRow.id}: failed to mark as expired — ${expireError.message}`
+            );
+            continue;
           }
+
+          await attemptRetry(supabase, staleRow, now, results);
+        } catch (retryError: any) {
+          results.errors.push(`Retry stale row ${staleRow.id}: ${retryError.message}`);
+        }
+      }
+    }
+
+    // ── Pass 2b — hourly retry of failed/deferred rows ──────────────────────
+    if (!results.rateLimited) {
+      const RETRY_THRESHOLD = new Date(now.getTime() - FAILED_RETRY_INTERVAL_MS);
+      // Bound the lookback so the query doesn't scan ancient history. Any
+      // tuple older than 24h has either hit the retry cap or has an
+      // event_date in the past — nothing left to do.
+      const LOOKBACK = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      // Query terminal-but-recoverable rows ordered DESC by created_at.
+      // The in-memory dedup below picks the MOST RECENT attempt per tuple,
+      // whose age determines cooldown eligibility.
+      const { data: retriableRows } = await supabase
+        .from("reminder_log")
+        .select("id, user_id, event_id, contact_id, days_before, event_date, created_at, status")
+        .in("status", ["failed", "deferred"])
+        .gte("created_at", LOOKBACK.toISOString())
+        .order("created_at", { ascending: false });
+
+      type RetriableRow = NonNullable<typeof retriableRows>[number];
+      const latestByTuple = new Map<string, RetriableRow>();
+      for (const row of retriableRows ?? []) {
+        const tupleKey = `${row.user_id}:${row.event_id}:${row.days_before}:${row.event_date}`;
+        // First write wins because the query is DESC; later rows for the
+        // same tuple are older attempts we don't want to use for cooldown.
+        if (!latestByTuple.has(tupleKey)) latestByTuple.set(tupleKey, row);
+      }
+
+      for (const latestRow of latestByTuple.values()) {
+        if (results.rateLimited) break;
+
+        // Cooldown check: most recent attempt must be older than the
+        // configured interval. Skip silently if not yet eligible.
+        if (new Date(latestRow.created_at) >= RETRY_THRESHOLD) continue;
+
+        try {
+          // Race-protection: another concurrent cron run may have already
+          // started a retry for this tuple, or a webhook may have marked
+          // the original send as bounced (terminal). The partial unique
+          // index would catch the former on INSERT (23505), but a pre-check
+          // avoids the wasted Resend call and noisy error. 'bounced' is
+          // included so a webhook-bounced row blocks any retry attempt.
+          const { data: liveRow } = await supabase
+            .from("reminder_log")
+            .select("id")
+            .eq("user_id", latestRow.user_id)
+            .eq("event_id", latestRow.event_id)
+            .eq("days_before", latestRow.days_before)
+            .eq("event_date", latestRow.event_date)
+            .in("status", ["pending", "sent", "delivered", "opened", "clicked", "bounced"])
+            .maybeSingle();
+
+          if (liveRow) {
+            results.skipped++;
+            continue;
+          }
+
+          await attemptRetry(supabase, latestRow, now, results);
+        } catch (retryError: any) {
+          results.errors.push(`Retry failed row ${latestRow.id}: ${retryError.message}`);
         }
       }
     }
@@ -601,6 +522,228 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+// ── Retry helper ────────────────────────────────────────────────────────────
+//
+// Attempt a single retry send for a previously-failed reminder. Used by both
+// Pass 2a (stale-pending recovery, after expiring the source row) and Pass 2b
+// (failed/deferred recovery). Mutates `results` and sets `results.rateLimited`
+// on 429 so the caller can break its loop.
+//
+// Caller responsibilities:
+//   - For stale 'pending' rows, transition the source row to 'expired' first.
+//   - Confirm no live row exists for this tuple (Pass 2b does this explicitly;
+//     Pass 2a relies on the source row's own status having moved to 'expired').
+
+async function attemptRetry(
+  supabase: any,
+  sourceRow: {
+    id: string;
+    user_id: string;
+    event_id: string;
+    contact_id: string;
+    days_before: number;
+    event_date: string;
+  },
+  now: Date,
+  results: CronResults
+): Promise<void> {
+  // 1. Don't retry a reminder whose event_date is in the past. For recurring
+  //    events the next year is a separate (user_id, event_id, days_before,
+  //    event_date) tuple handled by a fresh Pass 1 send. For one-time events
+  //    the event simply happened — no point sending the reminder now.
+  //    Compare against UTC midnight today; event_date is a DATE without TZ.
+  const todayUtcMidnight = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  ));
+  if (new Date(sourceRow.event_date) < todayUtcMidnight) {
+    results.skipped++;
+    return;
+  }
+
+  // 2. Retry cap: failed + expired + deferred (see MAX_RETRY_ATTEMPTS).
+  const { count: failedCount } = await supabase
+    .from("reminder_log")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", sourceRow.user_id)
+    .eq("event_id", sourceRow.event_id)
+    .eq("event_date", sourceRow.event_date)
+    .in("status", ["failed", "expired", "deferred"]);
+
+  if ((failedCount || 0) >= MAX_RETRY_ATTEMPTS) {
+    results.skipped++;
+    return;
+  }
+
+  // 3. Refetch user — they may have unverified email or been deleted.
+  const { data: retryUser } = await supabase.auth.admin.getUserById(sourceRow.user_id);
+  if (!retryUser?.user?.email || !retryUser.user.email_confirmed_at) return;
+
+  // 4. Refetch profile — consent / reminders-enabled may have changed.
+  const { data: retryProfile } = await supabase
+    .from("profiles")
+    .select("display_name, timezone, consent_terms, consent_emails, email_reminders_enabled")
+    .eq("id", sourceRow.user_id)
+    .single();
+
+  if (!retryProfile?.consent_terms || !retryProfile?.consent_emails) return;
+  if (retryProfile.email_reminders_enabled === false) return;
+
+  // 5. Refetch event — may have been soft-deleted.
+  const { data: retryEvent } = await supabase
+    .from("events")
+    .select(`
+      id, event_type, event_label, month, day, high_importance, suppress_gifts,
+      one_time, event_year, contact_id, user_id,
+      contacts!inner ( id, first_name, last_name, relationship, gender, has_pets, gift_categories, gift_other, budget_tier, deleted_at )
+    `)
+    .eq("id", sourceRow.event_id)
+    .is("deleted_at", null)
+    .is("contacts.deleted_at", null)
+    .single();
+
+  if (!retryEvent) return;
+
+  const retryContact = retryEvent.contacts as any;
+  const retryTimezone = retryProfile.timezone || DEFAULT_TIMEZONE;
+  const { daysUntil, eventYear } = calendarDaysUntil(now, retryEvent.month, retryEvent.day, retryTimezone);
+
+  // 6. Re-select gifts and build email content.
+  const gifts = await selectGiftsScored(supabase, retryContact, retryEvent, daysUntil, eventYear);
+  const contactFirstName = retryContact.first_name || "Someone";
+  const eventDateFormatted = formatEventDate(retryEvent.month, retryEvent.day);
+  const firstName = retryProfile.display_name?.split(" ")[0] || "there";
+  const lastYearLine = await getLastYearLine(
+    supabase,
+    retryContact.id,
+    retryEvent.month,
+    retryEvent.day,
+    eventYear
+  );
+
+  const { data: override } = await supabase
+    .from("email_overrides")
+    .select("custom_message")
+    .eq("user_id", sourceRow.user_id)
+    .eq("event_id", sourceRow.event_id)
+    .eq("days_before", sourceRow.days_before)
+    .eq("event_year", eventYear)
+    .maybeSingle();
+
+  const customMessage = override?.custom_message || null;
+  const isLateSend = daysUntil !== sourceRow.days_before;
+  const eventDateStr = sourceRow.event_date;
+
+  // 7. Insert new pending row for this retry attempt.
+  const { data: pendingRow, error: pendingError } = await supabase
+    .from("reminder_log")
+    .insert({
+      user_id: sourceRow.user_id,
+      event_id: sourceRow.event_id,
+      contact_id: sourceRow.contact_id,
+      days_before: sourceRow.days_before,
+      event_date: eventDateStr,
+      status: "pending",
+      gift_ids: gifts.map((g: any) => g.id),
+    })
+    .select("id")
+    .single();
+
+  if (pendingError) {
+    if (pendingError.code === "23505") {
+      // Another concurrent retry already inserted a live row for this tuple.
+      results.skipped++;
+      return;
+    }
+    results.errors.push(
+      `Retry user ${sourceRow.user_id}, event ${sourceRow.event_id}: pending insert failed — ${pendingError.message}`
+    );
+    return;
+  }
+
+  // 8. Send via Resend with a retry-suffixed idempotency key.
+  const idempotencyKey =
+    buildIdempotencyKey(sourceRow.user_id, sourceRow.event_id, sourceRow.days_before, eventDateStr) +
+    `-retry-${Date.now()}`;
+  const subject = reminderSubject(contactFirstName, retryEvent.event_type, daysUntil, retryEvent.event_label);
+
+  const { data: emailResult, error: emailError } = await resend().emails.send({
+    from: EMAIL_CONFIG.from,
+    to: retryUser.user.email,
+    replyTo: EMAIL_CONFIG.replyTo,
+    subject,
+    react: ReminderEmail({
+      firstName,
+      contactFirstName,
+      eventType: retryEvent.event_type as "birthday" | "anniversary" | "custom",
+      eventLabel: retryEvent.event_label,
+      daysBefore: daysUntil,
+      eventDateFormatted,
+      isLateSend,
+      gifts: gifts.map((g) => ({
+        name: g.name,
+        partner: g.partner,
+        description: g.description || g.tags?.join(", ") || "",
+        price: g.price_tier === "low" ? "<$50" : g.price_tier === "mid" ? "$50–$100" : ">$100",
+        affiliate_url: g.affiliate_url || "#",
+        category: g.category,
+        image_url: g.image_url || undefined,
+      })),
+      suppressGifts: retryEvent.suppress_gifts,
+      lastYearLine,
+      customMessage,
+      contactId: retryContact.id,
+      userId: sourceRow.user_id,
+      unsubscribeUrl: buildSignedUrl(sourceRow.user_id, "unsubscribe"),
+    }),
+    headers: {
+      ...EMAIL_CONFIG.headers({
+        userId: sourceRow.user_id,
+        reminderType: retryEvent.event_type,
+        partner: gifts[0]?.partner || "daysight",
+        reminderId: retryEvent.id,
+      }),
+      "Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  // 9. Handle outcome.
+  if (emailError) {
+    if (isRateLimitError(emailError)) {
+      await supabase.from("reminder_log").update({ status: "deferred" }).eq("id", pendingRow.id);
+      results.rateLimited = true;
+      results.deferred++;
+      return;
+    }
+    await supabase.from("reminder_log").update({ status: "failed" }).eq("id", pendingRow.id);
+    results.errors.push(`Retry user ${sourceRow.user_id}, event ${sourceRow.event_id}: ${emailError.message}`);
+    return;
+  }
+
+  await supabase
+    .from("reminder_log")
+    .update({ status: "sent", resend_id: emailResult?.id || null, sent_at: new Date().toISOString() })
+    .eq("id", pendingRow.id);
+
+  for (const gift of gifts) {
+    await supabase.from("shown_gifts").insert({
+      user_id: sourceRow.user_id,
+      contact_id: sourceRow.contact_id,
+      event_id: sourceRow.event_id,
+      gift_id: gift.id,
+      event_month: retryEvent.month,
+      event_day: retryEvent.day,
+      year: eventYear,
+      gift_name: gift.name,
+      gift_category: gift.category,
+      gift_partner: gift.partner,
+    });
+  }
+
+  results.sent++;
 }
 
 // ── Last-year-line (DB query + sentence builder) ────────────────────────────

@@ -61,6 +61,32 @@ export const DEFAULT_SEND_HOUR: SendHour = 8;
 /** Default timezone when user hasn't set one. */
 export const DEFAULT_TIMEZONE = "America/New_York";
 
+// ── Retry policy ────────────────────────────────────────────────────────────
+//
+// When a reminder send fails (Resend non-rate-limit error → 'failed') or is
+// rate-limited (Resend 429 → 'deferred'), Pass 2 of the next hourly cron run
+// will re-attempt the send after the configured interval. The reminder cron's
+// "stale pending" recovery uses its own 5-minute threshold for orphaned
+// in-flight rows; this interval is specifically for retrying after a known
+// terminal-but-recoverable failure.
+//
+// `MAX_RETRY_ATTEMPTS` is counted across `failed` + `expired` + `deferred`
+// rows for a given (user_id, event_id, event_date) tuple. Once the cap is
+// reached, the reminder is permanently abandoned. `bounced` rows are NEVER
+// retried — they indicate a permanent delivery problem (bad address,
+// suppression list, mailbox full).
+//
+// With the defaults below, a single reminder gets 5 attempts spaced 2 hours
+// apart — survives ~10 hours of Resend outage before giving up. Tuning:
+//   - To cover a 24h Resend outage, set MAX_RETRY_ATTEMPTS = 12.
+//   - To retry more aggressively, lower FAILED_RETRY_INTERVAL_MS.
+
+/** Max retry attempts per reminder (counts failed + expired + deferred). */
+export const MAX_RETRY_ATTEMPTS = 5;
+
+/** Min time between successive retry attempts for the same reminder. */
+export const FAILED_RETRY_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
 /**
  * @deprecated Use REMINDER_DAY_OPTIONS and REMINDER_TOLERANCE instead.
  * Kept temporarily for any code that still references these constants.

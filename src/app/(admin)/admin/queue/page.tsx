@@ -142,13 +142,16 @@ export default function EmailQueuePage() {
       .eq("event_id", item.eventId)
       .eq("event_year", item.eventYear);
 
-    // Fetch already-sent reminders
+    // Fetch slots already consumed for this reminder cycle.
+    // Includes 'bounced' because the cron treats bounced as terminal
+    // (won't re-send to a bouncing address), so that slot is unavailable
+    // for further send attempts even though no email reached the user.
     const { data: sentLogs } = await supabase
       .from("reminder_log")
       .select("days_before")
       .eq("user_id", item.userId)
       .eq("event_id", item.eventId)
-      .in("status", ["sent", "delivered", "opened", "clicked"])
+      .in("status", ["sent", "delivered", "opened", "clicked", "bounced"])
       .eq("event_date", eventDateStr);
 
     const sentSet = new Set((sentLogs || []).map((l) => l.days_before));
