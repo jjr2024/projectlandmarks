@@ -26,7 +26,7 @@ npm run build        # always run before push — catches TS errors Vercel will 
 - **Next.js 14** — App Router, API routes, middleware, on Vercel
 - **Supabase** — Postgres + Auth + RLS
 - **Resend** — transactional email via React Email templates
-- **Vercel Cron** — reminders (daily), digest (monthly), re-engagement (daily), purge (daily)
+- **GitHub Actions Cron** — reminders (hourly), digest (monthly), re-engagement (daily), purge (daily). Vercel Cron (`vercel.json`) is still configured as a harmless backup but Vercel Hobby only fires once/day at an unpredictable hour — GitHub Actions (`.github/workflows/cron.yml`) is the primary trigger. Requires two GitHub repo secrets: `CRON_SECRET` and `SITE_URL`.
 - **TypeScript** strict mode, `@/*` → `./src/*`
 - **Tailwind CSS** via PostCSS
 
@@ -85,6 +85,8 @@ supabase/migrations/
 ├── 015 add has_pets boolean    016 remap gift categories, reseed catalog, add gender_tags, update defaults
 ├── 017 seed 5 new gift catalog items (XLS v3.0)
 ├── 018 populate image_url with self-hosted paths
+.github/workflows/
+└── cron.yml               Hourly cron trigger via GitHub Actions (primary; replaces Vercel Hobby's once/day limit)
 ```
 
 ## Architecture
@@ -136,6 +138,8 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 3. **Range-based windows:** Per-user selectable reminder days (1, 3, 7, 14, 21) with late-side-only tolerance for cron outage recovery. Windows never fire early — only extend backward: 21→[19–21], 14→[12–14], 7→[5–7], 3→[2–3], 1→[0–1]. `high_importance` events inject day 21 regardless of user preference. Falls back to `DEFAULT_REMINDER_DAYS` [7, 3] if user preference is null/empty. Config in `REMINDER_DAY_OPTIONS` and `REMINDER_TOLERANCE` (`email-config.ts`); matching in `matchReminderWindow(daysUntil, highImportance, userDays)` (`reminders.ts`).
 4. **Per-user send cap:** Max 3 emails/user/day. Checked before and during event loop. Excess deferred to next run.
 5. **429 handling:** On rate limit, mark deferred, break user loop immediately. Retry on next cron run.
+
+6. **Stale pending recovery (two-pass):** The reminder cron runs two passes. Pass 1 is the normal send-hour-gated loop. The dedup query in Pass 1 only blocks on `sent`/`delivered`/`opened`/`clicked` statuses. If a "pending" row is older than 5 minutes, it's marked `"expired"` (preserving audit history) and the event is re-processed. `"failed"` and `"deferred"` rows never block retries. A retry cap of 3 `failed`+`expired` attempts per `(user_id, event_id, event_date)` prevents infinite retries on permanently broken events. Pass 2 runs after Pass 1 and scans for any remaining stale "pending" rows across ALL users (regardless of send hour), expires them, and retries. This ensures a failed 6pm email doesn't have to wait until the next day's 6pm slot — the next hourly cron run picks it up. Retry idempotency keys append `-retry-{timestamp}` to avoid Resend dedup collisions with the original attempt.
 
 **Not covered:** Digest and re-engagement lack pre-send dedup (acceptable). Outages >2 days permanently miss events outside tolerance ranges. The 1-day window has only 1-day tolerance (range [0–1]) so a 2-day outage misses it.
 
@@ -205,6 +209,9 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Affiliate webhook accepts unverified user_id-only postbacks (trade-off T-1 — pending owner decision on HMAC/stricter validation)
 - Resend spam complaints mapped to "bounced" status instead of triggering auto-unsubscribe (trade-off T-2 — pending owner decision)
 - `shown_gifts` insert errors silently swallowed in reminder cron (acceptable — doesn't block email delivery)
+- **Dedup blocks retries on stuck "pending" rows (FIXED):** The reminder cron's dedup query now only blocks on `sent`/`delivered`/`opened`/`clicked`. Stale "pending" rows (>5 min old) are marked `"expired"` and retried. A two-pass architecture retries across all users regardless of send hour. Retry cap of 3 `failed`+`expired` attempts prevents infinite retries. See Email Resilience § "Stale pending recovery" for details.
+- **Vercel Hobby cron limitation:** `vercel.json` defines `0 * * * *` (hourly) for reminders, but Vercel Hobby plan only runs crons once per day at an unpredictable hour. This means send-hour gating (which requires hourly execution to match each user's preferred hour) fails for most users. Mitigated by GitHub Actions cron (`.github/workflows/cron.yml`) as the primary trigger. `vercel.json` crons left in place as harmless backup — idempotency logic prevents duplicate sends if both fire in the same hour.
+- **Vercel production env vars:** `RESEND_WEBHOOK_SECRET` and `AFFILIATE_WEBHOOK_SECRET` are currently set to placeholders in Vercel production — webhook delivery tracking is not functional. `APP_URL` must be set to `https://daysight.xyz` in Vercel env vars (not just `.env.local`).
 
 ## Gotchas
 
@@ -220,7 +227,8 @@ Core logic in `src/lib/reminders.ts`. Five mechanisms:
 - Per-user send cap checked both before AND inside event loop (tracks `userSendsThisRun` counter)
 - Year rollover: the cron uses `eventYear` from `calendarDaysUntil()` for all year-dependent operations (`buildEventDateStr`, `shown_gifts.year`, `email_overrides`, `getLastYearLine`, `selectGiftsScored`). Never use `now.getFullYear()` — it breaks Dec cron runs for Jan events
 - **Timezone-aware day math is mandatory** — `calendarDaysUntil()` uses `Intl.DateTimeFormat` to compute calendar days in the user's local timezone. Never use `daysBetween()` (deprecated, timestamp-based) for reminder logic — it produces off-by-one errors for users far from UTC. The old `nextOccurrence()` + `daysBetween()` pattern is replaced by `calendarDaysUntil()` which returns both `daysUntil` and `eventYear`
-- **Send-hour gating** — the reminder cron runs hourly but only processes users whose `localHour(now, timezone) === preferred_send_hour`. Users without a timezone default to `America/New_York`; users without a send hour default to 8 (8am). Send hours are every hour from 6am to 9pm (6–21) per `SEND_HOUR_OPTIONS`
+- **Send-hour gating** — the reminder cron runs hourly but only processes users whose `localHour(now, timezone) === preferred_send_hour`. Users without a timezone default to `America/New_York`; users without a send hour default to 8 (8am). Send hours are every hour from 6am to 9pm (6–21) per `SEND_HOUR_OPTIONS`. **Requires hourly cron execution** — on Vercel Hobby (once/day), most users will never match. GitHub Actions (`.github/workflows/cron.yml`) is the primary hourly trigger. GitHub Actions cron can be delayed 2–15 minutes (occasionally longer); this is fine since gating checks the hour, not the minute.
+- **GitHub Actions cron workflow** — `.github/workflows/cron.yml` fires all 4 cron endpoints. A single job runs hourly; a "determine route" step checks the current UTC hour/day to decide which endpoints to hit (reminders always, others at their specific times). Requires GitHub repo secrets `CRON_SECRET` and `SITE_URL`. `workflow_dispatch` enabled for manual testing. The `vercel.json` crons remain as redundant backup — idempotency prevents duplicates
 - Vercel deployment protection blocks API requests on previews — use `npx vercel curl` or test locally
 - PostgREST `.or()` with `.in()` has quoting issues — use parallel queries instead (see gift-engine.ts)
 - **Never use `supabase.auth.resend()` for verification emails when PKCE is active** — it doesn't regenerate the PKCE pair, so the link's code exchange fails. Use `signUp()` again (if you have the password) or rely on the auth callback's session-based fallback (if the user is already signed in). See `handleResendVerification` in `auth/page.tsx` and the fallback in `auth/callback/route.ts`.
