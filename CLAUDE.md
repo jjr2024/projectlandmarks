@@ -85,6 +85,7 @@ supabase/migrations/
 ├── 015 add has_pets boolean    016 remap gift categories, reseed catalog, add gender_tags, update defaults
 ├── 017 seed 5 new gift catalog items (XLS v3.0)
 ├── 018 populate image_url with self-hosted paths
+├── 019 add last_digest_sent to profiles
 .github/workflows/
 └── cron.yml               Hourly cron trigger via GitHub Actions (primary; replaces Vercel Hobby's once/day limit)
 ```
@@ -119,7 +120,7 @@ supabase/migrations/
 - `friendlyError()` sanitizes all Supabase errors shown to users
 - Exact string matching on gift tags (no substring)
 
-**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. The reminder cron runs **hourly** (`0 * * * *`). Each run only processes users whose current local hour (derived from `profiles.timezone` via `Intl.DateTimeFormat`) matches their `preferred_send_hour` (hourly options: 6am–9pm, i.e. 6–21 — stored in `profiles`, default 8). This ensures emails arrive at the user's chosen time regardless of timezone. **Day math is timezone-aware:** `calendarDaysUntil()` computes pure calendar days in the user's local timezone (May 25 → May 27 = 2, regardless of hour or UTC offset). No `Math.ceil`, no fractional days. Reminders respect the user's `reminder_days_before` preference (selectable: 1, 3, 7, 14, 21 days — stored in `profiles`, default `{7, 3}`). The cron passes the user's timezone to `calendarDaysUntil()`, then `matchReminderWindow()` checks against late-side-only tolerance windows (see Email Resilience). Events with `high_importance` always inject a 21-day reminder even if the user hasn't selected it. Email subject/body show **actual calendar days**, not the canonical window — e.g., "2 days" if the late-tolerance caught a 3-day reminder. When actual days !== canonical days, a small late-send note appears above the footer. After matching, the cron selects gifts, sends, and logs to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
+**Email system:** Supabase Auth emails (verification, password reset) are sent via Resend's SMTP relay — configured in Supabase Dashboard → Authentication → SMTP Settings with Resend credentials. This removes the built-in mailer's 3–4/hour rate limit. Transactional app emails (reminders, digest, re-engagement) use Resend's API directly. Three cron routes via Resend + React Email. The reminder cron runs **hourly** (`0 * * * *`). Each run only processes users whose current local hour (derived from `profiles.timezone` via `Intl.DateTimeFormat`) matches their `preferred_send_hour` (hourly options: 6am–9pm, i.e. 6–21 — stored in `profiles`, default 8). This ensures emails arrive at the user's chosen time regardless of timezone. **Day math is timezone-aware:** `calendarDaysUntil()` computes pure calendar days in the user's local timezone (May 25 → May 27 = 2, regardless of hour or UTC offset). No `Math.ceil`, no fractional days. Reminders respect the user's `reminder_days_before` preference (selectable: 1, 3, 7, 14, 21 days — stored in `profiles`, default `{7, 3}`). The cron passes the user's timezone to `calendarDaysUntil()`, then `matchReminderWindow()` checks against late-side-only tolerance windows (see Email Resilience). Events with `high_importance` always inject a 21-day reminder even if the user hasn't selected it. Email subject/body show **actual calendar days**, not the canonical window — e.g., "2 days" if the late-tolerance caught a 3-day reminder. When actual days !== canonical days, a small late-send note appears above the footer. After matching, the cron selects gifts, sends, and logs to `reminder_log` + `shown_gifts`. Digest = next-30-days lookahead (not calendar-month scoped); body copy says "in the next 30 days," subject uses current month name. Digest dedup via `profiles.last_digest_sent` — skips if already sent this calendar month. Resend idempotency key `ds-digest-{userId}-{YYYY}-{MM}` as belt-and-suspenders. GitHub Actions fires the digest on every hourly run during the 1st–2nd of the month (~48 chances), so a few missed runs can't skip the digest. Re-engagement = D+3/D+10/D+30 drip for zero-contact users (tracked in `profiles.drips_sent` JSONB, not `reminder_log`). All cron routes paginate `listUsers()` (1000/page loop) to handle >1000 users.
 
 **Calendar feed:** `.ics` via `/api/calendar/[userId]`. One-time events use stored `event_year` with no `RRULE`; recurring events get `RRULE:FREQ=YEARLY`. Lines folded per RFC 5545 §3.1 (75-octet limit).
 
@@ -141,13 +142,13 @@ Core logic in `src/lib/reminders.ts` (helpers) and `src/app/api/cron/reminders/r
 
 6. **Stale pending recovery (two-pass):** The reminder cron runs two passes. Pass 1 is the normal send-hour-gated loop. The dedup query in Pass 1 only blocks on `sent`/`delivered`/`opened`/`clicked` statuses. If a "pending" row is older than 5 minutes, it's marked `"expired"` (preserving audit history) and the event is re-processed. `"failed"` and `"deferred"` rows never block retries. A retry cap of 3 `failed`+`expired` attempts per `(user_id, event_id, event_date)` prevents infinite retries on permanently broken events. Pass 2 runs after Pass 1 and scans for any remaining stale "pending" rows across ALL users (regardless of send hour), expires them, and retries. This ensures a failed 6pm email doesn't have to wait until the next day's 6pm slot — the next hourly cron run picks it up. Retry idempotency keys append `-retry-{timestamp}` to avoid Resend dedup collisions with the original attempt.
 
-**Not covered:** Digest and re-engagement lack pre-send dedup (acceptable). Outages >2 days permanently miss events outside tolerance ranges. The 1-day window has only 1-day tolerance (range [0–1]) so a 2-day outage misses it.
+**Not covered:** Re-engagement lacks pre-send dedup (acceptable — `drips_sent` JSONB prevents duplicates at the application level, and `>=` day comparison means missed days auto-recover). Outages >2 days permanently miss reminder events outside tolerance ranges. The 1-day window has only 1-day tolerance (range [0–1]) so a 2-day outage misses it.
 
 ## Supabase Schema
 
 | Table | Key columns |
 |---|---|
-| `profiles` | display_name, timezone, preferred_send_hour, reminder_days_before, drips_sent, consent_terms, consent_emails, email_reminders_enabled, monthly_digest_enabled |
+| `profiles` | display_name, timezone, preferred_send_hour, reminder_days_before, drips_sent, consent_terms, consent_emails, email_reminders_enabled, monthly_digest_enabled, last_digest_sent |
 | `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, has_pets, deleted_at |
 | `events` | event_type, month, day, high_importance, suppress_gifts, one_time, event_year, contact_id FK, user_id, deleted_at |
 | `reminder_log` | user_id, event_id, contact_id, days_before, event_date, resend_id, status, gift_ids |
@@ -205,13 +206,13 @@ Core logic in `src/lib/reminders.ts` (helpers) and `src/app/api/cron/reminders/r
 - No contact import (CSV, Google Contacts, vCard)
 - Privacy Policy and Terms have mismatched retention timelines
 - GDPR legal basis vague — should map processing activities to specific bases
-- Digest/re-engagement cron routes lack pre-send dedup (acceptable tradeoff)
+- Re-engagement cron lacks pre-send dedup (acceptable — `drips_sent` JSONB prevents duplicates at application level, and `>=` day comparison auto-recovers missed days)
 - Remaining from prototype: data export
 - Affiliate webhook accepts unverified user_id-only postbacks (trade-off T-1 — pending owner decision on HMAC/stricter validation)
 - Resend spam complaints mapped to "bounced" status instead of triggering auto-unsubscribe (trade-off T-2 — pending owner decision)
 - `shown_gifts` insert errors silently swallowed in reminder cron (acceptable — doesn't block email delivery)
 - **Dedup blocks retries on stuck "pending" rows (FIXED):** The reminder cron's dedup query now only blocks on `sent`/`delivered`/`opened`/`clicked`. Stale "pending" rows (>5 min old) are marked `"expired"` and retried. A two-pass architecture retries across all users regardless of send hour. Retry cap of 3 `failed`+`expired` attempts prevents infinite retries. See Email Resilience § "Stale pending recovery" for details.
-- **Vercel Hobby cron limitation:** `vercel.json` defines `0 * * * *` (hourly) for reminders, but Vercel Hobby plan only runs crons once per day at an unpredictable hour. This means send-hour gating (which requires hourly execution to match each user's preferred hour) fails for most users. Mitigated by GitHub Actions cron (`.github/workflows/cron.yml`) as the primary trigger. `vercel.json` crons left in place as harmless backup — idempotency logic prevents duplicate sends if both fire in the same hour.
+- **Vercel Hobby cron limitation (resolved):** Vercel Hobby only runs crons once per day at an unpredictable hour, which broke send-hour gating. Fixed by moving all cron triggers to GitHub Actions. `vercel.json` crons have been removed entirely — they were also causing Hobby plan deploy failures when >2 crons were defined.
 - **Vercel production env vars:** `RESEND_WEBHOOK_SECRET` has been configured locally (`.env.local`) and the Resend webhook endpoint is set up in the Resend dashboard pointing to `https://daysight.xyz/api/webhooks/resend`. Verify the Vercel env var matches. `AFFILIATE_WEBHOOK_SECRET` is still a placeholder in Vercel production. `APP_URL` must be set to `https://daysight.xyz` in Vercel env vars (not just `.env.local`). **Critical:** all env vars listed in `src/lib/env.ts` must be set in Vercel — if any are missing or placeholder, the cron route will fail mid-execution after inserting a "pending" row (see Debugging History).
 
 ## Gotchas
@@ -229,72 +230,21 @@ Core logic in `src/lib/reminders.ts` (helpers) and `src/app/api/cron/reminders/r
 - Year rollover: the cron uses `eventYear` from `calendarDaysUntil()` for all year-dependent operations (`buildEventDateStr`, `shown_gifts.year`, `email_overrides`, `getLastYearLine`, `selectGiftsScored`). Never use `now.getFullYear()` — it breaks Dec cron runs for Jan events
 - **Timezone-aware day math is mandatory** — `calendarDaysUntil()` uses `Intl.DateTimeFormat` to compute calendar days in the user's local timezone. Never use `daysBetween()` (deprecated, timestamp-based) for reminder logic — it produces off-by-one errors for users far from UTC. The old `nextOccurrence()` + `daysBetween()` pattern is replaced by `calendarDaysUntil()` which returns both `daysUntil` and `eventYear`
 - **Send-hour gating** — the reminder cron runs hourly but only processes users whose `localHour(now, timezone) === preferred_send_hour`. Users without a timezone default to `America/New_York`; users without a send hour default to 8 (8am). Send hours are every hour from 6am to 9pm (6–21) per `SEND_HOUR_OPTIONS`. **Requires hourly cron execution** — on Vercel Hobby (once/day), most users will never match. GitHub Actions (`.github/workflows/cron.yml`) is the primary hourly trigger. GitHub Actions cron can be delayed 2–15 minutes (occasionally longer); this is fine since gating checks the hour, not the minute.
-- **GitHub Actions cron workflow** — `.github/workflows/cron.yml` fires all 4 cron endpoints. A single job runs hourly; a "determine route" step checks the current UTC hour/day to decide which endpoints to hit (reminders always, others at their specific times). Requires GitHub repo secrets `CRON_SECRET` and `SITE_URL`. `workflow_dispatch` enabled for manual testing. The `vercel.json` crons remain as redundant backup — idempotency prevents duplicates
+- **GitHub Actions cron workflow** — `.github/workflows/cron.yml` fires all 4 cron endpoints. A single job runs hourly; a "determine route" step checks the current UTC hour/day to decide which endpoints to hit (reminders always, digest on 1st–2nd of month, re-engagement at 13:00 UTC, purge at 04:00 UTC). Requires GitHub repo secrets `CRON_SECRET` and `SITE_URL`. `workflow_dispatch` enabled for manual testing. `vercel.json` crons have been removed (were causing Hobby plan deploy failures)
 - Vercel deployment protection blocks API requests on previews — use `npx vercel curl` or test locally
 - PostgREST `.or()` with `.in()` has quoting issues — use parallel queries instead (see gift-engine.ts)
 - **Never use `supabase.auth.resend()` for verification emails when PKCE is active** — it doesn't regenerate the PKCE pair, so the link's code exchange fails. Use `signUp()` again (if you have the password) or rely on the auth callback's session-based fallback (if the user is already signed in). See `handleResendVerification` in `auth/page.tsx` and the fallback in `auth/callback/route.ts`.
 - **Reset-password code exchange needs a ref guard** — `exchangeCodeForSession` in `reset-password/page.tsx` runs inside a `useEffect` whose dependencies (`searchParams`) can change when `router.replace` cleans the URL. Without a ref guard (`codeExchangedRef`), the effect re-runs, tries to exchange the already-consumed code, fails, and shows "Reset link expired" even though the session was established. Always use a ref to prevent double exchange.
 - **Reset-password PKCE fallback** — When a password reset link opens via cross-site redirect (email client → Supabase → app), the PKCE `code_verifier` cookie may not be available, causing `exchangeCodeForSession()` to fail. However, Supabase also includes implicit-flow tokens in the URL hash as a fallback. The reset-password page handles this with `checkSessionWithRetry()` — after a failed code exchange, it retries `getSession()` with short delays to give the Supabase browser client time to detect and process the hash-fragment tokens. The `onAuthStateChange` listener for `PASSWORD_RECOVERY` also overrides `noSession` state if it fires.
 
-## Debugging History & Operational Learnings
+## Operational Rules (Hard-Won)
 
-This section documents root causes, design decisions, and hard-won lessons from production debugging sessions. Included so future developers (and AI assistants) don't re-derive these conclusions or regress to intermediate hypotheses that were later disproven.
+> Full bug/fix history: see `BUGFIX_LOG.md`. This section covers non-obvious rules that prevent regressions.
 
-### The "Emails Not Sending" Incident (May 2026)
+**RLS in admin code:** The browser client (anon key) obeys RLS even for `is_admin` users. `select count(*)` on `profiles` returns 1 (admin's own row). `gift_catalog` writes return zero rows with no error. **Rule:** Any admin query needing cross-user data or writes to unwritable tables must use a server-side route with the service-role admin client (`createAdminClient()`).
 
-Reminder emails were not reaching users despite contacts and events being correctly configured. The root cause was a **chain of three interconnected failures**, not a single bug:
+**Dedup status semantics:** Blocks retries: `sent`, `delivered`, `opened`, `clicked`. Does NOT block: `pending` (expires after 5 min), `failed`, `deferred`, `expired`. Retry cap: 3 `failed`+`expired` per `(user_id, event_id, event_date)`. Getting this wrong = duplicate emails or permanently stuck reminders.
 
-1. **Vercel Hobby fires cron once/day, not hourly.** `vercel.json` accepted `0 * * * *` syntax without error, but Vercel Hobby silently only executes it once per day at an unpredictable hour. Since send-hour gating requires hourly execution to match each user's preferred hour, most users never had their hour matched. There was no error and no log — the cron simply didn't fire. **Fix:** GitHub Actions as primary hourly trigger.
+**Resend status lifecycle:** `sent` → `delivered` → `opened` → `clicked`. Count "successfully sent" with `.in("status", ["sent","delivered","opened","clicked"])` — not just `sent`.
 
-2. **Missing Vercel env vars caused mid-flight failure.** Once GitHub Actions was firing the cron correctly, the cron route started but `env.ts` validation threw because `RESEND_WEBHOOK_SECRET` and `AFFILIATE_WEBHOOK_SECRET` were placeholders in Vercel production. The failure happened **after** the pre-send "pending" row was inserted into `reminder_log`, but **before** the Resend API call.
-
-3. **Stuck "pending" rows permanently blocked retries.** The original dedup query treated any existing row (including `pending`) as "already handled" and skipped the event. A pending row from a failed run would persist forever, preventing that reminder from ever being sent on future runs. The event was silently dropped.
-
-**Key takeaway:** These three bugs were invisible in isolation. Vercel's cron silence hid problem #1 for weeks. Problem #2 only surfaced once #1 was fixed. Problem #3 only mattered because #2 left rows in a bad state. Always check the **entire send pipeline** end-to-end when debugging email delivery.
-
-### Design Decision: "expired" Status, Not Deletion
-
-We considered two approaches for stuck pending rows: (a) delete them and re-insert, or (b) mark them with a new `"expired"` status and insert a fresh row. We chose (b) because deletion loses audit history. With `expired`, you can query `reminder_log` and reconstruct the full retry timeline: `pending → expired → pending → sent` (success after one retry) or `pending → expired → pending → expired → pending → expired` (gave up after 3 attempts). This matters for debugging delivery issues and understanding system health.
-
-### Design Decision: Two-Pass Retry Architecture
-
-Pass 1 of the reminder cron is send-hour-gated (only processes users whose local hour matches their preference). If a 6pm email fails in Pass 1, the original design required waiting until the next day's 6pm run — a 24-hour delay. Pass 2 was added to solve this: after Pass 1 completes, Pass 2 scans for stale pending rows across ALL users regardless of send hour, expires them, and retries immediately. This means a failed 6pm email gets retried at the next hourly cron run (7pm, 8pm, etc.), not the next 6pm.
-
-**Why not just remove send-hour gating from retries in Pass 1?** Pass 1 iterates users filtered by send hour. Pass 2 operates on `reminder_log` rows directly (no user filtering), which is structurally simpler and doesn't require changing the Pass 1 user-selection query.
-
-### Dedup Status Semantics (Critical)
-
-The dedup query's behavior depends entirely on which statuses it treats as "blocking." Getting this wrong either causes duplicate emails or permanently blocks retries:
-
-- **Blocks (truly sent):** `sent`, `delivered`, `opened`, `clicked` — the email reached Resend successfully. Even if it's only "sent" (not yet delivered), Resend has it and will deliver.
-- **Does NOT block:** `pending` (might be stale from a crashed run — checked for staleness via 5-minute threshold), `failed` (should retry), `deferred` (should retry), `expired` (already handled and cleared for retry).
-- **Retry cap:** 3 cumulative `failed` + `expired` attempts per `(user_id, event_id, event_date)` to prevent infinite retries on permanently broken events (e.g., invalid email, permanently missing template data).
-
-### RLS Pitfalls in Admin Code
-
-Two patterns to watch for when writing admin-facing features:
-
-1. **Silent data limitation.** The Supabase browser client (anon key) is subject to RLS even when the logged-in user has `is_admin = true`. Queries like `select count(*)` on `profiles` return 1 (the admin's own row), not the actual total. The query doesn't error — it just returns incomplete results. **Solution:** Admin queries needing cross-user data must go through a server-side API route (`/api/admin/stats`) that uses the service-role admin client (`createAdminClient()`).
-
-2. **Silent write failure.** `gift_catalog` has no RLS INSERT/UPDATE policies. The admin page had full CRUD UI (add, edit, deactivate), but writes via the browser client returned zero affected rows with no error. The UI appeared to work — the form submitted, no error toast appeared — but nothing was saved to the database. **Resolution:** Made the page read-only. The master XLS is the single editable source of truth; the DB is seeded from the XLS. If write functionality is ever needed, it must go through a server-side route with the admin client, like the stats endpoint does.
-
-### Year Rollover in All Date Code
-
-Any code that computes event dates must use `eventYear` from `calendarDaysUntil()`, never `now.getFullYear()`. In December, a January event's `eventYear` is next year. Using the current year produces wrong dates for `buildEventDateStr`, `email_overrides.event_year`, `shown_gifts.year`, and dedup keys. This applies to **both cron code and admin UI code** — the queue page originally used `now.getFullYear()` and was fixed to use `item.eventYear`.
-
-### Resend Webhook Status Progression
-
-Resend advances email status through a lifecycle: `sent` → `delivered` → `opened` → `clicked`. Each transition fires a webhook callback to `/api/webhooks/resend`, which updates `reminder_log.status`. When counting "successfully sent" emails for metrics, always use `.in("status", ["sent", "delivered", "opened", "clicked"])`. Counting only `status = 'sent'` undercounts because most emails have been advanced past that status by the time you query.
-
-### GitHub Actions Cron Reliability
-
-GitHub Actions `schedule` triggers are not real-time. Observed behavior: delays of 2–53 minutes are common, and runs are occasionally skipped entirely during periods of heavy GitHub load. For send-hour gating (checks the hour, not the minute), delays under ~60 minutes are acceptable. Skipped runs are covered by the two-pass retry architecture. The `vercel.json` crons remain as redundant backup — if both GitHub Actions and Vercel fire in the same hour, the dedup key prevents double-sends. If GitHub Actions reliability becomes a persistent problem, consider migrating to cron-job.org or a similar dedicated service.
-
-### `email_reminders_enabled` vs. `consent_emails`
-
-These are two separate gates, both of which must be true for a user to receive reminder emails:
-
-- `consent_emails` — legal consent to receive emails with affiliate content. Set during signup, can be revoked via unsubscribe link (HMAC-signed). Revoking shows a persistent banner in the app directing user to Settings to re-subscribe. This is a **compliance** gate.
-- `email_reminders_enabled` — user preference toggle in Settings. Controls whether the reminder cron processes this user. Disabling shows a `window.confirm()` warning and a red inline warning. This is a **feature** gate.
-
-Both are checked in the cron (Pass 1 and Pass 2). The digest cron has its own independent `monthly_digest_enabled` toggle.
+**Email send pipeline debugging:** When emails aren't arriving, check the entire chain: (1) cron trigger firing? (2) env vars valid in production? (3) send-hour matching? (4) dedup not blocking? (5) Resend API succeeding? These failures are invisible in isolation.

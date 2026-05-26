@@ -16,11 +16,13 @@ import { buildSignedUrl } from "@/lib/tokens";
 /**
  * GET /api/cron/digest
  *
- * 1st of each month via Vercel Cron. Sends a digest of upcoming events (next 30
- * days) to each verified user who has digest enabled. Skips users with no
- * upcoming events (no empty digests).
+ * Monthly via GitHub Actions (fires on 1st–2nd of each month for resilience).
+ * Sends a digest of upcoming events (next 30 days) to each verified user who
+ * has digest enabled. Skips users with no upcoming events (no empty digests).
  *
- * Resilience: 429 handling stops processing immediately.
+ * Resilience: Dedup via `profiles.last_digest_sent` (skips if already sent this
+ * calendar month). Resend idempotency key as belt-and-suspenders. 429 handling
+ * stops processing immediately.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, monthly_digest_enabled, timezone, consent_terms, consent_emails")
+          .select("display_name, monthly_digest_enabled, timezone, consent_terms, consent_emails, last_digest_sent")
           .eq("id", user.id)
           .single();
 
@@ -75,6 +77,17 @@ export async function GET(request: NextRequest) {
         if (!profile?.monthly_digest_enabled) {
           results.skipped++;
           continue;
+        }
+
+        // Dedup: skip if we already sent a digest this calendar month.
+        // The cron fires on every hourly run during the 1st–2nd of the month,
+        // so this check prevents duplicate digests across those ~48 runs.
+        if (profile.last_digest_sent) {
+          const lastSent = new Date(profile.last_digest_sent);
+          if (lastSent.getUTCFullYear() === now.getUTCFullYear() && lastSent.getUTCMonth() === now.getUTCMonth()) {
+            results.skipped++;
+            continue;
+          }
         }
 
         const firstName = profile?.display_name?.split(" ")[0] || "there";
@@ -119,6 +132,12 @@ export async function GET(request: NextRequest) {
         const monthName = now.toLocaleDateString("en-US", { month: "long" });
         const subject = digestSubject(monthName);
 
+        // Idempotency key scoped to user + month — Resend deduplicates within its
+        // window, and last_digest_sent covers the full month.
+        const digestYear = now.getUTCFullYear();
+        const digestMonth = String(now.getUTCMonth() + 1).padStart(2, "0");
+        const idempotencyKey = `ds-digest-${user.id}-${digestYear}-${digestMonth}`;
+
         const { error: emailError } = await resend().emails.send({
           from: EMAIL_CONFIG.from,
           to: userEmail,
@@ -138,10 +157,13 @@ export async function GET(request: NextRequest) {
             userId: user.id,
             unsubscribeUrl: buildSignedUrl(user.id, "unsubscribe"),
           }),
-          headers: EMAIL_CONFIG.headers({
-            userId: user.id,
-            reminderType: "digest",
-          }),
+          headers: {
+            ...EMAIL_CONFIG.headers({
+              userId: user.id,
+              reminderType: "digest",
+            }),
+            "Idempotency-Key": idempotencyKey,
+          },
         });
 
         if (emailError) {
@@ -153,6 +175,12 @@ export async function GET(request: NextRequest) {
           results.errors.push(`User ${user.id}: ${emailError.message}`);
           continue;
         }
+
+        // Mark digest as sent for this month — prevents duplicates on future runs.
+        await supabase
+          .from("profiles")
+          .update({ last_digest_sent: now.toISOString() })
+          .eq("id", user.id);
 
         results.sent++;
       } catch (userError: any) {

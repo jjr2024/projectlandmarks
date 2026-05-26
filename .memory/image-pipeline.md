@@ -24,13 +24,8 @@ Script written, tested, and run. All 72 images downloaded and committed to `publ
 2. **XML parse error (incense item)**: Had a product page URL instead of image CDN URL. Fixed in v3.0.
 3. **Format mismatch**: Original script requested WebP via Accept header; Amazon served garbled responses for some items. Fixed by removing WebP from Accept and using URL suffix to force JPEG.
 
-## Next Steps
-- [x] Run script locally to download all 72 images
-- [x] Commit `public/gifts/` to repo
-- [x] Update `src/emails/reminder.tsx` to render product thumbnails (200px, 8px border-radius)
-- [x] Pass `image_url` through in cron route (line ~217 of reminders/route.ts)
-- [ ] Seed 5 new XLS v3.0 items into `gift_catalog` DB table (migration 017 written, needs to be run)
-- [ ] Update `gift_catalog.image_url` for all items to point to self-hosted paths (migration 018 written, needs to be run)
+## Status
+All steps complete. Migrations 017 and 018 written and applied. 72 images live at `daysight.xyz/gifts/`.
 
 ## Usage
 ```bash
