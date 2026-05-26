@@ -7,6 +7,9 @@ import { isRateLimitError, emptyCronResults } from "@/lib/reminders";
 import { compareTokens } from "@/lib/utils";
 import { buildSignedUrl } from "@/lib/tokens";
 
+// Vercel Hobby defaults to 10s — not enough for multi-user cron processing.
+export const maxDuration = 60;
+
 /**
  * GET /api/cron/reengagement
  *

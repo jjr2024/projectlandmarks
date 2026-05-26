@@ -20,6 +20,9 @@ import { selectGiftsScored } from "@/lib/gift-engine";
 import { compareTokens } from "@/lib/utils";
 import { buildSignedUrl } from "@/lib/tokens";
 
+// Vercel Hobby defaults to 10s — not enough for multi-user cron processing.
+export const maxDuration = 60;
+
 /**
  * GET /api/cron/reminders
  *
@@ -189,11 +192,25 @@ export async function GET(request: NextRequest) {
             if (existing.status === "pending") {
               const ageMs = now.getTime() - new Date(existing.created_at).getTime();
               if (ageMs > 5 * 60 * 1000) {
-                // Stale pending — mark expired so retry can proceed
-                await supabase
+                // Stale pending — mark expired so retry can proceed.
+                // Surface any error: silent UPDATE failures here are what
+                // hid the migration-003 / migration-020 status mismatch in
+                // production for months. See migration 020 header.
+                const { error: expireError } = await supabase
                   .from("reminder_log")
                   .update({ status: "expired" })
                   .eq("id", existing.id);
+                if (expireError) {
+                  results.errors.push(
+                    `User ${user.id}, event ${event.id}: failed to mark stale pending as expired — ${expireError.message}`
+                  );
+                  // Don't proceed to insert a new pending row — the unique
+                  // index on (user_id, event_id, days_before, event_date)
+                  // is partial (live statuses only), so if the existing
+                  // row didn't transition out of 'pending', a fresh INSERT
+                  // would 23505 anyway.
+                  continue;
+                }
               } else {
                 // Fresh pending — another run may be in-flight, don't interfere
                 results.skipped++;
@@ -388,11 +405,22 @@ export async function GET(request: NextRequest) {
           if (results.rateLimited) break;
 
           try {
-            // Mark as expired before retrying
-            await supabase
+            // Mark as expired before retrying.
+            // Surface any error: silent UPDATE failures here previously
+            // hid a check-constraint mismatch (status='expired' was not
+            // in the allowed set until migration 020). The partial dedup
+            // index added in migration 020 expects this transition out
+            // of 'pending' to succeed before the retry INSERT below.
+            const { error: expireError } = await supabase
               .from("reminder_log")
               .update({ status: "expired" })
               .eq("id", staleRow.id);
+            if (expireError) {
+              results.errors.push(
+                `Retry stale row ${staleRow.id}: failed to mark as expired — ${expireError.message}`
+              );
+              continue;
+            }
 
             // Check retry cap
             const { count: failedCount } = await supabase

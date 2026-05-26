@@ -3,6 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { compareTokens } from "@/lib/utils";
 import { TRASH_HOLD_DAYS } from "@/lib/constants";
 
+// Vercel Hobby defaults to 10s — not enough for multi-user cron processing.
+export const maxDuration = 60;
+
 /**
  * GET /api/cron/purge
  *

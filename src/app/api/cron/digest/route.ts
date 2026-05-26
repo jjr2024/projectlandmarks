@@ -3,6 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
 import { EMAIL_CONFIG } from "@/lib/email-config";
 import DigestEmail, { digestSubject } from "@/emails/digest";
+
+// Vercel Hobby defaults to 10s — not enough for multi-user cron processing.
+export const maxDuration = 60;
+
 import {
   nextOccurrence,
   formatEventDate,
