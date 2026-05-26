@@ -80,12 +80,18 @@ export async function GET(request: NextRequest) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("display_name, timezone, preferred_send_hour, consent_terms, consent_emails, reminder_days_before")
+          .select("display_name, timezone, preferred_send_hour, consent_terms, consent_emails, email_reminders_enabled, reminder_days_before")
           .eq("id", user.id)
           .single();
 
         // Skip users who haven't consented — required for Amazon affiliate compliance
         if (!profile?.consent_terms || !profile?.consent_emails) {
+          results.skipped++;
+          continue;
+        }
+
+        // Skip users who have disabled event reminders in settings
+        if (profile.email_reminders_enabled === false) {
           results.skipped++;
           continue;
         }
@@ -408,11 +414,12 @@ export async function GET(request: NextRequest) {
 
             const { data: retryProfile } = await supabase
               .from("profiles")
-              .select("display_name, timezone, consent_terms, consent_emails")
+              .select("display_name, timezone, consent_terms, consent_emails, email_reminders_enabled")
               .eq("id", staleRow.user_id)
               .single();
 
             if (!retryProfile?.consent_terms || !retryProfile?.consent_emails) continue;
+            if (retryProfile.email_reminders_enabled === false) continue;
 
             const { data: retryEvent } = await supabase
               .from("events")

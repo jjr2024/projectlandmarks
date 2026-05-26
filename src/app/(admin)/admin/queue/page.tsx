@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { calendarDaysUntil, buildEventDateStr } from "@/lib/reminders";
+import { REMINDER_DAY_OPTIONS } from "@/lib/email-config";
 
 interface QueueItem {
   eventId: string;
@@ -14,10 +16,13 @@ interface QueueItem {
   month: number;
   day: number;
   daysUntil: number;
+  eventYear: number;
   highImportance: boolean;
   relationship: string;
   giftCategories: string[];
   budgetTier: string | null;
+  userTimezone: string;
+  userReminderDays: number[];
 }
 
 interface WindowSlot {
@@ -38,7 +43,6 @@ export default function EmailQueuePage() {
 
   const supabase = createClient();
   const now = new Date();
-  const year = now.getFullYear();
 
   useEffect(() => { loadQueue(); }, []);
 
@@ -57,11 +61,11 @@ export default function EmailQueuePage() {
 
     if (!events) { setLoading(false); return; }
 
-    // Get user profiles and emails
+    // Get user profiles including timezone and reminder preferences
     const userIds = [...new Set(events.map((e) => e.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, display_name")
+      .select("id, display_name, timezone, reminder_days_before")
       .in("id", userIds);
 
     const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
@@ -69,12 +73,13 @@ export default function EmailQueuePage() {
     const queueItems: QueueItem[] = [];
     for (const event of events) {
       const contact = event.contacts as any;
-      const eventDate = nextOccurrence(event.month, event.day, now);
-      const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const profile = profileMap.get(event.user_id);
+      const userTimezone = profile?.timezone || "America/New_York";
+
+      // Timezone-aware calendar day math (same as cron)
+      const { daysUntil, eventYear } = calendarDaysUntil(now, event.month, event.day, userTimezone);
 
       if (daysUntil < 0 || daysUntil > 21) continue;
-
-      const profile = profileMap.get(event.user_id);
 
       queueItems.push({
         eventId: event.id,
@@ -87,10 +92,13 @@ export default function EmailQueuePage() {
         month: event.month,
         day: event.day,
         daysUntil,
+        eventYear,
         highImportance: event.high_importance,
         relationship: contact.relationship,
         giftCategories: contact.gift_categories || [],
         budgetTier: contact.budget_tier,
+        userTimezone,
+        userReminderDays: profile?.reminder_days_before || [7, 3],
       });
     }
 
@@ -108,11 +116,23 @@ export default function EmailQueuePage() {
     setExpandedId(itemKey);
     setEditingSlot(null);
 
-    // Determine which windows apply
-    const windows: { daysBefore: number; label: string }[] = [];
-    if (item.highImportance) windows.push({ daysBefore: 21, label: "21-day (high importance)" });
-    windows.push({ daysBefore: 7, label: "7-day" });
-    windows.push({ daysBefore: 3, label: "3-day" });
+    // Build windows from the user's actual reminder_days_before preferences
+    const effectiveDays = [...item.userReminderDays];
+    if (item.highImportance && !effectiveDays.includes(21)) {
+      effectiveDays.push(21);
+    }
+    // Only include valid reminder day options, sorted descending
+    const validDays = effectiveDays
+      .filter((d) => (REMINDER_DAY_OPTIONS as readonly number[]).includes(d))
+      .sort((a, b) => b - a);
+
+    const windows = validDays.map((d) => ({
+      daysBefore: d,
+      label: `${d}-day${item.highImportance && d === 21 && !item.userReminderDays.includes(21) ? " (high importance)" : ""}`,
+    }));
+
+    // Use eventYear from calendarDaysUntil (year-rollover safe)
+    const eventDateStr = buildEventDateStr(item.eventYear, item.month, item.day);
 
     // Fetch existing overrides for this event
     const { data: overrides } = await supabase
@@ -120,7 +140,7 @@ export default function EmailQueuePage() {
       .select("id, days_before, custom_message")
       .eq("user_id", item.userId)
       .eq("event_id", item.eventId)
-      .eq("event_year", year);
+      .eq("event_year", item.eventYear);
 
     // Fetch already-sent reminders
     const { data: sentLogs } = await supabase
@@ -129,7 +149,7 @@ export default function EmailQueuePage() {
       .eq("user_id", item.userId)
       .eq("event_id", item.eventId)
       .in("status", ["sent", "delivered", "opened", "clicked"])
-      .eq("event_date", `${year}-${String(item.month).padStart(2, "0")}-${String(item.day).padStart(2, "0")}`);
+      .eq("event_date", eventDateStr);
 
     const sentSet = new Set((sentLogs || []).map((l) => l.days_before));
 
@@ -168,7 +188,7 @@ export default function EmailQueuePage() {
             user_id: item.userId,
             event_id: item.eventId,
             days_before: slot.daysBefore,
-            event_year: year,
+            event_year: item.eventYear,
             custom_message: messageText,
             created_by: user?.id || null,
           });
@@ -416,11 +436,4 @@ function QueueRow({
       )}
     </>
   );
-}
-
-function nextOccurrence(month: number, day: number, from: Date): Date {
-  const thisYear = from.getFullYear();
-  let d = new Date(thisYear, month - 1, day);
-  if (d < from) d = new Date(thisYear + 1, month - 1, day);
-  return d;
 }

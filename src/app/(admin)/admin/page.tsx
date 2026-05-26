@@ -44,10 +44,11 @@ export default function AdminDashboardPage() {
     const sinceStr = since.toISOString();
 
     // Funnel from reminder_log (sent count) + conversion_events (funnel stages)
+    // Count all successfully sent emails — status progresses from sent → delivered → opened → clicked
     const { count: sentCount } = await supabase
       .from("reminder_log")
       .select("id", { count: "exact", head: true })
-      .eq("status", "sent")
+      .in("status", ["sent", "delivered", "opened", "clicked"])
       .gte("sent_at", sinceStr);
 
     const { data: conversionRows } = await supabase
@@ -128,16 +129,21 @@ export default function AdminDashboardPage() {
       if (row.event_type === "purchased") { lr.purchased++; lr.revenue += safeParseFloat(row.commission); }
     }
 
-    // User count
-    const { count: userCount } = await supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true });
+    // User count — fetched via admin API route (bypasses RLS)
+    try {
+      const statsRes = await fetch("/api/admin/stats");
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        setTotalUsers(stats.totalUsers || 0);
+      }
+    } catch {
+      // Fallback: leave at 0
+    }
 
     setFunnel(f);
     setByPartner(Array.from(partnerMap.values()).sort((a, b) => b.revenue - a.revenue));
     setByCategory(Array.from(categoryMap.values()).sort((a, b) => b.revenue - a.revenue));
     setByLead(Array.from(leadMap.values()).sort((a, b) => b.purchased - a.purchased));
-    setTotalUsers(userCount || 0);
     setLoading(false);
   }
 

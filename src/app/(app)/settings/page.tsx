@@ -732,8 +732,30 @@ export default function SettingsPage() {
             )}
 
             <div className="space-y-3">
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={profile.email_reminders_enabled}
+                    onChange={(e) => {
+                      if (!e.target.checked) {
+                        if (!window.confirm("Are you sure? This will stop all birthday and event reminder emails, including gift suggestions. This is the core feature of Daysight.")) {
+                          return;
+                        }
+                      }
+                      setProfile({ ...profile, email_reminders_enabled: e.target.checked });
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-gray-700">Event reminders</span>
+                </label>
+                {!profile.email_reminders_enabled && (
+                  <p className="text-xs text-red-500 mt-1 ml-7">
+                    Reminders are off — you won&apos;t receive any event or gift reminder emails.
+                  </p>
+                )}
+              </div>
               {[
-                { key: "email_reminders_enabled" as const, label: "Event reminders" },
                 { key: "monthly_digest_enabled" as const, label: "Monthly digest" },
                 { key: "product_updates_enabled" as const, label: "Product updates" },
               ].map((pref) => (
