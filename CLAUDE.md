@@ -88,6 +88,11 @@ supabase/migrations/
 ├── 019 add last_digest_sent to profiles
 ├── 020 fix reminder_log dedup index (partial, live statuses only) + add 'expired' to status CHECK
 ├── 021 'bounced' is terminal at dedup (adds bounced to partial-index predicate + dedup cleanup)
+├── 022 admin/debug instrumentation: add updated_at to contacts+events (backfilled from created_at), add last_changed_fields text[] to profiles+contacts+events, swap their triggers to set_updated_at_and_changed_fields() (generic JSONB diff). email_overrides stays on the original set_updated_at()
+├── 023 add ds_sku (Daysight internal SKU) to gift_catalog with unique + format constraint, backfilled deterministically from name via slug. Wire gift_catalog to set_updated_at_and_changed_fields() trigger. Create gift_catalog_audit (append-only log keyed by run_id) for tracking sync runs. Catalog edits move from migrations to scripts/sync-gift-catalog.mjs from this point forward.
+scripts/
+├── sync-gift-catalog.mjs       Canonical workflow for editing gift_catalog. Reads XLS → diffs against DB by ds_sku → INSERT/UPDATE/soft-deactivate with audit logging. See "Gift catalog workflow" below.
+├── download-gift-images.mjs    Downloads/resizes product images to public/gifts/{slug}.jpg. Slug truncated at 60 chars; sync-gift-catalog.mjs mirrors that truncation when writing image_url.
 .github/workflows/
 └── cron.yml               Hourly cron trigger via GitHub Actions (primary; replaces Vercel Hobby's once/day limit)
 ```
@@ -160,12 +165,13 @@ Core logic in `src/lib/reminders.ts` (helpers) and `src/app/api/cron/reminders/r
 
 | Table | Key columns |
 |---|---|
-| `profiles` | display_name, timezone, preferred_send_hour, reminder_days_before, drips_sent, consent_terms, consent_emails, email_reminders_enabled, monthly_digest_enabled, last_digest_sent |
-| `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, has_pets, deleted_at |
-| `events` | event_type, month, day, high_importance, suppress_gifts, one_time, event_year, contact_id FK, user_id, deleted_at |
+| `profiles` | display_name, timezone, preferred_send_hour, reminder_days_before, drips_sent, consent_terms, consent_emails, email_reminders_enabled, monthly_digest_enabled, last_digest_sent, **updated_at, last_changed_fields** |
+| `contacts` | first_name, last_name, relationship, gender, gift_categories, budget_tier, has_pets, deleted_at, **updated_at, last_changed_fields** |
+| `events` | event_type, month, day, high_importance, suppress_gifts, one_time, event_year, contact_id FK, user_id, deleted_at, **updated_at, last_changed_fields** |
 | `reminder_log` | user_id, event_id, contact_id, days_before, event_date, resend_id, status, gift_ids |
 | `shown_gifts` | contact_id, gift_id, year |
-| `gift_catalog` | name, category, partner, price_tier, description, tags, gender_tags, affiliate_url, is_active, is_last_minute |
+| `gift_catalog` | **ds_sku (unique stable identifier)**, name, category, partner, price_tier, description, tags, gender_tags, affiliate_url, image_url, is_active, is_last_minute, **updated_at, last_changed_fields** |
+| `gift_catalog_audit` | run_id, run_at, run_by, gift_id FK, gift_ds_sku, action (insert/update/deactivate/reactivate), changed_fields, old_values JSONB, new_values JSONB, note |
 | `email_overrides` | user_id, event_id, days_before, event_year, custom_message (unique composite) |
 | `conversion_events` | reminder_id, user_id, event_type, partner, gift_category, commission |
 
@@ -249,6 +255,36 @@ Core logic in `src/lib/reminders.ts` (helpers) and `src/app/api/cron/reminders/r
 - **Never use `supabase.auth.resend()` for verification emails when PKCE is active** — it doesn't regenerate the PKCE pair, so the link's code exchange fails. Use `signUp()` again (if you have the password) or rely on the auth callback's session-based fallback (if the user is already signed in). See `handleResendVerification` in `auth/page.tsx` and the fallback in `auth/callback/route.ts`.
 - **Reset-password code exchange needs a ref guard** — `exchangeCodeForSession` in `reset-password/page.tsx` runs inside a `useEffect` whose dependencies (`searchParams`) can change when `router.replace` cleans the URL. Without a ref guard (`codeExchangedRef`), the effect re-runs, tries to exchange the already-consumed code, fails, and shows "Reset link expired" even though the session was established. Always use a ref to prevent double exchange.
 - **Reset-password PKCE fallback** — When a password reset link opens via cross-site redirect (email client → Supabase → app), the PKCE `code_verifier` cookie may not be available, causing `exchangeCodeForSession()` to fail. However, Supabase also includes implicit-flow tokens in the URL hash as a fallback. The reset-password page handles this with `checkSessionWithRetry()` — after a failed code exchange, it retries `getSession()` with short delays to give the Supabase browser client time to detect and process the hash-fragment tokens. The `onAuthStateChange` listener for `PASSWORD_RECOVERY` also overrides `noSession` state if it fires.
+
+## Gift Catalog Workflow
+
+The XLS at the repo root (`Daysight Manual Amazon Inputs - XLS Format_v3.0.xlsx`) is the single source of truth for gift catalog content. **Do not edit `gift_catalog` via the Supabase SQL editor or via new migrations** — those edits will be reconciled away by the next sync. If you need a hotfix, update the XLS and re-sync.
+
+**To change the catalog** (add, edit, deactivate gifts):
+
+1. Edit the XLS — make any changes (add rows, edit fields, set `is_active` to `no` to deactivate). For new rows, you must assign a `ds_sku` yourself: lowercase, alphanumeric + hyphens, 2–80 chars, unique across the file. Convention: short and descriptive (e.g. `apple-airtag-gen2`, `peony-bouquet`).
+2. If any gift is new or had its image source URL changed, run `node scripts/download-gift-images.mjs` first to pull/resize images into `public/gifts/`.
+3. Run `node scripts/sync-gift-catalog.mjs --dry-run` to preview the diff. The output shows inserts, updates with per-field old → new, reactivations, and deactivations.
+4. If the diff looks right, run `node scripts/sync-gift-catalog.mjs` (no flag). The script prompts for confirmation if any rows would be deactivated. Use `--yes` to skip the prompt for agent/CI runs, and `--note="reason"` to attach a human-readable note to every audit row in the run.
+
+**Safety guards built into the script:**
+- Validates every XLS row before any DB write (required fields, enum membership for category/price_tier/gender_tags, ds_sku format and uniqueness). Bails with line-numbered errors if anything is off.
+- Refuses to proceed if a single run would deactivate more than 15% of currently-active gifts (override with `--force`, default cap tunable via `--max-deactivate-pct=N`).
+- **Never DELETEs from `gift_catalog`.** Removed-from-XLS items get `is_active=false` (soft deactivation). This preserves the `shown_gifts.gift_id` FK and the `reminder_log.gift_ids[]` snapshots for historical reminders.
+- Each gift_catalog write is paired with an audit row insert (action, changed_fields, old_values, new_values, run_id, run_by, optional note). If a partial failure leaves the DB mid-flight, the audit log records exactly what applied and the script is idempotent on re-run (it re-diffs against current state).
+- **Cron-safe**: Postgres MVCC means the reminder cron's `SELECT * FROM gift_catalog WHERE is_active=true` either sees the full pre-sync state or the full post-sync state, never partial. Gift selection within one cron user iteration doesn't span the sync window. Soft-deactivation means past `reminder_log.gift_ids` references stay valid forever.
+
+**Audit trail queries:**
+- All changes from one sync run: `SELECT * FROM gift_catalog_audit WHERE run_id = '...' ORDER BY run_at;`
+- All changes to one gift over time: `SELECT * FROM gift_catalog_audit WHERE gift_ds_sku = 'apple-airtag-gen2' ORDER BY run_at DESC;`
+- Recent runs: `SELECT run_id, run_at, run_by, COUNT(*), array_agg(DISTINCT action) FROM gift_catalog_audit GROUP BY 1,2,3 ORDER BY run_at DESC LIMIT 10;`
+
+**`ds_sku` semantics:**
+- Daysight's internal stable identifier. **Never** derived from ASIN, name, or affiliate URL. ASIN stays in the XLS as internal reference for price-checking workflows and is not read by the sync script.
+- For the 72 existing items (as of migration 023), `ds_sku` was backfilled from a slug-of-name with `-2/-3` suffixes on collisions.
+- For new items, you choose `ds_sku`. Once stored, it never changes via the script. If a gift's identity should change (rare), update the `ds_sku` in the XLS and the script will treat it as deactivate-old + insert-new.
+
+**Image filename truncation** is shared between `download-gift-images.mjs` (which writes `public/gifts/{slug.slice(0,60)}.jpg`) and `sync-gift-catalog.mjs` (which writes DB `image_url = https://daysight.xyz/gifts/{ds_sku.slice(0,60)}.jpg`). The 60-char cap is enforced in both places. If you ever lift it, lift it in both scripts in the same change to keep URL ↔ file alignment intact.
 
 ## Operational Rules (Hard-Won)
 
