@@ -7,6 +7,7 @@ import { Text } from "@react-email/text";
 import { Link } from "@react-email/link";
 import { Hr } from "@react-email/hr";
 import * as React from "react";
+import { isAffiliateLink } from "@/lib/utils";
 
 interface GiftItem {
   name: string;
@@ -209,7 +210,7 @@ export default function ReminderEmail({
                                 <tr>
                                   <td align="center" style={{ background: brandOrange, borderRadius: "8px" }}>
                                     <Link href={gift.affiliate_url || "#"} style={{ display: "inline-block", color: "white", textDecoration: "none", fontSize: "13px", fontWeight: 600, padding: "9px 24px", borderRadius: "8px" }}>
-                                      {gift.affiliate_url && gift.affiliate_url !== "#" ? "Buy Now (Affiliate Link) →" : "Buy Now →"}
+                                      {isAffiliateLink(gift.affiliate_url) ? "Buy Now (Affiliate Link) →" : "Buy Now →"}
                                     </Link>
                                   </td>
                                 </tr>

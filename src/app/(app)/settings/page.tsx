@@ -9,6 +9,7 @@ import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
 import { REMINDER_DAY_OPTIONS, SEND_HOUR_OPTIONS } from "@/lib/email-config";
 import { GIFT_OPTIONS } from "@/lib/constants";
+import { parentContactNeedsRestore, buildRestoreWithContactMessage } from "@/lib/trash";
 
 interface Profile {
   id: string;
@@ -518,6 +519,12 @@ export default function SettingsPage() {
     // Read the contact's deleted_at so we can scope the event restore to only
     // cascade-deleted events (same timestamp). Individually trashed events
     // will have a different, earlier deleted_at and stay in the bin.
+    //
+    // INVARIANT: this match relies on the contact and its cascade-deleted
+    // events sharing the EXACT same deleted_at string. handleTrash() in
+    // contacts/page.tsx stamps both from a single `now` value to guarantee
+    // this. If that ever splits into separate Date() calls, this `.eq()` match
+    // breaks and cascade restore silently leaves child events in the bin.
     const { data: contact } = await supabase
       .from("contacts")
       .select("deleted_at")
@@ -540,6 +547,17 @@ export default function SettingsPage() {
 
   const handleRestoreEvent = async (id: string) => {
     setConfirmDeleteId(null);
+    const evt = trashedEvents.find((e) => e.id === id);
+    // If the event's parent contact is also in the bin, restoring the event
+    // alone would orphan it (invisible in the UI, then silently hard-deleted
+    // when the contact purges). Confirm first, then restore the contact too.
+    // trashedContacts is loaded alongside trashedEvents whenever the bin is
+    // open, so the deleted-contact check needs no extra query.
+    if (evt && parentContactNeedsRestore(evt.contact_id, trashedContacts.map((c) => c.id))) {
+      const ok = window.confirm(buildRestoreWithContactMessage(evt.contact_name));
+      if (!ok) return;
+      await supabase.from("contacts").update({ deleted_at: null }).eq("id", evt.contact_id).eq("user_id", userId);
+    }
     await supabase.from("events").update({ deleted_at: null }).eq("id", id).eq("user_id", userId);
     await loadTrashedContacts();
   };

@@ -39,6 +39,7 @@ import {
   GiftRow,
   ScoringContext,
 } from "@/lib/gift-engine";
+import { isAffiliateLink } from "@/lib/utils";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ─ REMINDERS.TS TESTS ────────────────────────────────────────────────────────
@@ -1066,5 +1067,54 @@ describe("scoreGift — gender scoring", () => {
     const manScore = scoreGift(giftWith({ gender_tags: ["man"] }), ctx);
     // +20 vs -10 = 30 point difference
     assert.strictEqual(womanScore - manScore, 30);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─ UTILS.TS TESTS ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("isAffiliateLink(url)", () => {
+  test("Amazon Associates URL with tag= is affiliate", () => {
+    assert.strictEqual(
+      isAffiliateLink("https://www.amazon.com/dp/B097Z6ZH1S?tag=daysightremin-20"),
+      true
+    );
+  });
+
+  test("tag= as a non-first query param is still detected", () => {
+    assert.strictEqual(
+      isAffiliateLink("https://www.amazon.com/dp/B097Z6ZH1S?ref=foo&tag=daysightremin-20"),
+      true
+    );
+  });
+
+  test("wine.com product URL is not affiliate", () => {
+    assert.strictEqual(
+      isAffiliateLink("https://www.wine.com/product/veuve-clicquot-yellow-label-brut/528"),
+      false
+    );
+  });
+
+  test("urbanstems product URL is not affiliate", () => {
+    assert.strictEqual(
+      isAffiliateLink("https://urbanstems.com/products/the-peony"),
+      false
+    );
+  });
+
+  test("placeholder, empty, null, and undefined are not affiliate", () => {
+    assert.strictEqual(isAffiliateLink("#"), false);
+    assert.strictEqual(isAffiliateLink(""), false);
+    assert.strictEqual(isAffiliateLink(null), false);
+    assert.strictEqual(isAffiliateLink(undefined), false);
+  });
+
+  test("empty tag value is not treated as affiliate", () => {
+    assert.strictEqual(isAffiliateLink("https://www.amazon.com/dp/B097Z6ZH1S?tag="), false);
+  });
+
+  test("substring 'tag' in path without query param is not affiliate", () => {
+    assert.strictEqual(isAffiliateLink("https://example.com/vintage/item"), false);
   });
 });

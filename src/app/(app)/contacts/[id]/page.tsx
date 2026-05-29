@@ -18,7 +18,7 @@ import {
 } from "@/lib/utils";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
-import { GIFT_OPTIONS } from "@/lib/constants";
+import { GIFT_OPTIONS, MAX_EVENTS_PER_CONTACT, EVENT_LIMIT_WARN_WITHIN } from "@/lib/constants";
 
 interface Contact {
   id: string;
@@ -195,7 +195,13 @@ function ContactDetailContent() {
   // Max days for selected month
   const maxDays = DAYS_IN_MONTH[eventForm.month] || 31;
 
+  // Per-contact event limit (hidden until close to it). Live events only.
+  const atEventLimit = events.length >= MAX_EVENTS_PER_CONTACT;
+  const approachingEventLimit =
+    events.length >= MAX_EVENTS_PER_CONTACT - EVENT_LIMIT_WARN_WITHIN;
+
   const openAddEvent = () => {
+    if (atEventLimit) return;
     setEventForm(EMPTY_EVENT_FORM);
     setEditingEventId(null);
     setEventModal("add");
@@ -444,12 +450,22 @@ function ContactDetailContent() {
       <div className="bg-white rounded-xl border border-gray-200 mb-6">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Events</h2>
-          <button
-            onClick={openAddEvent}
-            className="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors"
-          >
-            + Add event
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={openAddEvent}
+              disabled={atEventLimit}
+              className="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-600"
+            >
+              + Add event
+            </button>
+            {approachingEventLimit && (
+              <p className="text-xs text-gray-500">
+                {atEventLimit
+                  ? `Maximum of ${MAX_EVENTS_PER_CONTACT} events reached.`
+                  : `${events.length} of ${MAX_EVENTS_PER_CONTACT} events used.`}
+              </p>
+            )}
+          </div>
         </div>
 
         {events.length === 0 ? (

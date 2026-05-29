@@ -37,3 +37,19 @@ export const GIFT_OPTIONS: { value: string; label: string; description: string }
 
 /** Days soft-deleted contacts/events are kept before hard-delete by purge cron. */
 export const TRASH_HOLD_DAYS = 7;
+
+/**
+ * Account limits. Enforced authoritatively by DB triggers (migration 024) and
+ * surfaced as friendly UX gates in the contacts pages. Counts consider only
+ * non-deleted rows (deleted_at IS NULL) — soft-deleted items in the trash do
+ * not consume quota. Keep these values in sync with the trigger thresholds.
+ */
+export const MAX_CONTACTS_PER_USER = 100;
+export const MAX_EVENTS_PER_CONTACT = 10;
+
+/**
+ * How close to a limit a user must be before any messaging about it appears.
+ * The cap is intentionally hidden until the user is within this many of it.
+ */
+export const CONTACT_LIMIT_WARN_WITHIN = 5;
+export const EVENT_LIMIT_WARN_WITHIN = 2;

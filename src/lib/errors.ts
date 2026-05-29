@@ -10,6 +10,8 @@
  *   setSaveError(friendlyError(error, "save this contact"));
  */
 
+import { MAX_CONTACTS_PER_USER, MAX_EVENTS_PER_CONTACT } from "@/lib/constants";
+
 interface SupabaseError {
   message?: string;
   code?: string;
@@ -30,6 +32,9 @@ const KNOWN_CODES: Record<string, string> = {
 };
 
 const KNOWN_MESSAGES: Array<[RegExp, string]> = [
+  // Account-limit triggers (migration 024). Matched before generic patterns.
+  [/contact limit reached/i, `You've reached the maximum of ${MAX_CONTACTS_PER_USER} contacts.`],
+  [/event limit reached/i, `You've reached the maximum of ${MAX_EVENTS_PER_CONTACT} events for this contact.`],
   [/rate limit/i, "Too many requests. Please wait a moment and try again."],
   [/row-level security/i, "You don't have permission to perform this action."],
   [/jwt expired/i, "Your session has expired. Please sign in again."],

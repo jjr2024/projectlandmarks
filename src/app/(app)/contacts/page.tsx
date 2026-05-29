@@ -8,7 +8,7 @@ import { getInitials, relationshipLabel, giftLabel } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GiftCategoryIcon } from "@/components/gift-icons";
 import { Modal } from "@/components/Modal";
-import { GIFT_OPTIONS } from "@/lib/constants";
+import { GIFT_OPTIONS, MAX_CONTACTS_PER_USER, CONTACT_LIMIT_WARN_WITHIN } from "@/lib/constants";
 
 interface Contact {
   id: string;
@@ -121,8 +121,15 @@ function ContactsPageContent() {
     return matchesSearch && matchesRel;
   });
 
+  // Contact limit (hidden until the user is close to it). Counts live contacts
+  // only — soft-deleted ones in the trash don't consume quota.
+  const atContactLimit = contacts.length >= MAX_CONTACTS_PER_USER;
+  const approachingContactLimit =
+    contacts.length >= MAX_CONTACTS_PER_USER - CONTACT_LIMIT_WARN_WITHIN;
+
   // Modal handlers
   const openAdd = () => {
+    if (atContactLimit) return;
     setForm(EMPTY_FORM);
     setEditingId(null);
     setModalMode("add");
@@ -208,6 +215,11 @@ function ContactsPageContent() {
 
   const handleTrash = async () => {
     if (!deleteTarget) return;
+    // INVARIANT: the contact and its cascade-deleted events MUST share the exact
+    // same deleted_at string. The restore path (settings handleRestore) scopes
+    // the cascade restore with `.eq("deleted_at", contact.deleted_at)`, which
+    // only works if both were stamped from this single `now`. Do not split this
+    // into separate Date() calls.
     const now = new Date().toISOString();
     // Soft-delete the contact
     await supabase
@@ -258,12 +270,22 @@ function ContactsPageContent() {
             We never contact the people you add — your data stays private.
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors whitespace-nowrap"
-        >
-          + Add contact
-        </button>
+        <div className="flex flex-col sm:items-end gap-1">
+          <button
+            onClick={openAdd}
+            disabled={atContactLimit}
+            className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-600"
+          >
+            + Add contact
+          </button>
+          {approachingContactLimit && (
+            <p className="text-xs text-gray-500">
+              {atContactLimit
+                ? `You've reached the maximum of ${MAX_CONTACTS_PER_USER} contacts.`
+                : `You're using ${contacts.length} of ${MAX_CONTACTS_PER_USER} contacts.`}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Search + filter */}

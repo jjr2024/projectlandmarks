@@ -19,6 +19,20 @@ export function compareTokens(provided: string | null, expected: string): boolea
   }
 }
 
+/**
+ * Whether a product URL is a genuine affiliate (commission-earning) link.
+ *
+ * The only affiliate links in the catalog are Amazon Associates URLs, which
+ * carry a `tag=` query param (e.g. `?tag=daysightremin-20`). Other partner
+ * URLs (wine.com, urbanstems.com) are plain product links with no affiliate
+ * marker. Detection is data-driven so it adapts as the catalog changes — emails
+ * only label a button "(Affiliate Link)" when the link actually earns a commission.
+ */
+export function isAffiliateLink(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /[?&]tag=[^&]+/.test(url);
+}
+
 /** Format month + day as "April 24" */
 export function formatDate(month: number, day: number): string {
   const d = new Date(2024, month - 1, day);
