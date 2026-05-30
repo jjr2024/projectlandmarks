@@ -13,6 +13,8 @@ import assert from "node:assert/strict";
 import {
   resolveCallbackRedirect,
   looksLikeVerifierMismatch,
+  validateNext,
+  isAllowedOtpType,
   type CallbackInput,
 } from "../lib/auth-callback";
 
@@ -113,5 +115,52 @@ describe("looksLikeVerifierMismatch (advisory telemetry only)", () => {
   test("null / unrelated error -> false (redirect decision is structural, not this)", () => {
     assert.equal(looksLikeVerifierMismatch(null), false);
     assert.equal(looksLikeVerifierMismatch({ message: "network timeout", status: 503 }), false);
+  });
+});
+
+describe("validateNext (shared open-redirect guard)", () => {
+  test("safe same-origin path is preserved", () => {
+    assert.equal(validateNext("/dashboard"), "/dashboard");
+    assert.equal(validateNext("/contacts?add=1"), "/contacts?add=1");
+  });
+
+  test("null / empty falls back to default", () => {
+    assert.equal(validateNext(null), "/dashboard");
+    assert.equal(validateNext(undefined), "/dashboard");
+    assert.equal(validateNext(""), "/dashboard");
+  });
+
+  test("protocol-relative URL is rejected", () => {
+    assert.equal(validateNext("//evil.com"), "/dashboard");
+  });
+
+  test("absolute URL with scheme is rejected", () => {
+    assert.equal(validateNext("https://evil.com"), "/dashboard");
+    assert.equal(validateNext("javascript:alert(1)"), "/dashboard");
+  });
+
+  test("non-slash relative path is rejected", () => {
+    assert.equal(validateNext("dashboard"), "/dashboard");
+  });
+
+  test("custom fallback is honored", () => {
+    assert.equal(validateNext(null, "/auth/reset-password"), "/auth/reset-password");
+  });
+});
+
+describe("isAllowedOtpType (confirm flow type allowlist)", () => {
+  test("accepts the types Daysight redeems", () => {
+    assert.equal(isAllowedOtpType("signup"), true);
+    assert.equal(isAllowedOtpType("email"), true);
+    assert.equal(isAllowedOtpType("recovery"), true);
+    assert.equal(isAllowedOtpType("email_change"), true);
+  });
+
+  test("rejects unused / crafted types", () => {
+    assert.equal(isAllowedOtpType("magiclink"), false);
+    assert.equal(isAllowedOtpType("invite"), false);
+    assert.equal(isAllowedOtpType("sms"), false);
+    assert.equal(isAllowedOtpType(null), false);
+    assert.equal(isAllowedOtpType(""), false);
   });
 });

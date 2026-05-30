@@ -1,23 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { looksLikeVerifierMismatch, resolveCallbackRedirect } from "@/lib/auth-callback";
+import { looksLikeVerifierMismatch, resolveCallbackRedirect, validateNext } from "@/lib/auth-callback";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const errorParam = searchParams.get("error");
   const errorCode = searchParams.get("error_code");
-  let next = searchParams.get("next") ?? "/dashboard";
-
-  // Validate redirect URL to prevent open redirect attacks
-  if (!next.startsWith("/") || next.startsWith("//")) {
-    next = "/dashboard";
-  }
-  // Additional check: reject if next contains a protocol (http://, https://, etc.)
-  if (/^[a-z][a-z0-9+\-.]*:/i.test(next)) {
-    next = "/dashboard";
-  }
+  // Validate redirect URL to prevent open redirect attacks (shared guard,
+  // also used by /auth/confirm/verify).
+  const next = validateNext(searchParams.get("next"));
 
   let hasUser = false;
 

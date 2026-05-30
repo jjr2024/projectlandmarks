@@ -53,6 +53,36 @@ export function looksLikeVerifierMismatch(error: CallbackError): boolean {
 }
 
 /**
+ * Open-redirect guard for the post-auth `next` destination, shared by the
+ * PKCE callback (`/auth/callback`) and the token_hash confirm handler
+ * (`/auth/confirm/verify`). Returns `raw` only if it is a safe same-origin
+ * absolute path; otherwise returns `fallback`.
+ *
+ * Rejects: empty/missing, protocol-relative (`//evil.com`), and anything with a
+ * URL scheme (`https:`, `javascript:`, etc.). Matches the inline logic that
+ * previously lived in `callback/route.ts`.
+ */
+export function validateNext(raw: string | null | undefined, fallback = "/dashboard"): string {
+  if (!raw) return fallback;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return fallback;
+  if (/^[a-z][a-z0-9+\-.]*:/i.test(raw)) return fallback;
+  return raw;
+}
+
+/**
+ * OTP types the `/auth/confirm` flow is allowed to redeem via `verifyOtp`.
+ * Deliberately excludes `invite` and `magiclink` (not used by Daysight) so a
+ * crafted link can't redeem a token for an unintended purpose. A subset of
+ * gotrue's `EmailOtpType`.
+ */
+export const ALLOWED_OTP_TYPES = ["signup", "email", "recovery", "email_change"] as const;
+export type AllowedOtpType = (typeof ALLOWED_OTP_TYPES)[number];
+
+export function isAllowedOtpType(t: string | null | undefined): t is AllowedOtpType {
+  return !!t && (ALLOWED_OTP_TYPES as readonly string[]).includes(t);
+}
+
+/**
  * Returns the absolute-path redirect target (no origin) for a callback request.
  * `next` is the already-validated post-login destination.
  */
