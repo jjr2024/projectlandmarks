@@ -8,11 +8,14 @@ import Link from "next/link";
 const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
   auth_callback_failed:
     "Your sign-in link has expired or is invalid. Please try again.",
+  link_expired:
+    "This verification link has expired or was already used. If you've already confirmed your email, just sign in below — otherwise resend a new link.",
 };
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
   const callbackError = searchParams.get("error");
+  const verifiedNotice = searchParams.get("verified") === "1";
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -70,6 +73,12 @@ function AuthPageContent() {
   const handleResendVerification = async () => {
     setResendingVerification(true);
     setVerificationError("");
+
+    if (!email) {
+      setVerificationError("Enter your email above, then resend.");
+      setResendingVerification(false);
+      return;
+    }
 
     // Two-tier approach:
     // 1. If we still have the password in state (user never left the page),
@@ -301,9 +310,37 @@ function AuthPageContent() {
         </p>
 
         <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
+          {verifiedNotice && (
+            <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-3 mb-4 text-sm">
+              <strong>Email verified.</strong> Please sign in below to finish setting up your account.
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
               {error}
+            </div>
+          )}
+
+          {callbackError === "link_expired" && (
+            <div className="mb-4 text-sm">
+              {verificationError && (
+                <p className="text-red-600 mb-2">{verificationError}</p>
+              )}
+              {verificationResent ? (
+                <p className="text-green-600">
+                  Verification email sent! You can resend in {resendCountdown}s.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  className="text-brand-600 font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendingVerification ? "Sending..." : "Resend verification email"}
+                </button>
+              )}
             </div>
           )}
 

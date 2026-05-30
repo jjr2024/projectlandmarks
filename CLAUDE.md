@@ -93,6 +93,7 @@ supabase/migrations/
 ├── 021 'bounced' is terminal at dedup (adds bounced to partial-index predicate + dedup cleanup)
 ├── 022 admin/debug instrumentation: add updated_at to contacts+events (backfilled from created_at), add last_changed_fields text[] to profiles+contacts+events, swap their triggers to set_updated_at_and_changed_fields() (generic JSONB diff). email_overrides stays on the original set_updated_at()
 ├── 023 add ds_sku (Daysight internal SKU) to gift_catalog with unique + format constraint, backfilled deterministically from name via slug. Wire gift_catalog to set_updated_at_and_changed_fields() trigger. Create gift_catalog_audit (append-only log keyed by run_id) for tracking sync runs. Catalog edits move from migrations to scripts/sync-gift-catalog.mjs from this point forward.
+├── 024 add_contact_and_event_limits: BEFORE INSERT triggers enforce_contact_limit() (≤100 live contacts/user) and enforce_event_limit() (≤10 live events/contact). Authoritative DB backstop for the client-side UX gates. Only counts deleted_at IS NULL rows; INSERT-only so lowering a limit never breaks existing over-cap users. Raises P0001 with "contact/event limit reached" message (mapped by friendlyError()). See Architecture § "Account limits".
 scripts/
 ├── sync-gift-catalog.mjs       Canonical workflow for editing gift_catalog. Reads XLS → diffs against DB by ds_sku → INSERT/UPDATE/soft-deactivate with audit logging. See "Gift catalog workflow" below.
 ├── download-gift-images.mjs    Downloads/resizes product images to public/gifts/{slug}.jpg. Slug truncated at 60 chars; sync-gift-catalog.mjs mirrors that truncation when writing image_url.
@@ -105,6 +106,13 @@ scripts/
 **Data:** Supabase Postgres + RLS. Admin client (`lib/supabase/admin.ts`) uses service_role to bypass RLS for cron jobs.
 
 **Soft-delete:** `deleted_at` on contacts and events. Purge cron hard-deletes after 7 days (cascades to events, reminder_log, shown_gifts). **One-time events:** The reminder cron skips one-time events whose date has passed (`event.one_time && event.event_year && oneTimeDate < now`). One-time events with `event_year: null` (legacy) are treated as recurring to avoid silently dropping reminders.
+
+**Account limits:** `MAX_CONTACTS_PER_USER = 100` and `MAX_EVENTS_PER_CONTACT = 10` (`lib/constants.ts`). **Two-layer enforcement:**
+- **DB triggers (authoritative — migration 024):** `BEFORE INSERT` triggers `enforce_contact_limit()` / `enforce_event_limit()` raise P0001 ("contact/event limit reached") when at the cap. This is the real backstop — inserts go through the browser anon key, so client gating alone is bypassable via direct API calls. `friendlyError()` maps the P0001 message to "You've reached the maximum of N…" (`lib/errors.ts`).
+- **Client UX gates (convenience):** The contacts list and contact detail pages hide the cap until the user is within `CONTACT_LIMIT_WARN_WITHIN = 5` (contacts) / `EVENT_LIMIT_WARN_WITHIN = 2` (events). Inside that band a "You're using X of N" hint appears; at the cap the add button is disabled and `openAdd()` early-returns.
+- **Trash doesn't count:** Both the trigger counts and the UI counts filter `deleted_at IS NULL`, so soft-deleted items in the 7-day trash window do **not** consume quota. Keep the trigger thresholds in sync with `constants.ts`.
+- **Triggers are INSERT-only:** existing rows over a limit are never touched, so lowering a cap later only blocks new inserts — it won't break current users.
+- **Accepted concurrency gap:** the trigger's count-then-insert is not atomic, so two simultaneous inserts at the boundary can both succeed (off-by-one over the cap). Intentionally unguarded — acceptable for a soft abuse cap; a heavier lock is not warranted.
 
 **Route groups:** `(app)` = auth'd sidebar layout. `(onboarding)` = isolated layout. `(admin)` = admin sidebar, gated on `profiles.is_admin`.
 

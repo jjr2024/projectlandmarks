@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { looksLikeVerifierMismatch, resolveCallbackRedirect } from "@/lib/auth-callback";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const errorParam = searchParams.get("error");
+  const errorCode = searchParams.get("error_code");
   let next = searchParams.get("next") ?? "/dashboard";
 
   // Validate redirect URL to prevent open redirect attacks
@@ -15,6 +18,8 @@ export async function GET(request: Request) {
   if (/^[a-z][a-z0-9+\-.]*:/i.test(next)) {
     next = "/dashboard";
   }
+
+  let hasUser = false;
 
   if (code) {
     // Create the redirect response FIRST so we can wire session cookies to it.
@@ -52,6 +57,7 @@ export async function GET(request: Request) {
     console.error("[auth/callback] Code exchange failed:", error.message, {
       code: code.slice(0, 8) + "...",
       next,
+      pkceLike: looksLikeVerifierMismatch(error),
     });
 
     // PKCE fallback: resend() does not regenerate the PKCE
@@ -62,11 +68,32 @@ export async function GET(request: Request) {
     // re-sent verification link), redirect them to the app
     // instead of showing an error — their email is now verified.
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      return NextResponse.redirect(`${origin}${next}`);
+    hasUser = !!user;
+
+    // A code only exists because the server-side /verify step already
+    // succeeded (signup confirm / OAuth / magic link). If the exchange
+    // failed and there's no session on this device, the email IS verified
+    // but the PKCE code_verifier lives on another device (cross-device
+    // signup). resolveCallbackRedirect() routes that case to sign-in with a
+    // truthful "verified" notice instead of a false "expired".
+    // See docs/auth-callback-option-b-plan.md.
+    if (!hasUser) {
+      console.error(
+        "[auth/callback] code present but no session after exchange; treating as verified",
+        { pkceLike: looksLikeVerifierMismatch(error) }
+      );
     }
   }
 
-  // If no code or exchange failed, redirect to auth with error
-  return NextResponse.redirect(`${origin}/auth?error=auth_callback_failed`);
+  const redirectPath = resolveCallbackRedirect(
+    {
+      code,
+      exchangeFailed: true,
+      hasUser,
+      errorParam,
+      errorCode,
+    },
+    next
+  );
+  return NextResponse.redirect(`${origin}${redirectPath}`);
 }
