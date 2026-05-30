@@ -51,19 +51,12 @@ export default function EmailVerificationBanner() {
       data: { user },
     } = await supabase.auth.getUser();
     if (user?.email) {
-      // Note: resend() does NOT regenerate the PKCE code_verifier,
-      // so the link in the re-sent email may fail at code exchange
-      // in /auth/callback. However, Supabase still verifies the
-      // email server-side before the redirect. The callback is
-      // patched to detect this: if exchange fails but the user
-      // already has an active session, it redirects to /dashboard
-      // instead of showing an error.
+      // The re-sent confirmation link uses the device-independent token_hash
+      // flow (/auth/confirm), so it verifies and signs the user in on any
+      // device — no PKCE code_verifier dependency.
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: user.email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
       });
 
       if (resendError) {

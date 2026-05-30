@@ -80,71 +80,23 @@ function AuthPageContent() {
       return;
     }
 
-    // Two-tier approach:
-    // 1. If we still have the password in state (user never left the page),
-    //    use signUp() which generates a fresh PKCE code_verifier/code_challenge
-    //    pair. This is the ideal path — the verification link will work cleanly.
-    // 2. If the password is gone (user refreshed/reopened the tab), fall back
-    //    to resend(). resend() does NOT regenerate the PKCE pair, so the link's
-    //    code exchange may fail — but the auth callback has a fallback that
-    //    redirects to /dashboard if a session already exists (Supabase verifies
-    //    the email server-side regardless of PKCE outcome). See bug sweep C4.
-    if (password) {
-      // Preferred path: signUp() with fresh PKCE pair
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            display_name: displayName || email.split("@")[0],
-            consent_terms: consentTerms,
-            consent_emails: consentEmails,
-            consent_at: new Date().toISOString(),
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+    // Re-send the confirmation email. The link uses the device-independent
+    // token_hash flow (/auth/confirm), so a plain resend() works on any device
+    // — there is no PKCE code_verifier to regenerate.
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+    });
 
-      setResendingVerification(false);
+    setResendingVerification(false);
 
-      if (error) {
-        if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
-          setVerificationError("Too many attempts. Please wait a few minutes and try again.");
-        } else {
-          setVerificationError("Unable to resend. Please try again shortly.");
-        }
-        return;
+    if (error) {
+      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
+        setVerificationError("Too many attempts. Please wait a few minutes and try again.");
+      } else {
+        setVerificationError("Unable to resend. Please try again shortly.");
       }
-
-      // If Supabase returns empty identities, the email was already
-      // confirmed (edge case — user verified in another tab). Direct
-      // them to sign in instead of waiting for another email.
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        setVerificationError("This email is already verified. Please sign in.");
-        return;
-      }
-    } else {
-      // Fallback path: password no longer in state (page was refreshed).
-      // resend() won't regenerate the PKCE pair, but the auth callback's
-      // session-based fallback handles this gracefully.
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      setResendingVerification(false);
-
-      if (error) {
-        if (error.status === 429 || error.message?.toLowerCase().includes("rate limit")) {
-          setVerificationError("Too many attempts. Please wait a few minutes and try again.");
-        } else {
-          setVerificationError("Unable to resend. Please try again shortly.");
-        }
-        return;
-      }
+      return;
     }
 
     sessionStorage.setItem("ds_verify_resend_at", Date.now().toString());
@@ -197,7 +149,6 @@ function AuthPageContent() {
           consent_emails: consentEmails,
           consent_at: new Date().toISOString(),
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -249,7 +200,7 @@ function AuthPageContent() {
             <h2 className="text-2xl font-bold text-green-800 mb-2">Check your email</h2>
             <p className="text-green-700">
               We sent a confirmation link to <strong>{email}</strong>. Click it to
-              activate your account, then come back here to sign in.
+              confirm — you&apos;ll be signed in automatically, on whatever device you open it.
             </p>
             <p className="text-green-600 text-sm mt-3">
               Didn&apos;t get it? Check your spam folder, or resend below.

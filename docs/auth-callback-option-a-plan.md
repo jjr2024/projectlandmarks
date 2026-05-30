@@ -1,6 +1,8 @@
 # Implementation Plan — Option A: Device-independent email confirmation via `token_hash` + `verifyOtp`
 
-**Status:** Plan only. No code changed yet. Supersedes the *root cause* that Option B (`docs/auth-callback-option-b-plan.md`) could only relabel. Option B stays in place; Option A removes the cross-device dead-end entirely.
+**Status:** **Phase 1 (signup confirmation) SHIPPED & verified in production (May 30 2026).** Interstitial variant chosen (D1). Cross-device signup now auto-logs-in: confirmed by Supabase auth logs showing `POST /verify 200 user_signedup` with `login_method: otp` from a different IP than signup, and no PKCE `/token` exchange. Phase 2 (unify password reset onto `token_hash`) remains deferred. Supersedes the *root cause* that Option B (`docs/auth-callback-option-b-plan.md`) could only relabel; Option B stays in place for OAuth/in-flight links.
+
+**Shipped in Phase 1:** `src/app/auth/confirm/page.tsx` (interstitial), `src/app/auth/confirm/verify/route.ts` (`verifyOtp` handler), shared `validateNext()` + `isAllowedOtpType()` in `src/lib/auth-callback.ts`, tests in `src/__tests__/auth-callback.test.ts`, cleanup of `emailRedirectTo`/resend logic in `auth/page.tsx` + `email-verification-banner.tsx`, and the Supabase Confirm-signup email template switched to the `token_hash` link.
 
 **Goal:** Make the email-confirmation link redeemable — and auto-login — on **any device**, eliminating the PKCE `code_verifier` device-binding that forces cross-device users to fall back to a password sign-in. Optionally, unify password reset onto the same flow to retire the fragile client-side `exchangeCodeForSession` + hash-fallback machinery in `reset-password/page.tsx`.
 
