@@ -19,10 +19,10 @@ export default async function AppLayout({
     redirect("/auth");
   }
 
-  // Fetch profile for sidebar display and consent check
+  // Fetch profile for sidebar display, consent check, and onboarding gate
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, consent_terms, consent_emails")
+    .select("display_name, consent_terms, consent_emails, onboarding_completed")
     .eq("id", user.id)
     .single();
 
@@ -31,6 +31,14 @@ export default async function AppLayout({
   // but see a persistent banner instead of being locked out)
   if (!profile?.consent_terms) {
     redirect("/consent");
+  }
+
+  // Gate on onboarding — users who haven't finished onboarding are routed there.
+  // This is the single, server-side source of truth (replaces the old
+  // client-side heuristic in dashboard/page.tsx). Runs after the consent gate so
+  // the legal gate always takes precedence.
+  if (!profile?.onboarding_completed) {
+    redirect("/onboarding");
   }
 
   const displayName = profile?.display_name || user.email?.split("@")[0] || "User";

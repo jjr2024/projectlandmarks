@@ -187,6 +187,16 @@ function OnboardingContent() {
         if (eventError) throw eventError;
       }
 
+      // Mark onboarding complete so the server-side gate in (app)/layout.tsx
+      // lets the user into the app. Set only on the success path, after the
+      // contact + events inserts succeed — so "completed" always implies the
+      // user has at least one contact.
+      const { error: completeError } = await supabase
+        .from("profiles")
+        .update({ onboarding_completed: true })
+        .eq("id", userId);
+      if (completeError) throw completeError;
+
       savedRef.current = true;
       setStep(4);
     } catch (err: any) {

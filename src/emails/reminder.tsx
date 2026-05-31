@@ -78,7 +78,7 @@ export default function ReminderEmail({
     daysBefore === 0
       ? `It's today — ${contactFirstName}'s ${typeLabel} is ${eventDateFormatted}. Here are some last-minute options.`
       : daysBefore === 1
-      ? `Last chance — ${contactFirstName}'s ${typeLabel} is tomorrow, ${eventDateFormatted}. We've put together your best same-day options below.`
+      ? `Last chance — ${contactFirstName}'s ${typeLabel} is tomorrow, ${eventDateFormatted}. The options below tend to ship quickly, so there's still time.`
       : `${contactFirstName}'s ${typeLabel} is coming up on ${eventDateFormatted} — ${daysBefore} days from now. Here are a few gift ideas they'd love, ready to order in one click.`;
 
   return (
@@ -150,7 +150,7 @@ export default function ReminderEmail({
                 {isLastMinute && (
                   <Section style={{ background: "#fff7ed", border: "2px solid #fed7aa", borderRadius: "10px", padding: "12px 16px", marginBottom: "14px" }}>
                     <Text style={{ color: "#c2410c", fontWeight: 700, fontSize: "13px", margin: "0 0 3px 0" }}>You still have options.</Text>
-                    <Text style={{ color: "#ea580c", fontSize: "12px", margin: 0 }}>Every gift below ships today or delivers instantly.</Text>
+                    <Text style={{ color: "#ea580c", fontSize: "12px", margin: 0 }}>The gifts below tend to ship quickly, so there&apos;s still time.</Text>
                   </Section>
                 )}
 

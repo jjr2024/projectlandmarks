@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   formatDate,
@@ -51,7 +50,6 @@ export default function DashboardPage() {
   const [loadingError, setLoadingError] = useState(false);
   const [filterDays, setFilterDays] = useState<30 | 90>(30);
   const supabase = createClient();
-  const router = useRouter();
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -62,22 +60,8 @@ export default function DashboardPage() {
         } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Redirect new users (account created in last hour, zero contacts) to onboarding
-        const createdAt = user.created_at ? new Date(user.created_at) : null;
-        const isNewUser =
-          createdAt && Date.now() - createdAt.getTime() < 60 * 60 * 1000;
-
-        if (isNewUser) {
-          const { count } = await supabase
-            .from("contacts")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id);
-
-          if (count === 0) {
-            router.push("/onboarding");
-            return;
-          }
-        }
+        // Onboarding routing is handled server-side in (app)/layout.tsx via the
+        // profiles.onboarding_completed flag — no client-side redirect here.
 
         const [contactsRes, eventsRes, profileRes] = await Promise.all([
           supabase

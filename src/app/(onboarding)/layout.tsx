@@ -22,12 +22,18 @@ export default async function OnboardingLayout({
   // consent architecture. See bug sweep C2.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("consent_terms")
+    .select("consent_terms, onboarding_completed")
     .eq("id", user.id)
     .single();
 
   if (!profile?.consent_terms) {
     redirect("/consent");
+  }
+
+  // Users who have already finished onboarding shouldn't be able to re-run it.
+  // Send them to the dashboard (mirrors the gate in (app)/layout.tsx).
+  if (profile?.onboarding_completed) {
+    redirect("/dashboard");
   }
 
   return <>{children}</>;
