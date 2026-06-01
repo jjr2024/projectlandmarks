@@ -161,11 +161,18 @@ export default function PrivacyPage() {
 
             <h2>6. Cookies</h2>
             <p>
-              We use only <strong>strictly necessary cookies</strong> on the Daysight website. These
+              We use <strong>strictly necessary cookies</strong> on the Daysight website. These
               are set by Supabase, our authentication provider, to maintain your signed-in session
-              and cannot be disabled without breaking the service. We do not use analytics,
-              advertising, or preference cookies on our own site, and we do not display a cookie
-              consent banner because no non-essential cookies are set.
+              and cannot be disabled without breaking the service. We do not use third-party
+              advertising cookies, tracking pixels, or analytics scripts on our own site.
+            </p>
+            <p>
+              If you arrive from a Microsoft Advertising (Bing) ad, we store a single first-party
+              cookie holding the ad-click identifier that Microsoft appends to the link (the
+              &ldquo;msclkid&rdquo;). We use it only to measure whether ad clicks lead to sign-ups,
+              and we report only that identifier &mdash; never your name, email, or other personal
+              information &mdash; back to Microsoft for that measurement. No third-party advertising
+              cookie or tracking script runs in your browser.
             </p>
             <p>
               Third-party retailers you visit after clicking a gift link may set their own cookies.

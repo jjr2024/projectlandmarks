@@ -16,8 +16,13 @@ function AuthPageContent() {
   const searchParams = useSearchParams();
   const callbackError = searchParams.get("error");
   const verifiedNotice = searchParams.get("verified") === "1";
+  // Initialize mode from ?mode= so marketing CTAs (/auth?mode=signup) land on
+  // the sign-up form. Defaults to "signin" for any other/missing value.
+  const modeParam = searchParams.get("mode");
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(
+    modeParam === "signup" ? "signup" : "signin"
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -139,6 +144,21 @@ function AuthPageContent() {
 
     setLoading(true);
 
+    // Microsoft Ads attribution (Path B): if this visitor arrived from a Bing
+    // ad, MsclkidCapture stored the click id in the ds_msclkid cookie. Attach it
+    // to the user's auth metadata so the reconciliation cron can later report
+    // verified-signup / activation conversions via the Conversions API. Purely
+    // best-effort: absence of the cookie simply omits the field, and a malformed
+    // value is dropped — signup is never blocked by this. See MARKETING.md §12.
+    let msclkid: string | undefined;
+    try {
+      const match = document.cookie.match(/(?:^|;\s*)ds_msclkid=([^;]+)/);
+      const candidate = match ? decodeURIComponent(match[1]) : "";
+      if (/^[a-zA-Z0-9]{1,64}$/.test(candidate)) msclkid = candidate;
+    } catch {
+      // ignore — attribution is optional, signup must proceed
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -148,6 +168,7 @@ function AuthPageContent() {
           consent_terms: consentTerms,
           consent_emails: consentEmails,
           consent_at: new Date().toISOString(),
+          ...(msclkid ? { msclkid } : {}),
         },
       },
     });

@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+// Reads per-request profile state (consent + onboarding_completed) to gate the
+// flow. Force dynamic so the Supabase `profiles` fetch isn't served stale from
+// Next's Data Cache — otherwise a just-completed user can be read as still
+// incomplete, contributing to an onboarding redirect loop with (app)/layout.
+export const dynamic = "force-dynamic";
+
 export default async function OnboardingLayout({
   children,
 }: {

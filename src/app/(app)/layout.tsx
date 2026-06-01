@@ -4,6 +4,14 @@ import Sidebar from "@/components/sidebar";
 import EmailVerificationBanner from "@/components/email-verification-banner";
 import EmailUnsubscribedBanner from "@/components/email-unsubscribed-banner";
 
+// This layout gates on per-request, per-user data (consent + onboarding state)
+// that changes mid-session. Without this, Next.js caches the Supabase `profiles`
+// fetch in its Data Cache and the gate reads a stale value — e.g. it keeps
+// seeing onboarding_completed=false right after the user finishes onboarding,
+// bouncing them back into the flow. force-dynamic disables that fetch caching so
+// the gate always reflects current DB state.
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
