@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import CookieNotice from "@/components/cookie-notice";
 import MsclkidCapture from "@/components/msclkid-capture";
+import IgrefCapture from "@/components/igref-capture";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -72,6 +73,7 @@ export default function RootLayout({
       <body className="font-sans antialiased text-gray-900 bg-white">
         {children}
         <MsclkidCapture />
+        <IgrefCapture />
         <CookieNotice />
       </body>
     </html>

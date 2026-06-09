@@ -1,0 +1,10 @@
+-- Local development seed.
+--
+-- Intentionally empty. The gift catalog and all reference data are seeded by
+-- migrations (see 004_seed_gift_catalog, 017_seed_new_gifts, 018_populate_image_urls),
+-- so a fresh `supabase start` / `supabase db reset` already has a full catalog.
+--
+-- config.toml's [db.seed].sql_paths points here; this file exists only so the
+-- CLI has something to load instead of erroring on a missing path.
+--
+-- Add throwaway local-only fixtures below if you want them on every db reset.

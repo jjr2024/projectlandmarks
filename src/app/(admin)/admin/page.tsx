@@ -22,6 +22,11 @@ interface BreakdownRow {
   revenue: number;
 }
 
+interface SourceRow {
+  source: string;
+  count: number;
+}
+
 export default function AdminDashboardPage() {
   const [range, setRange] = useState<DateRange>(30);
   const [funnel, setFunnel] = useState<FunnelData>({ sent: 0, delivered: 0, opened: 0, clicked: 0, purchased: 0, revenue: 0 });
@@ -29,6 +34,7 @@ export default function AdminDashboardPage() {
   const [byCategory, setByCategory] = useState<BreakdownRow[]>([]);
   const [byLead, setByLead] = useState<BreakdownRow[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [signupSources, setSignupSources] = useState<SourceRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
@@ -135,6 +141,7 @@ export default function AdminDashboardPage() {
       if (statsRes.ok) {
         const stats = await statsRes.json();
         setTotalUsers(stats.totalUsers || 0);
+        setSignupSources(stats.signupSources || []);
       }
     } catch {
       // Fallback: leave at 0
@@ -202,6 +209,11 @@ export default function AdminDashboardPage() {
             <BreakdownTable title="By Gift Category" rows={byCategory} />
             <BreakdownTable title="By Reminder Lead Time" rows={byLead} />
           </div>
+
+          {/* Signup sources — all-time attribution (independent of date range) */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <SignupSourceTable rows={signupSources} total={totalUsers} />
+          </div>
         </>
       )}
     </div>
@@ -236,6 +248,37 @@ function FunnelBar({ label, count, max }: { label: string; count: number; max: n
           {count} {max > 0 && `(${((count / max) * 100).toFixed(1)}%)`}
         </span>
       </div>
+    </div>
+  );
+}
+
+function SignupSourceTable({ rows, total }: { rows: SourceRow[]; total: number }) {
+  const pct = (n: number) => (total === 0 ? "0%" : `${((n / total) * 100).toFixed(1)}%`);
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3">By Signup Source</h3>
+      {rows.length === 0 ? (
+        <p className="text-xs text-gray-400">No data yet</p>
+      ) : (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-100">
+              <th className="text-left py-1.5 font-medium text-gray-500">Source</th>
+              <th className="text-right py-1.5 font-medium text-gray-500">Users</th>
+              <th className="text-right py-1.5 font-medium text-gray-500">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.source} className="border-b border-gray-50">
+                <td className="py-1.5 font-medium text-gray-700">{r.source}</td>
+                <td className="py-1.5 text-right text-gray-600">{r.count}</td>
+                <td className="py-1.5 text-right text-gray-600">{pct(r.count)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

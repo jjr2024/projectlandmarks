@@ -902,13 +902,23 @@ function OnboardingContent() {
 
               <div className="space-y-3">
                 <button
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => {
+                    // Full navigation (not router.push) to bypass Next.js
+                    // Router Cache — a soft nav can replay the stale RSC payload
+                    // from (app)/layout.tsx captured before onboarding_completed
+                    // flipped, bouncing the user back into onboarding. Mirrors
+                    // the same workaround in the consent page.
+                    window.location.href = "/dashboard";
+                  }}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-4 rounded-xl text-lg transition-colors"
                 >
                   Go to dashboard
                 </button>
                 <button
-                  onClick={() => router.push("/contacts")}
+                  onClick={() => {
+                    // Full navigation — same Router Cache rationale as above.
+                    window.location.href = "/contacts";
+                  }}
                   className="w-full border border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Add more contacts

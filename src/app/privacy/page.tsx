@@ -175,6 +175,13 @@ export default function PrivacyPage() {
               cookie or tracking script runs in your browser.
             </p>
             <p>
+              Similarly, if you arrive from one of our own links (for example a link in our social
+              media profile), we store a single first-party cookie holding a short referral label
+              from that link so we can measure which of our channels lead to sign-ups. This label
+              contains no personal information, is used only for our own internal analytics, and is
+              never shared with any third party.
+            </p>
+            <p>
               Third-party retailers you visit after clicking a gift link may set their own cookies.
               Those cookies are governed by the retailer&apos;s own privacy policy.
             </p>

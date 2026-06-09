@@ -193,6 +193,118 @@
 - [ ] EU/ePrivacy nuance: `ds_msclkid` is a first-party *measurement* cookie (arguably non-essential). We disclose it in §6 and did NOT add a consent gate (US-focused audience). Revisit if EU traffic grows → gate cookie set behind consent.
 - [ ] Cross-device activation undercount (desktop click → phone onboarding) remains, by design. Direction-finding, not exact CPA.
 
+### Live config notes (Microsoft UI, as set up 2026-06)
+- Goal conversion window = **60 days** on both goals (not 90). Independent of the feed's 90-day import-freshness filter; both fine since conversions occur minutes-to-days after click.
+- Scheduled-import **time zone must equal UTC**. MS picker has NO plain "UTC" entry → use a **no-DST UTC zone (Reykjavik/Monrovia)**. The feed emits `...Z` (true UTC). NEVER UTC+1 / "(GMT) Dublin" (summer DST shifts conversions ~1h early → fast signups rejected as before-click). GMT-1 is a safe late-side fallback if no UTC zone exists. Direction: MS reads wall-clock as `trueUTC − offset`, so +1 = early/bad, 0 = exact, −1 = late/safe.
+- See `MS_ADS_SETUP.md` for the full click-by-click runbook.
+
+## 13. Instagram (organic, faceless voiceover Reels)
+> Goal: a low-personal, ColdFusion-style content engine (voiceover + b-roll + clean text, no face) that compounds into free signups. Format-agnostic but Reels-first (highest organic reach).
+> HONEST EFFORT NOTE: "free" = founder labor. Faceless ≠ effortless (scripting + editing take real time). Sustainability rule below makes content piggyback on gift-catalog work you ALREADY do. If it ever competes with product time, drop to 1–2/wk or pause — paid Bing + free in-product loops remain the spine.
+
+### Engineer for the 2026 ranking signals (NOT likes)
+- Order of weight: **watch-completion → SHARES (DM sends are the single heaviest signal) → SAVES → comments.** Likes barely matter.
+- ⇒ Design every post to be **DM'd to a specific person** ("send this to the friend who always forgets") and **saved** ("save this for the holidays"). That's the whole game.
+- Hook in **first 2–3s** (≈50% drop by 3s). A 3-sec hold >60% can 5–10× reach. Lead with the payoff, never a slow intro.
+- Length **7–45s** sweet spot (educational can stretch ~60–90s, but tighter wins). Always on-screen captions (sound-off viewing). Original footage only — **never repost watermarked TikToks** (penalized).
+
+### 4 content pillars (each maps to a Daysight value prop, none is an ad)
+1. **Gift intelligence / guides** (SAVE-bait, the workhorse). "5 gifts under $40 that look expensive," "what to get the person who has everything," "anniversary gifts by year." ← These come straight from your gift-catalog research → **product work IS the content**. This is the sustainability engine.
+2. **Thoughtfulness / relationship psychology** (SHARE-bait; a top-performing faceless niche). "The real reason you forget birthdays (it's not your memory)," "what your gift says about you," "the 5-minute habit that makes you the thoughtful one."
+3. **Relatable dread / POV** (DM/tag-bait). The last-minute scramble, gas-station flowers, the "happy belated 😬" text. → "tag your last-minute friend."
+4. **Occasion etiquette / utility** (SAVE-bait). "How much to actually spend on a coworker," "gift etiquette by relationship," "what NOT to gift."
+
+### Reels — 10 starter scripts (stat-led, mapped to VERIFIED studies)
+> Each = surprising stat hook → visual metaphor → primary signal. Small source credit on-screen + full cite in caption. NEVER fabricate; every tag maps to the Research/stat bank below. Effect sizes modest → say "research finds," not miracle numbers.
+- Hook formulas: number+payoff, myth-bust, curiosity gap, command, POV.
+1. "Recipients don't appreciate pricier gifts more — givers just think they do." [Flynn & Adams 2009] — price tag vs flat smile. Myth-bust → SHARE/SAVE.
+2. "People prefer gifts they asked for over surprises — we keep buying surprises." [Gino & Flynn 2011] — wishlist vs mystery box. → COMMENT ("team surprise or team list?").
+3. "Givers chase the unwrapping 'wow'. Recipients want what they'll still use in March." [Galak, Givi & Williams 2016] — confetti vs item on a shelf. → SAVE. *(soft tie-in)*
+4. "The sentimental gift you're scared to give is the one they want most." [Givi & Galak 2017] — gift card vs framed photo. → SHARE (tag partner).
+5. "200 studies, ~198,000 people: being kind makes YOU happier too." [Hui et al. 2020 meta] — give → glow. Authority/big-N → SAVE/SHARE.
+6. "Spending just $5 on someone else lifts your mood more than spending it on yourself." [Dunn, Aknin & Norton 2008, replicated] — a single $5 bill. → SHARE. *(soft tie-in)*
+7. "Want to feel closer to someone? Give an experience, not an object." [Chan & Mogilner 2017] — concert tickets vs gadget. → SAVE.
+8. "That little gesture you forgot? It meant far more to them than you'd guess." [Kumar & Epley 2023] — sticky note → ripple. Emotional → SHARE.
+9. "Why birthdays hit different: your brain treats them as a 'fresh start'." [Dai, Milkman & Riis 2014] — calendar landmark glowing. Relatable → SAVE. *(soft tie-in)*
+10. "Gifts to never give — and what research says to give instead." [Galak/Givi framework + Chan & Mogilner] — red-X items → swap. Polarizing → COMMENT/SAVE.
+- Soft CTA on ~#3/#6/#9 only: "I got tired of forgetting + guessing, so I built a free tool that reminds me and picks gifts that land — link in bio." Never hard-sell.
+
+### Carousels / slideshows — 10 post bank (easier to make; content overlap with Reels is fine)
+> Portrait, text-on-image slides. Carousels over-index on SAVES → lean list / reference / depth. Same no-fabrication + sourced-caption rules.
+1. "7 ways gift-givers get it wrong (per research)" — 1 mismatch/slide. [Galak, Givi & Williams 2016] → SAVE.
+2. "5 gifts under $40 that look expensive" — 1 product/slide, straight from the catalog (product work = content). → SAVE.
+3. "Experiences > stuff: 6 experience gifts for people you love." [Chan & Mogilner 2017] → SAVE.
+4. "The honest science of gift-giving, in 6 slides" — the giver/receiver gap. [Flynn & Adams; Gino & Flynn; Galak] → SAVE/SHARE, authority.
+5. "Anniversary gifts by year (so you never blank)" — etiquette/utility. → SAVE.
+6. "What your go-to gift secretly says about you" — identity/personality (lighter). → COMMENT/SHARE.
+7. "How much to actually spend on a gift, by relationship" — etiquette numbers. → SAVE.
+8. "5 sentimental gifts that beat anything expensive." [Givi & Galak 2017] → SAVE/SHARE, emotional.
+9. "Why we forget birthdays (and how to never again)" — relatable; soft product fix on the last slide. [Dai et al. 2014 + prospective-memory framing] → SHARE.
+10. "Gifts to never give — and the better swap for each" — polarizing list w/ swaps. → COMMENT/SAVE.
+
+### Reels vs carousels — the reach trade (choose deliberately)
+- **Reels = reach/discovery engine:** roughly **1.4–3× more reach** than carousels (varies by source/account) because the Reels feed + Explore push to NON-followers. For a cold-start account that needs discovery, that's the metric that matters.
+- **Carousels = engagement/saves engine:** less cold reach, but higher engagement rate + more saves among people who see them; Mosseri has said photos/carousels are NOT penalized.
+- **Verdict:** slides aren't "much worse" — ~1.4–3× weaker on cold reach, but stronger on saves (a top ranking signal) and far quicker to produce. Reels for top-of-funnel discovery; carousels for save-bait depth + converting existing followers. Don't grow a cold account on carousels alone.
+
+### Research / stat bank (VERIFIED vs journals 2026-06 — cite, never fabricate)
+> Use directionally (effect sizes modest); meta-analyses are strongest for broad claims. These are the sources behind the hooks above.
+- Flynn & Adams (2009), *JESP* 45(2):404–409 — recipients' appreciation is NOT linked to gift price; givers wrongly assume it is.
+- Gino & Flynn (2011), *JESP* 47(5):915–922 — requested gifts appreciated more than unsolicited; givers overrate "surprise" thoughtfulness.
+- Galak, Givi & Williams (2016), *Current Directions in Psych Science* 25(6):380–385 (review) — givers weight the exchange moment, recipients weight lasting value; ~7 mismatches.
+- Givi & Galak (2017), *J. Consumer Psychology* 27(4):473–479 — givers under-give sentimental gifts (fear of missing); recipients want them more.
+- Chan & Mogilner (2017), *J. Consumer Research* 43(6):913–931 — experiential gifts strengthen relationships more than material (more emotionally evocative).
+- Dunn, Aknin & Norton (2008), *Science* 319:1687–1688 — prosocial spending (as little as $5) raises happiness. CAVEAT: small original (n=46); later supported by a Registered Replication Report → cite as "replicated," not the lone 2008 study.
+- Hui, Ng, Berzaghi, Cunningham-Amos & Kogan (2020), *Psychological Bulletin* 146(12):1084–1116 — **META:** prosociality↔well-being r≈.13 (201 studies, N≈198,213).
+- Curry, Rowland, Van Lissa, Zlotowitz, McAlaney & Whitehouse (2018), *JESP* 76:320–329 — **META:** acts of kindness boost actor well-being δ≈0.28 (27 studies, N=4,045).
+- Kumar & Epley (2023), *J. Exp. Psychology: General* 152(1):236–252 — givers underestimate the impact of small kindnesses on recipients.
+- Dai, Milkman & Riis (2014), *Management Science* 60(10):2563–2582 — "fresh start effect": birthdays/landmarks spark aspirational behavior (dates are psychologically loaded).
+- Umbrella review: Givi, Birg, Lowrey & Galak (2023), *J. Consumer Psychology* — integrative review of gift-giving research.
+- Daysight consumer stats (sourced 2026-06; grade matters — prefer Gallup/NRF over brand PR surveys):
+  - **Last-minute shopping (STRONG):** ~49–50% of US holiday shoppers do the BULK of shopping in December (Shopify–Gallup / Gallup poll); ~60% don't FINISH until December and only ~13% START in December (NRF). Credible, usable.
+  - **Plan-ahead motivation (STRONG):** ~40% (2-in-5) start before November, with "avoid the stress of last-minute shopping" among the top reasons (NRF). Directly supports the reminder value prop.
+  - **"Occasions forgotten per year" (NO rigorous figure — do NOT invent one):** only commissioned PR surveys exist, e.g. Moonpig: ~29% have forgotten a parent's birthday (45% of 16–29s); "~1 in 5 usually forget birthdays." If used, ATTRIBUTE the brand and frame as a survey, never as an "average N/yr." Better: lean on the academic memory angle instead.
+  - **"Preferred reminder lead time" (NO direct stat):** use NRF shopping-start timing as a behavioral proxy, not a literal "how far ahead people want reminding" figure.
+
+### What good looks like — per-post checklist (teardown of 8 reference posts, 2026-06)
+> Derived from high-performers across health/longevity/investing/careers (saved in Landmarks_Marketing/Instagram/Post References). Build every post to pass most of these:
+- [ ] **Quantified hook, legible in frame 1** — one surprising NUMBER does the work ("47%", "128,000 people", "$1.77tn"). Numbers stop the scroll + signal credibility.
+- [ ] **Counterintuitive / myth-bust angle** beats a plain fact ("The reason you forget birthdays isn't your memory").
+- [ ] **Built for SAVES + SHARES, not likes** — the heavy 2026 signals. (Reference Forbes post = 533 saves : 75 likes.) Make it reference-worthy (guide/list) or identity-worthy ("this is me").
+- [ ] **List with a finite number + contrast** where possible ("5 that add years, 5 that don't"; "Six paths that…").
+- [ ] **Authority line + sourced caption** — study language / big-N ("study of 128,000"), real source NAMED in caption.
+- [ ] **Striking visual metaphor carries the idea** (faceless-friendly): the image = the argument (e.g. calendar bleeding red dates; gift dissolving into a "?").
+- [ ] **Bold centered text, color-pop the 2–3 key words** (legible sound-off).
+- [ ] **Confident subtitle under the hook** that promises payoff ("The honest list. Decades of data.").
+- [ ] **Carousel for guides/depth** ("swipe for more" → dwell + saves); single image for one punchy stat.
+- [ ] **Mild polarization to earn comments** — a defensible debatable take ("never give gift cards"), not rage-bait.
+- [ ] **Comparison framing makes numbers relatable** ("looks like $100, costs $30"; SpaceX "7× LVMH").
+- [ ] **Consistent template + single niche** — one recognizable look; stay on thoughtfulness/gifting (algorithmic clarity + follow-worthiness).
+- [ ] **Soft CTA only, sparingly** ("comment X for the list" / "link in bio") — every 2–3 posts, never every post.
+- **STAT BANK:** verified research bank is in the "Research / stat bank" subsection below (10 sources + 2 meta-analyses). NEVER fabricate — sourced or cut. Still TO SOURCE: avg occasions forgotten/yr, % last-minute shoppers, preferred reminder lead time.
+
+### Production stack (ColdFusion-style, faceless, mostly free)
+- Script: Hook (0–3s) → tension/promise (3–8s) → 3–5 beats (8–40s) → payoff → soft CTA. ~20–40s.
+- Voiceover: **your own voice** (calm, no face — most authentic, free) OR ElevenLabs for consistent premium TTS. 
+- Visuals: free b-roll (Pexels/Pixabay) + your actual product images from the catalog + simple motion text. Ambient bed; add a low-volume IG **trending/licensed audio** under the VO for reach (tradeoff vs pure original score — worth it on IG).
+- Edit: **CapCut** (free: script-to-video, auto-captions, AI voice if wanted) or DaVinci Resolve (free, more cinematic). Export clean (NO watermark).
+
+### Cadence & sustainability (respect the product-first constraint)
+- **3 Reels/week**, BATCH-produced: write 6–9 scripts + record all VOs in one sitting, edit in a block. Don't make it a daily task.
+- Repurpose each piece → IG carousel + Story, and cross-post to TikTok / YouTube Shorts / Pinterest (re-export without watermark). One idea → ~4 surfaces.
+- **Content-from-product loop:** every gift-catalog update or seasonal refresh = ≥1 gift-guide Reel. The labor you're already spending becomes the top of the funnel.
+- Profile: bio = clear value + "🎁 free birthday & gift reminders," name field keyworded ("Birthday & Gift Reminders"), link → `daysight.xyz/auth?mode=signup` (or homepage).
+
+### Measurement (IG organic won't show in Bing/MS)
+- Track **shares + saves per post** as the leading indicators (not likes/views). Find the 2–3 hooks/pillars that hit → repeat & iterate; kill the rest.
+- Attribute signups: put a **UTM / unique ref on the bio link** and watch signups in your own analytics (`conversion_events`). Optional later: capture an `igref` query param the same way as `msclkid` for cleaner attribution.
+- Expectation-setting: faceless accounts that hit 100k typically take **6–12 months of consistent posting** — this is a slow COMPOUNDING bet, not a quick tap. First milestone = find repeatable formats, not instant virality.
+
+### Guardrails
+- **No instant/same-day delivery claims** (same rule as emails — you don't control fulfillment; CLAUDE.md). Don't imply Daysight ships gifts.
+- On-brand privacy: fine to make a pillar out of "no spam, no data selling" occasionally — reinforces the differentiator.
+- No bought followers/engagement; consistency + retention beat vanity metrics.
+
 ## 10. Sources
 - LocalIQ search benchmarks: https://localiq.com/blog/search-advertising-benchmarks/
 - Shno Bing Ads stats 2026: https://www.shno.co/marketing-statistics/bing-ads-statistics
@@ -209,3 +321,10 @@
 - Stape CAPI integration guide: https://stape.io/blog/guide-microsoft-conversion-api-integration
 - MS Offline Conversion Record (bulk format, columns + 90-day/UTC rules): https://learn.microsoft.com/en-us/advertising/bulk-service/offline-conversion?view=bingads-13
 - MS Tracking offline conversions (help): https://help.ads.microsoft.com/apex/index/3/en/56852
+- Instagram Reels algorithm 2026 (Buffer): https://buffer.com/resources/instagram-algorithms/
+- Reels viral guide 2026 (invideo): https://invideo.io/blog/instagram-reels-guide/
+- Faceless Reels strategy (fluxnote): https://fluxnote.io/guides/faceless-instagram-reels-content-strategy
+- Faceless Reels ideas 2026 (fluxnote): https://fluxnote.io/guides/faceless-instagram-reels-ideas-2026
+- Accounts that do faceless Reels well (Homemade Social): https://www.homemadesocial.com/blog/accounts-that-do-instagram-reels-well-without-showing-their-face
+- Reels vs carousels reach/engagement (Buffer): https://buffer.com/resources/instagram-reach-engagement-analysis/
+- Gift research full citations verified via: ScienceDirect/JESP, Oxford JCR, APA Psychological Bulletin, INFORMS Management Science, Science (links per study in chat thread)

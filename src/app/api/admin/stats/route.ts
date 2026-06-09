@@ -39,8 +39,25 @@ export async function GET() {
   const { data: allUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   const verifiedCount = allUsers?.users?.filter((u) => !!u.email_confirmed_at).length || 0;
 
+  // Signup-source attribution (all-time, like totalUsers — independent of the
+  // dashboard date range). Captured at signup from the ?igref= landing param;
+  // NULL means direct/unknown. Single text column, reduced in memory.
+  const { data: sourceRows } = await admin
+    .from("profiles")
+    .select("signup_source");
+
+  const sourceCounts: Record<string, number> = {};
+  for (const row of sourceRows || []) {
+    const key = row.signup_source || "direct";
+    sourceCounts[key] = (sourceCounts[key] || 0) + 1;
+  }
+  const signupSources = Object.entries(sourceCounts)
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count);
+
   return NextResponse.json({
     totalUsers: totalUsers || 0,
     verifiedUsers: verifiedCount,
+    signupSources,
   });
 }

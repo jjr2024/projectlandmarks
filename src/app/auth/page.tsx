@@ -159,6 +159,19 @@ function AuthPageContent() {
       // ignore — attribution is optional, signup must proceed
     }
 
+    // Organic referral attribution (link-in-bio / Instagram): if this visitor
+    // landed via a ?igref= link, IgrefCapture stored the slug in the ds_igref
+    // cookie. Attach it to auth metadata so handle_new_user() can persist it to
+    // profiles.signup_source. Same best-effort contract as msclkid above.
+    let igref: string | undefined;
+    try {
+      const match = document.cookie.match(/(?:^|;\s*)ds_igref=([^;]+)/);
+      const candidate = match ? decodeURIComponent(match[1]) : "";
+      if (/^[a-zA-Z0-9_-]{1,64}$/.test(candidate)) igref = candidate;
+    } catch {
+      // ignore — attribution is optional, signup must proceed
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -169,6 +182,7 @@ function AuthPageContent() {
           consent_emails: consentEmails,
           consent_at: new Date().toISOString(),
           ...(msclkid ? { msclkid } : {}),
+          ...(igref ? { igref } : {}),
         },
       },
     });
